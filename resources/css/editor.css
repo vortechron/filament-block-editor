@@ -1,0 +1,570 @@
+/* Content blocks: roomy, document-like BlockNote surface.
+   The block spans the whole editor, like a section on the customer page,
+   while the text column inside it keeps the width chosen in the Style modal.
+   --fbe-block-width comes from BlockAppearanceFields::editorAttributes(). */
+.fbe-blocknote .bn-editor {
+    min-height: 9rem;
+    border-radius: 0.5rem;
+    max-width: var(--fbe-block-width, 53rem);
+    margin-inline: auto;
+}
+
+/* The outline sits on the wrapper, not on .bn-container, because the wrapper's
+   edge is the block edge - the furthest a stretched item may reach. */
+.fbe-blocknote {
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.5rem;
+    /* The block is drawn the way the public page shows it: on white, in a
+       light scheme, even inside a dark panel. A block background paints over
+       this from the inline style. */
+    background-color: #fff;
+    color: #1f2937;
+    color-scheme: light;
+}
+
+.fbe-blocknote .bn-container {
+    /* Positions the width drag handles in .fbe-width-layer */
+    position: relative;
+}
+
+/* Live background preview while editing. The wrapper carries a flat colour
+   and a set of --fbe-bg-* variables via an inline style (see
+   BlockAppearanceFields::editorAttributes()); the picture and the tint are
+   drawn by ::before / ::after so the blur never touches the text.
+   isolation: isolate keeps the pseudo layers below the editor (negative
+   z-index) and stops a blended tint mixing with the page. No overflow:hidden
+   here - it would clip the width drag handles at the block edge; the blurred
+   layer clips itself with clip-path instead. */
+.fbe-blocknote-has-bg {
+    position: relative;
+    isolation: isolate;
+    border-radius: 0.75rem;
+    border-color: transparent;
+    padding: 2rem 1rem;
+}
+
+.fbe-blocknote-has-media::before,
+.fbe-blocknote-has-media::after {
+    content: "";
+    position: absolute;
+    pointer-events: none;
+    border-radius: inherit;
+}
+
+.fbe-blocknote-has-media::before {
+    inset: calc(-2 * var(--fbe-bg-blur, 0px));
+    z-index: -2;
+    background-image: var(--fbe-bg-image, none);
+    background-size: cover;
+    background-position: var(--fbe-bg-position, center);
+    filter: blur(var(--fbe-bg-blur, 0px));
+    clip-path: inset(calc(2 * var(--fbe-bg-blur, 0px)) round 0.75rem);
+}
+
+.fbe-blocknote-has-media::after {
+    inset: 0;
+    z-index: -1;
+    background-color: var(--fbe-bg-tint, #0f172a);
+    opacity: var(--fbe-bg-tint-opacity, 0);
+    mix-blend-mode: var(--fbe-bg-tint-blend, normal);
+}
+
+.fbe-blocknote-has-bg .bn-container {
+    --bn-colors-editor-background: transparent;
+}
+
+.fbe-blocknote-has-bg .bn-editor {
+    background: transparent;
+}
+
+.fbe-blocknote-light-text .bn-container {
+    --bn-colors-editor-text: #ffffff;
+    --bn-colors-side-menu: #e2e8f0;
+}
+
+.fbe-blocknote-light-text .bn-editor {
+    color: #fff;
+}
+
+/* A YouTube, Vimeo or Loom link in a video block renders as the host's player
+   (resources/js/video-embed.js). An iframe has no intrinsic size the way a
+   video file does, so it needs the 16:9 shape spelled out. */
+.fbe-blocknote iframe.fbe-video-embed {
+    aspect-ratio: 16 / 9;
+    border: 0;
+    border-radius: 4px;
+}
+
+/* BlockNote sizes a media block to its content: it puts an inline
+   `width: fit-content` on the wrapper and lets the video file's own size fill
+   it. An iframe has no such size, so it would fall back to the HTML default of
+   300px. !important is needed to beat that inline style.
+
+   Once the user drags the resize handle the iframe carries a width attribute,
+   this rule stops matching, and fit-content sizes the player as usual. */
+.fbe-blocknote .bn-file-block-content-wrapper:has(iframe.fbe-video-embed:not([width])),
+.fbe-blocknote .bn-visual-media-wrapper:has(> iframe.fbe-video-embed:not([width])) {
+    width: 100% !important;
+}
+
+/* Background video preview (BlockNoteEditor::backgroundVideo). The layer is
+   its own size container so the 16:9 player can be sized to cover it. */
+.fbe-blocknote-media {
+    position: absolute;
+    inset: 0;
+    z-index: -2;
+    overflow: hidden;
+    border-radius: inherit;
+    pointer-events: none;
+    container-type: size;
+}
+
+.fbe-blocknote-media video {
+    position: absolute;
+    inset: calc(-2 * var(--fbe-bg-blur, 0px));
+    width: calc(100% + 4 * var(--fbe-bg-blur, 0px));
+    height: calc(100% + 4 * var(--fbe-bg-blur, 0px));
+    object-fit: cover;
+    object-position: var(--fbe-bg-position, center);
+    filter: blur(var(--fbe-bg-blur, 0px));
+}
+
+.fbe-blocknote-media iframe {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: auto;
+    height: calc(max(100cqh, calc(100cqw * 9 / 16)) + 4 * var(--fbe-bg-blur, 0px));
+    aspect-ratio: 16 / 9;
+    transform: translate(-50%, -50%);
+    border: 0;
+    filter: blur(var(--fbe-bg-blur, 0px));
+}
+
+/* "Background card": the text sits on a white card over the picture. */
+.fbe-blocknote-card .bn-editor {
+    background: #fff;
+    border-radius: 1rem;
+    padding-block: 2rem;
+    box-shadow: 0 20px 40px rgb(15 23 42 / 0.18);
+}
+
+/* Per-item width: drag an item's edge to make it span fewer of the 12 grid
+   columns, like Qwilr. The `width` prop comes from resources/js/block-width.jsx
+   and BlockNote writes it out as data-width; the public page gets the same
+   widths from BlockNoteRenderer::constrainWidth(). A full-width item carries no
+   attribute, so nothing here touches it.
+
+   A column layout is its own element (.bn-block-column-list) rather than block
+   content, so every rule has to cover both. */
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list)[data-width="1"] { width: 8.3333%; }
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list)[data-width="2"] { width: 16.6667%; }
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list)[data-width="3"] { width: 25%; }
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list)[data-width="4"] { width: 33.3333%; }
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list)[data-width="5"] { width: 41.6667%; }
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list)[data-width="6"] { width: 50%; }
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list)[data-width="7"] { width: 58.3333%; }
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list)[data-width="8"] { width: 66.6667%; }
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list)[data-width="9"] { width: 75%; }
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list)[data-width="10"] { width: 83.3333%; }
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list)[data-width="11"] { width: 91.6667%; }
+
+.fbe-blocknote .bn-block-content[data-width][data-text-alignment="center"] {
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.fbe-blocknote .bn-block-content[data-width][data-text-alignment="right"] {
+    margin-left: auto;
+}
+
+/* Above 12 the item stretches past the block padding, towards the wrapper's
+   edge. --fbe-bleed-full is that edge in pixels; BlockWidthHandles keeps it
+   up to date with a ResizeObserver, because a CSS container query here would
+   break BlockNote's floating menus. The public page fills the same variable
+   with a container query instead - see resources/css/page.css. */
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list):is(
+    [data-width="13"], [data-width="14"], [data-width="15"],
+    [data-width="16"], [data-width="17"], [data-width="18"]
+) {
+    width: calc(100% + (var(--fbe-bleed-full, 100%) - 100%) * var(--fbe-bleed, 0));
+    margin-left: calc((100% - var(--fbe-bleed-full, 100%)) * var(--fbe-bleed, 0) / 2);
+    margin-right: 0;
+}
+
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list)[data-width="13"] { --fbe-bleed: 0.1667; }
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list)[data-width="14"] { --fbe-bleed: 0.3333; }
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list)[data-width="15"] { --fbe-bleed: 0.5; }
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list)[data-width="16"] { --fbe-bleed: 0.6667; }
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list)[data-width="17"] { --fbe-bleed: 0.8333; }
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list)[data-width="18"] { --fbe-bleed: 1; }
+
+/* Per-item spacing: the space above and below one item, on top of whatever
+   padding the block itself has. The `spaceTop` / `spaceBottom` props come from
+   resources/js/block-spacing.jsx and BlockNote writes them out as
+   data-space-top / data-space-bottom. An item left at `none` carries no
+   attribute, so nothing here touches it.
+
+   Padding, not margin, and the same on the public page
+   (BlockNoteRenderer::applySpacing): a margin would collapse into the
+   paragraph's own margin and the gap would come out smaller than it looks
+   here. Keep these sizes in sync with App\Enums\BlockSpacing::css(). */
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list)[data-space-top="sm"] { padding-top: 1rem; }
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list)[data-space-top="md"] { padding-top: 2rem; }
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list)[data-space-top="lg"] { padding-top: 3.5rem; }
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list)[data-space-top="xl"] { padding-top: 6rem; }
+
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list)[data-space-bottom="sm"] { padding-bottom: 1rem; }
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list)[data-space-bottom="md"] { padding-bottom: 2rem; }
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list)[data-space-bottom="lg"] { padding-bottom: 3.5rem; }
+.fbe-blocknote :is(.bn-block-content, .bn-block-column-list)[data-space-bottom="xl"] { padding-bottom: 6rem; }
+
+/* The handles and the column guide float above the editor. The layer itself
+   never swallows clicks; only the two handles do. */
+.fbe-width-layer {
+    position: absolute;
+    inset: 0;
+    z-index: 3;
+    pointer-events: none;
+}
+
+/* The frame only exists while an item is tracked under the pointer, so it does
+   not need a :hover gate as well - and a gate on .bn-container would be one
+   more thing to get wrong for an item stretched past that container's edge. */
+.fbe-width-frame {
+    position: absolute;
+    border-radius: 0.25rem;
+    outline: 1px solid rgb(147 197 253);
+    outline-offset: 2px;
+}
+
+.fbe-width-frame.is-dragging {
+    background-color: rgb(59 130 246 / 0.08);
+}
+
+/* Clicking an item pins the frame so it stays while the pointer travels to a
+   handle. A heavier outline is the only signal that the pin is on. */
+.fbe-width-frame.is-pinned {
+    outline-width: 2px;
+    outline-color: rgb(59 130 246);
+}
+
+.fbe-width-frame.is-pinned .fbe-width-handle::after {
+    background: rgb(59 130 246);
+    border-color: #fff;
+}
+
+/* The grab area is deliberately much larger than the dot you see, so the
+   handle is easy to catch. The dot itself is drawn with ::after. */
+.fbe-width-handle {
+    position: absolute;
+    top: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 2.25rem;
+    cursor: ew-resize;
+    pointer-events: auto;
+    touch-action: none;
+}
+
+.fbe-width-handle::after {
+    content: '';
+    width: 0.7rem;
+    height: 0.7rem;
+    border: 2px solid rgb(59 130 246);
+    border-radius: 9999px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgb(15 23 42 / 0.25);
+    transition: transform 100ms ease-out;
+}
+
+.fbe-width-handle:hover::after,
+.fbe-width-frame.is-dragging .fbe-width-handle::after {
+    transform: scale(1.3);
+}
+
+.fbe-width-handle.is-start {
+    left: 0;
+    transform: translate(-50%, -50%);
+}
+
+.fbe-width-handle.is-end {
+    right: 0;
+    transform: translate(50%, -50%);
+}
+
+.fbe-width-readout {
+    position: absolute;
+    top: -1.6rem;
+    left: 50%;
+    transform: translateX(-50%);
+    border-radius: 0.25rem;
+    background: rgb(30 41 59);
+    padding: 0.1rem 0.4rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: #fff;
+    white-space: nowrap;
+}
+
+/* The pale stripes that show where the drag will snap to: twelve across the
+   text column, plus the stretch steps in the gap on each side. */
+.fbe-width-grid {
+    position: absolute;
+    display: flex;
+    pointer-events: none;
+}
+
+.fbe-width-grid-part {
+    display: flex;
+    gap: 2px;
+    padding-inline: 1px;
+}
+
+.fbe-width-grid-part span {
+    flex: 1 1 0;
+    border-radius: 2px;
+    background-color: rgb(59 130 246 / 0.12);
+}
+
+.fbe-width-grid-part.is-gutter span {
+    background-color: rgb(59 130 246 / 0.22);
+}
+
+/* Typeface picker: the little "Aa" drawn in each font's own face */
+.fbe-font-swatch {
+    display: inline-block;
+    min-width: 1.5rem;
+    font-size: 0.875rem;
+    line-height: 1;
+}
+
+/* Spacer block: invisible in output, visible while editing */
+.fbe-blocknote .fbe-spacer {
+    position: relative;
+    border-radius: 0.375rem;
+    outline: 1px dashed transparent;
+}
+
+.fbe-blocknote .fbe-spacer:hover {
+    outline-color: rgb(148 163 184);
+}
+
+.fbe-blocknote .fbe-spacer-controls {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+    opacity: 0;
+}
+
+.fbe-blocknote .fbe-spacer:hover .fbe-spacer-controls {
+    opacity: 1;
+}
+
+.fbe-blocknote .fbe-spacer-controls button {
+    border-radius: 0.25rem;
+    background: rgb(226 232 240);
+    padding: 0.05rem 0.4rem;
+    font-size: 0.65rem;
+    font-weight: 600;
+    color: rgb(71 85 105);
+}
+
+.fbe-blocknote .fbe-spacer-controls button.is-active {
+    background: #4f46e5;
+    color: #fff;
+}
+
+/* Card block (resources/js/card-block.jsx). The banner and the title are the
+   block itself; the blocks nested under it are the body, drawn as the card's
+   white panel so it is clear what folds away for the customer. The customer
+   page draws the real thing with .bn-card in page.css. */
+.fbe-blocknote .fbe-card {
+    width: 100%;
+}
+
+.fbe-blocknote .fbe-card-head {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 3.25rem;
+    padding: 0.85rem 1rem;
+    overflow: hidden;
+    border: 1px solid rgb(226 232 240);
+    border-radius: 0.75rem 0.75rem 0 0;
+    background: #fff;
+}
+
+.fbe-blocknote .fbe-card-head.has-image {
+    min-height: 9rem;
+    border-color: transparent;
+}
+
+.fbe-blocknote .fbe-card-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    pointer-events: none;
+}
+
+.fbe-blocknote .fbe-card-head.has-image::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgb(0 0 0 / 0.7), rgb(0 0 0 / 0) 65%);
+    pointer-events: none;
+}
+
+.fbe-blocknote .fbe-card-title {
+    position: relative;
+    z-index: 1;
+    flex: 1;
+    min-width: 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+    line-height: 1.25;
+    color: #111827;
+}
+
+.fbe-blocknote .fbe-card-head.has-image .fbe-card-title {
+    color: #fff;
+    text-shadow: 0 1px 3px rgb(0 0 0 / 0.45);
+}
+
+.fbe-blocknote .fbe-card-toggle {
+    position: relative;
+    z-index: 1;
+    flex-shrink: 0;
+    border-radius: 0.375rem;
+    padding: 0.45rem 0.8rem;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    user-select: none;
+}
+
+.fbe-blocknote .fbe-card-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.4rem 0.5rem;
+    border: 1px solid rgb(226 232 240);
+    border-top: 0;
+    background: rgb(248 250 252);
+    font-size: 0.7rem;
+}
+
+.fbe-blocknote .fbe-card-controls > button {
+    border-radius: 0.25rem;
+    background: rgb(226 232 240);
+    padding: 0.15rem 0.5rem;
+    font-weight: 600;
+    color: rgb(71 85 105);
+}
+
+.fbe-blocknote .fbe-card-controls > button.is-active {
+    background: #4f46e5;
+    color: #fff;
+}
+
+.fbe-blocknote .fbe-card-swatches {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
+    margin-left: 0.25rem;
+}
+
+.fbe-blocknote .fbe-card-swatches button {
+    width: 1.1rem;
+    height: 1.1rem;
+    border-radius: 9999px;
+    box-shadow: inset 0 0 0 1px rgb(15 23 42 / 0.2);
+}
+
+.fbe-blocknote .fbe-card-swatches button.is-active {
+    outline: 2px solid #4f46e5;
+    outline-offset: 1px;
+}
+
+.fbe-blocknote .fbe-card-swatches input[type='color'] {
+    width: 1.4rem;
+    height: 1.4rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+}
+
+.fbe-blocknote .fbe-card-hint {
+    margin: 0;
+    padding: 0.4rem 0.6rem;
+    border: 1px dashed rgb(203 213 225);
+    border-top: 0;
+    border-radius: 0 0 0.75rem 0.75rem;
+    font-size: 0.75rem;
+    color: rgb(100 116 139);
+}
+
+/* The body: the blocks nested under a card. A React block's content sits in a
+   .node-card wrapper, so that, not .bn-block-content, is the sibling of the
+   nested group. The card does not re-render when its children change, so the
+   hint is hidden here rather than in card-block.jsx. */
+.fbe-blocknote .bn-block:has(> .bn-block-group) > .node-card .fbe-card-hint {
+    display: none;
+}
+
+/* BlockNote's grey nesting line would sit outside the white panel. */
+.fbe-blocknote .bn-block:has(> .node-card) > .bn-block-group > .bn-block-outer::before {
+    display: none;
+}
+
+/* The panel is white even when the section behind it is a photo, so it undoes
+   .fbe-blocknote-light-text, or its text would be white on white. */
+.fbe-blocknote .bn-block:has(> .node-card) > .bn-block-group {
+    --bn-colors-editor-text: #1f2937;
+    color: #1f2937;
+    margin-left: 0;
+    padding: 0.5rem 0.75rem 0.75rem;
+    border: 1px solid rgb(226 232 240);
+    border-top: 0;
+    border-radius: 0 0 0.75rem 0.75rem;
+    background: #fff;
+}
+
+
+/* BlockNote paints a few parts dark whenever an ancestor has the `dark`
+   class, which Filament sets on <html> in dark mode. The editor always shows
+   the page the way the public sees it, which is light, so these keep their
+   light colours. Selectors are scoped to .fbe-blocknote, which beats
+   BlockNote's zero-specificity :where(.dark) rules. */
+.fbe-blocknote .bn-preview-placeholder,
+.fbe-blocknote [data-file-block] .bn-add-file-button {
+    color: #5f5b5c;
+    background-color: #f2f1ee;
+}
+
+.fbe-blocknote .bn-editor[contenteditable=true] .bn-preview-placeholder:not(.bn-preview-placeholder-error):hover,
+.fbe-blocknote .bn-editor[contenteditable=true] [data-file-block] .bn-add-file-button:hover,
+.fbe-blocknote [data-file-block] .bn-file-name-with-icon:hover,
+.fbe-blocknote .ProseMirror-selectednode .bn-file-name-with-icon {
+    background-color: #e1e1e1;
+}
+
+.fbe-blocknote .bn-editor[contenteditable=true] .bn-column-list-hovered > .bn-block-column:not(:last-child) {
+    box-shadow: 4px 0 #eee;
+}
+
+.fbe-blocknote .bn-editor[contenteditable=true] .bn-column-list-hovered > .bn-block-column.bn-column-resize-border {
+    box-shadow: 4px 0 #ccc;
+}

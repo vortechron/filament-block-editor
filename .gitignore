@@ -1,0 +1,9 @@
+/vendor
+/node_modules
+/composer.lock
+/.phpunit.cache
+/.phpunit.result.cache
+.DS_Store
+# resources/dist is committed on purpose: apps install the built editor
+# without Node.
+/workbench/storage

@@ -1,0 +1,17 @@
+{
+    "private": true,
+    "type": "module",
+    "scripts": {
+        "build": "node bin/build.js",
+        "dev": "node bin/build.js --dev"
+    },
+    "devDependencies": {
+        "@blocknote/core": "0.54.0",
+        "@blocknote/mantine": "0.54.0",
+        "@blocknote/react": "0.54.0",
+        "@blocknote/xl-multi-column": "0.54.0",
+        "esbuild": "^0.25.0",
+        "react": "^19.2.8",
+        "react-dom": "^19.2.8"
+    }
+}
