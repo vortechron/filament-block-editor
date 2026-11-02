@@ -296,10 +296,13 @@ class BlockAppearanceFields
      * Live background, padding, width and height preview around the editor,
      * so the block in the form looks like the section on the public page.
      *
-     * The picture and tint are drawn by ::before / ::after rules in
-     * resources/css/editor.css, fed by the CSS variables set
+     * The picture and tint are drawn by ::before / ::after rules in the
+     * stylesheet of the blocknote-kit package, fed by the CSS variables set
      * here. The video itself comes from editorVideo() through
      * BlockNoteEditor::backgroundVideo(); a dark surface sits under it.
+     *
+     * The kit's own appearanceToSurface() paints the same thing for apps
+     * without Filament. Keep the two in step.
      *
      * @return array<string, string>
      */
@@ -310,10 +313,10 @@ class BlockAppearanceFields
         $width = $block->contentWidth();
         $padding = $block->paddingSize()->css();
 
-        // --fbe-block-pad lets a stretched item cancel this padding, the
+        // --bnk-block-pad lets a stretched item cancel this padding, the
         // same way it does on the public page.
-        $style = 'padding: '.$padding.'; --fbe-block-pad: '.$padding.';';
-        $style .= ' --fbe-block-width: '.($width === BlockContentWidth::Full ? '100%' : $width->css()).';';
+        $style = 'padding: '.$padding.'; --bnk-block-pad: '.$padding.';';
+        $style .= ' --bnk-block-width: '.($width === BlockContentWidth::Full ? '100%' : $width->css()).';';
 
         if ($block->isFullHeight()) {
             $style .= ' min-height: 70vh;';
@@ -329,11 +332,11 @@ class BlockAppearanceFields
                 return ['style' => $style];
             }
 
-            $classes[] = 'fbe-blocknote-has-bg';
+            $classes[] = 'bnk-blocknote-has-bg';
             $style .= " background-color: {$color};";
 
             if (BlockColor::isDark($color)) {
-                $classes[] = 'fbe-blocknote-light-text';
+                $classes[] = 'bnk-blocknote-light-text';
             }
 
             return ['class' => implode(' ', $classes), 'style' => $style];
@@ -343,21 +346,21 @@ class BlockAppearanceFields
             return ['style' => $style];
         }
 
-        $classes[] = 'fbe-blocknote-has-bg';
-        $classes[] = 'fbe-blocknote-has-media';
-        $classes[] = $block->hasBackgroundCard() ? 'fbe-blocknote-card' : 'fbe-blocknote-light-text';
+        $classes[] = 'bnk-blocknote-has-bg';
+        $classes[] = 'bnk-blocknote-has-media';
+        $classes[] = $block->hasBackgroundCard() ? 'bnk-blocknote-card' : 'bnk-blocknote-light-text';
 
         $tint = $block->backgroundTintColor();
         $opacity = $block->backgroundTintOpacity() / 100;
         $blur = $block->backgroundBlur();
 
-        $style .= " --fbe-bg-tint: {$tint}; --fbe-bg-tint-opacity: {$opacity};";
-        $style .= ' --fbe-bg-tint-blend: '.$block->backgroundTintStyle()->css().';';
-        $style .= ' --fbe-bg-position: '.$block->backgroundPosition()->css().';';
-        $style .= " --fbe-bg-blur: {$blur}px;";
+        $style .= " --bnk-bg-tint: {$tint}; --bnk-bg-tint-opacity: {$opacity};";
+        $style .= ' --bnk-bg-tint-blend: '.$block->backgroundTintStyle()->css().';';
+        $style .= ' --bnk-bg-position: '.$block->backgroundPosition()->css().';';
+        $style .= " --bnk-bg-blur: {$blur}px;";
 
         if ($type === BlockBackgroundType::Image) {
-            $style .= " --fbe-bg-image: url('".$block->background_image_url."');";
+            $style .= " --bnk-bg-image: url('".$block->background_image_url."');";
         } else {
             // No video plays in the editor: a dark surface stands in for it.
             $style .= ' background-color: #1e293b;';

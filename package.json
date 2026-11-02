@@ -10,6 +10,7 @@
         "@blocknote/mantine": "0.54.0",
         "@blocknote/react": "0.54.0",
         "@blocknote/xl-multi-column": "0.54.0",
+        "@vortechron/blocknote-kit": "github:vortechron/blocknote-kit#v0.1.0",
         "esbuild": "^0.25.0",
         "react": "^19.2.8",
         "react-dom": "^19.2.8"

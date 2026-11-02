@@ -704,7 +704,7 @@ class BlockSectionsTest extends TestCase
         $html = $component->html();
         $this->assertStringContainsString('background-color: #123456;', $html);
         $this->assertStringContainsString('padding: 6rem;', $html);
-        $this->assertStringContainsString('fbe-blocknote-has-bg', $html);
+        $this->assertStringContainsString('bnk-blocknote-has-bg', $html);
     }
 
     public function test_youtube_and_vimeo_links_become_silent_looping_players(): void
@@ -785,8 +785,8 @@ class BlockSectionsTest extends TestCase
         ]);
 
         Livewire::test(EditPage::class, ['record' => $page->getRouteKey()])
-            ->assertSee('fbe-blocknote-has-media')
-            ->assertSee('fbe-blocknote-media')
+            ->assertSee('bnk-blocknote-has-media')
+            ->assertSee('bnk-blocknote-media')
             ->assertSee('youtube-nocookie.com/embed/dQw4w9WgXcQ');
     }
 

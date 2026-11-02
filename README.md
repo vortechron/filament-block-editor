@@ -213,6 +213,8 @@ composer serve             # demo app at http://127.0.0.1:8000/admin (admin@exam
 
 `resources/dist` is committed, so apps never need Node.
 
+The editor itself (columns, item width and spacing, cards, spacers, video embeds, the media sheet and the section preview) lives in [@vortechron/blocknote-kit](https://github.com/vortechron/blocknote-kit), so projects without Filament can use it too. `resources/js/index.js` only connects the kit to Livewire and to the panel's upload routes. To pick up a new kit version, change its tag in `package.json`, run `npm install`, then `npm run build`.
+
 ## Licence
 
 GPL-3.0-or-later. See [LICENSE](LICENSE).

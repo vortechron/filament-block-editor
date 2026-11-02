@@ -24,14 +24,14 @@
                 fonts: @js($getFonts()),
                 readOnly: @js($isDisabled()),
             })"
-            {{ $getExtraAttributeBag()->class(['fbe-blocknote']) }}
+            {{ $getExtraAttributeBag()->class(['bnk-blocknote']) }}
         >
             <div x-ref="editor" wire:ignore wire:key="{{ $statePath }}-editor"></div>
 
             {{-- Background video preview. Sits after the editor so Livewire never
                  confuses it with the wire:ignore'd editor node when it appears. --}}
             @if ($video = $getBackgroundVideo())
-                <div class="fbe-blocknote-media" aria-hidden="true" wire:key="{{ $statePath }}-media">
+                <div class="bnk-blocknote-media" aria-hidden="true" wire:key="{{ $statePath }}-media">
                     @if ($video['embed'])
                         <iframe src="{{ $video['url'] }}" title="Background video" allow="autoplay; encrypted-media" tabindex="-1"></iframe>
                     @else
