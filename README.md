@@ -66,6 +66,7 @@ class BuildPage extends Page
     public function mount(int|string $record): void
     {
         $this->record = $this->resolveRecord($record);
+        $this->authorizePageBuilder();
     }
 
     protected function getPageBuilderValue(): array
@@ -91,6 +92,13 @@ class BuildPage extends Page
     protected function getPageBuilderBackUrl(): ?string
     {
         return PageResource::getUrl();
+    }
+
+    // Runs before every save, preview and upload (Livewire calls can be sent
+    // without opening the page). Call it from mount() too.
+    protected function authorizePageBuilder(): void
+    {
+        abort_unless(PageResource::canEdit($this->record), 403);
     }
 }
 ```

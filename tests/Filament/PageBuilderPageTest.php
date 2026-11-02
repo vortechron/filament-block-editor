@@ -99,4 +99,16 @@ class PageBuilderPageTest extends FilamentTestCase
             ->call('storePageBuilderUpload', 'image')
             ->assertHasErrors(['pageBuilderUpload']);
     }
+
+    public function test_every_builder_call_checks_access_first(): void
+    {
+        $this->signIn();
+        $component = Livewire::test(DemoBuilder::class);
+        DemoBuilder::$denied = true;
+
+        $component->call('savePageBuilder', ['sections' => []])->assertForbidden();
+        $this->assertNull(DemoBuilder::$saved);
+
+        DemoBuilder::$denied = false;
+    }
 }

@@ -50,6 +50,14 @@ trait InteractsWithPageBuilder
      */
     abstract protected function renderPageBuilderPreview(array $sections): string;
 
+    /**
+     * Checks that the signed-in user may edit this page. It runs before
+     * every save, preview and upload, because a Livewire call can be sent
+     * without opening the page. Throw (for example abort(403)) to refuse.
+     * Call it from mount() as well.
+     */
+    protected function authorizePageBuilder(): void {}
+
     public function getView(): string
     {
         return 'filament-block-editor::filament.page-builder';
@@ -118,6 +126,8 @@ trait InteractsWithPageBuilder
      */
     public function savePageBuilder(array $value): array
     {
+        $this->authorizePageBuilder();
+
         $validator = Validator::make(['sections' => $value['sections'] ?? null], PageContent::rules('sections'));
 
         if ($validator->fails()) {
@@ -137,6 +147,8 @@ trait InteractsWithPageBuilder
      */
     public function previewPageBuilder(array $value): string
     {
+        $this->authorizePageBuilder();
+
         return $this->renderPageBuilderPreview(PageContent::normalize((array) ($value['sections'] ?? [])));
     }
 
@@ -147,6 +159,8 @@ trait InteractsWithPageBuilder
      */
     public function storePageBuilderUpload(string $kind = 'image'): array
     {
+        $this->authorizePageBuilder();
+
         $mimes = match ($kind) {
             'video' => 'mimes:mp4,webm,mov',
             'file' => 'mimes:pdf,doc,docx,xls,xlsx,ppt,pptx,txt,csv,zip',

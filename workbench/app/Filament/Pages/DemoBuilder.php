@@ -17,6 +17,14 @@ class DemoBuilder extends PageBuilderPage
     /** @var array{sections: array<mixed>}|null */
     public static ?array $saved = null;
 
+    /** Tests flip this to check that every builder call asks first. */
+    public static bool $denied = false;
+
+    protected function authorizePageBuilder(): void
+    {
+        abort_if(self::$denied, 403);
+    }
+
     protected static ?string $title = 'Demo page';
 
     protected function getPageBuilderValue(): array

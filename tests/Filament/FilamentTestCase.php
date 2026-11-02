@@ -38,6 +38,7 @@ abstract class FilamentTestCase extends TestCase
         parent::setUp();
 
         DemoBuilder::$saved = null;
+        DemoBuilder::$denied = false;
     }
 
     protected function getPackageProviders($app): array
