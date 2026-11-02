@@ -2,140 +2,188 @@
 
 namespace Vortechron\FilamentBlockEditor\Tests\Unit;
 
-use Vortechron\FilamentBlockEditor\Support\BlockNoteDocument;
+use Vortechron\FilamentBlockEditor\BlockNote\BlockNoteDocument;
+use Vortechron\FilamentBlockEditor\BlockNote\Blocks;
 use Vortechron\FilamentBlockEditor\Tests\TestCase;
 
 class BlockNoteDocumentTest extends TestCase
 {
-    /**
-     * @return array<string, mixed>
-     */
-    private function table(bool $withType = false): array
+    public function test_it_gives_a_table_the_content_type_the_editor_needs(): void
     {
-        $rows = [
-            ['cells' => [[['type' => 'text', 'text' => 'Item', 'styles' => []]], [['type' => 'text', 'text' => 'Price', 'styles' => []]]]],
-        ];
-
-        return [
-            'type' => 'table',
-            'content' => $withType ? ['type' => 'tableContent', 'rows' => $rows] : ['rows' => $rows],
-        ];
-    }
-
-    public function test_a_table_without_its_content_type_gets_the_one_the_editor_needs(): void
-    {
-        $normalized = BlockNoteDocument::normalize([$this->table()]);
-
-        $this->assertSame('tableContent', $normalized[0]['content']['type']);
-        $this->assertSame($this->table()['content']['rows'], $normalized[0]['content']['rows']);
-    }
-
-    public function test_tables_inside_columns_and_nested_children_are_repaired_too(): void
-    {
-        $normalized = BlockNoteDocument::normalize([
-            [
-                'type' => 'columnList',
-                'children' => [
-                    ['type' => 'column', 'props' => ['width' => 1], 'children' => [$this->table()]],
-                ],
-            ],
-            [
-                'type' => 'bulletListItem',
-                'content' => [['type' => 'text', 'text' => 'Point', 'styles' => []]],
-                'children' => [$this->table()],
-            ],
+        $clean = BlockNoteDocument::clean([
+            ['id' => 't1', 'type' => 'table', 'props' => [], 'content' => ['rows' => []], 'children' => []],
+            ['id' => 't2', 'type' => 'table', 'props' => [], 'content' => ['type' => 'tableContent', 'rows' => []], 'children' => []],
         ]);
 
-        $this->assertSame('tableContent', $normalized[0]['children'][0]['children'][0]['content']['type']);
-        $this->assertSame('tableContent', $normalized[1]['children'][0]['content']['type']);
+        $this->assertSame('tableContent', $clean[0]['content']['type']);
+        $this->assertSame('tableContent', $clean[1]['content']['type']);
     }
 
-    public function test_a_document_that_is_already_valid_is_left_exactly_as_it_was(): void
+    public function test_it_cleans_blocks_inside_columns_and_children_and_drops_what_is_not_a_block(): void
     {
-        $document = [
-            $this->table(withType: true),
-            ['type' => 'paragraph', 'content' => [['type' => 'text', 'text' => 'Hello', 'styles' => []]]],
-            ['type' => 'image', 'props' => ['url' => '/storage/media/1/a.jpg']],
+        $clean = BlockNoteDocument::clean([
             'not a block',
-        ];
+            ['type' => 'columnList', 'children' => [
+                ['type' => 'column', 'children' => [
+                    ['type' => 'image', 'props' => ['url' => 'javascript:alert(1)']],
+                ]],
+            ]],
+            ['type' => 'paragraph', 'children' => 'junk'],
+        ]);
 
-        $this->assertSame($document, BlockNoteDocument::normalize($document));
+        $this->assertCount(2, $clean);
+        $this->assertSame('', $clean[0]['children'][0]['children'][0]['props']['url']);
+        $this->assertSame([], $clean[1]['children']);
     }
 
-    public function test_a_table_with_no_rows_or_odd_content_is_not_touched(): void
+    public function test_a_value_that_is_not_a_list_of_blocks_is_an_empty_document(): void
+    {
+        $this->assertSame([], BlockNoteDocument::clean('text'));
+        $this->assertSame([], BlockNoteDocument::clean(['a' => 1]));
+        $this->assertSame([], BlockNoteDocument::clean(null));
+    }
+
+    public function test_a_document_over_the_size_limit_is_dropped(): void
+    {
+        $this->assertTrue(BlockNoteDocument::isTooBig([['type' => 'paragraph', 'content' => str_repeat('a', 100_001)]]));
+        $this->assertSame([], BlockNoteDocument::clean([['type' => 'paragraph', 'content' => str_repeat('a', 100_001)]]));
+    }
+
+    public function test_media_blocks_keep_only_web_and_site_addresses(): void
+    {
+        $clean = BlockNoteDocument::clean([
+            Blocks::image('https://cdn.example/a.jpg'),
+            Blocks::image('/storage/b.jpg'),
+            Blocks::image('data:image/svg+xml;base64,PHN2Zz4='),
+            Blocks::image('//evil.example/x.png'),
+            Blocks::video('javascript:alert(1)'),
+            ['type' => 'audio', 'props' => ['url' => 'ftp://x/y.mp3']],
+            ['type' => 'file', 'props' => ['url' => 'https://cdn.example/a.pdf', 'name' => 'A']],
+            ['type' => 'card', 'props' => ['url' => 'file:///etc/passwd'], 'content' => [], 'children' => []],
+        ]);
+
+        $this->assertSame(
+            ['https://cdn.example/a.jpg', '/storage/b.jpg', '', '', '', '', 'https://cdn.example/a.pdf', ''],
+            array_map(fn (array $block): string => $block['props']['url'], $clean),
+        );
+    }
+
+    public function test_a_slideshow_keeps_only_safe_unique_addresses_up_to_the_limit(): void
+    {
+        $urls = array_map(fn (int $i): string => "https://cdn.example/{$i}.jpg", range(1, 14));
+        $clean = BlockNoteDocument::clean([
+            ['type' => 'gallery', 'props' => ['images' => "javascript:x\nhttps://a.example/1.jpg\nhttps://a.example/1.jpg\n/b.jpg\n//c.example/c.jpg"]],
+            Blocks::gallery($urls),
+        ]);
+
+        $this->assertSame("https://a.example/1.jpg\n/b.jpg", $clean[0]['props']['images']);
+        $this->assertCount(Blocks::MAX_GALLERY_PHOTOS, explode("\n", $clean[1]['props']['images']));
+    }
+
+    public function test_a_button_keeps_its_text_a_safe_link_and_a_known_variant(): void
+    {
+        $clean = BlockNoteDocument::clean([
+            Blocks::button('Hubungi', 'https://wa.me/60123456789', 'outline'),
+            Blocks::button('Bad', 'javascript:alert(1)', 'neon'),
+            ['type' => 'button', 'props' => ['text' => ['x'], 'url' => '#tentang']],
+        ]);
+
+        $this->assertSame(['text' => 'Hubungi', 'url' => 'https://wa.me/60123456789', 'variant' => 'outline'], $clean[0]['props']);
+        $this->assertSame(['text' => 'Bad', 'url' => '', 'variant' => 'solid'], $clean[1]['props']);
+        $this->assertSame(['text' => '', 'url' => '#tentang', 'variant' => 'solid'], $clean[2]['props']);
+    }
+
+    public function test_an_own_block_keeps_a_kind_and_values_as_a_json_object(): void
+    {
+        $clean = BlockNoteDocument::clean([
+            Blocks::ownBlock('stationery-board', ['heading' => 'Alat tulis']),
+            ['type' => 'ownBlock', 'props' => ['kind' => 'Bad Kind!', 'values' => '[1,2]']],
+            ['type' => 'ownBlock', 'props' => ['kind' => 'x', 'values' => 'not json']],
+            ['type' => 'ownBlock', 'props' => ['kind' => 'x', 'values' => ['array']]],
+            ['type' => 'ownBlock', 'props' => []],
+        ]);
+
+        $this->assertSame(['kind' => 'stationery-board', 'values' => '{"heading":"Alat tulis"}'], $clean[0]['props']);
+        $this->assertSame(['kind' => 'BadKind', 'values' => '{}'], $clean[1]['props']);
+        $this->assertSame('{}', $clean[2]['props']['values']);
+        $this->assertSame('{}', $clean[3]['props']['values']);
+        $this->assertSame(['kind' => '', 'values' => '{}'], $clean[4]['props']);
+    }
+
+    public function test_a_link_with_an_unsafe_address_becomes_plain_text(): void
+    {
+        $clean = BlockNoteDocument::clean([
+            ['type' => 'paragraph', 'props' => [], 'content' => [
+                ['type' => 'link', 'href' => 'javascript:alert(1)', 'content' => [['type' => 'text', 'text' => 'Klik', 'styles' => []]]],
+                ['type' => 'link', 'href' => 'https://example.com', 'content' => [['type' => 'text', 'text' => 'Ok', 'styles' => []]]],
+                ['type' => 'link', 'href' => '#tentang', 'content' => [['type' => 'text', 'text' => 'Atas', 'styles' => []]]],
+            ], 'children' => []],
+        ]);
+
+        $this->assertSame([
+            ['type' => 'text', 'text' => 'Klik', 'styles' => []],
+            ['type' => 'link', 'href' => 'https://example.com', 'content' => [['type' => 'text', 'text' => 'Ok', 'styles' => []]]],
+            ['type' => 'link', 'href' => '#tentang', 'content' => [['type' => 'text', 'text' => 'Atas', 'styles' => []]]],
+        ], $clean[0]['content']);
+    }
+
+    public function test_it_finds_the_first_picture_inside_columns_cards_and_slideshows(): void
     {
         $document = [
-            ['type' => 'table'],
-            ['type' => 'table', 'content' => []],
-            ['type' => 'table', 'content' => 'text'],
+            Blocks::paragraph('Hai'),
+            ['type' => 'columnList', 'children' => [['type' => 'column', 'children' => [Blocks::gallery(['https://cdn.example/g1.jpg', 'https://cdn.example/g2.jpg'])]]]],
+            Blocks::image('https://cdn.example/later.jpg'),
         ];
 
-        $this->assertSame($document, BlockNoteDocument::normalize($document));
+        $this->assertSame('https://cdn.example/g1.jpg', BlockNoteDocument::firstImageUrl($document));
+        $this->assertNull(BlockNoteDocument::firstImageUrl([Blocks::image('javascript:x')]));
+        $this->assertNull(BlockNoteDocument::firstImageUrl('nope'));
     }
 
-    /**
-     * @return array<string, mixed>
-     */
-    private function textBlock(string $type, string $text): array
+    public function test_it_reads_the_words_in_order(): void
     {
-        return ['type' => $type, 'content' => [['type' => 'text', 'text' => $text, 'styles' => []]]];
+        $document = [
+            Blocks::heading(2, 'Tajuk'),
+            Blocks::paragraph('Satu'),
+            ['type' => 'card', 'content' => [['type' => 'text', 'text' => 'Kad', 'styles' => []]], 'children' => [Blocks::paragraph('Dalam kad')]],
+        ];
+
+        $this->assertSame("Tajuk\nSatu\nKad\nDalam kad", BlockNoteDocument::text($document));
     }
 
-    public function test_the_title_is_the_first_heading_even_below_a_paragraph(): void
+    public function test_the_block_builders_make_blocks_that_clean_leaves_alone(): void
     {
-        $title = BlockNoteDocument::title([
-            $this->textBlock('paragraph', 'Thanks for the chat last week.'),
-            $this->textBlock('heading', 'Our approach'),
-            $this->textBlock('heading', 'Pricing'),
-        ]);
+        $document = [
+            Blocks::heading(1, 'Tajuk'),
+            Blocks::heading(4, 'Kecil', 'center'),
+            Blocks::paragraph('Ayat'),
+            Blocks::bullet('Satu'),
+            Blocks::numbered('Dua'),
+            Blocks::quote('Petikan'),
+            Blocks::toggle('Soalan?', [Blocks::paragraph('Jawapan')]),
+            Blocks::image('https://cdn.example/a.jpg', 'Kapsyen'),
+            Blocks::video('https://cdn.example/a.mp4'),
+            Blocks::gallery(['https://cdn.example/1.jpg', '/2.jpg']),
+            Blocks::button('Hubungi', 'mailto:hai@example.com', 'outline'),
+            Blocks::ownBlock('a-kind-nobody-registered', ['heading' => 'Hai', 'items' => [['name' => 'x']]]),
+        ];
 
-        $this->assertSame('Our approach', $title);
+        $this->assertSame($document, BlockNoteDocument::clean($document));
     }
 
-    public function test_without_a_heading_the_title_is_the_first_line_of_text(): void
+    public function test_a_heading_level_stays_between_one_and_four(): void
     {
-        $title = BlockNoteDocument::title([
-            ['type' => 'image', 'props' => ['url' => '/storage/media/1/a.jpg']],
-            $this->textBlock('paragraph', '   '),
-            ['type' => 'paragraph', 'content' => [
-                ['type' => 'link', 'href' => 'https://example.com', 'content' => [['type' => 'text', 'text' => 'Read', 'styles' => []]]],
-                ['type' => 'text', 'text' => "  our\n terms", 'styles' => []],
-            ]],
-        ]);
-
-        $this->assertSame('Read our terms', $title);
+        $this->assertSame(1, Blocks::heading(0, 'a')['props']['level']);
+        $this->assertSame(4, Blocks::heading(9, 'a')['props']['level']);
+        $this->assertSame(3, Blocks::heading(3, 'a')['props']['level']);
     }
 
-    public function test_the_title_is_found_inside_columns(): void
+    public function test_an_own_block_builder_keeps_values_as_a_json_object_string(): void
     {
-        $title = BlockNoteDocument::title([
-            ['type' => 'columnList', 'children' => [
-                ['type' => 'column', 'children' => [$this->textBlock('paragraph', 'Left side')]],
-                ['type' => 'column', 'children' => [$this->textBlock('heading', 'Meet the team')]],
-            ]],
-        ]);
-
-        $this->assertSame('Meet the team', $title);
-    }
-
-    public function test_a_long_title_is_cut_short(): void
-    {
-        $title = BlockNoteDocument::title([$this->textBlock('heading', str_repeat('word ', 30))]);
-
-        $this->assertLessThanOrEqual(63, mb_strlen($title));
-        $this->assertStringStartsWith('word word', $title);
-        $this->assertStringEndsWith('...', $title);
-    }
-
-    public function test_a_document_with_no_text_has_no_title(): void
-    {
-        $this->assertNull(BlockNoteDocument::title([]));
-        $this->assertNull(BlockNoteDocument::title(null));
-        $this->assertNull(BlockNoteDocument::title([$this->table(withType: true), ['type' => 'image'], 'not a block']));
-    }
-
-    public function test_a_document_still_held_as_json_text_has_a_title(): void
-    {
-        $this->assertSame('Hello', BlockNoteDocument::title(json_encode([$this->textBlock('heading', 'Hello')])));
+        $this->assertSame('{}', Blocks::ownBlock('x')['props']['values']);
+        $this->assertSame('{"a":"é/b"}', Blocks::ownBlock('x', ['a' => 'é/b'])['props']['values']);
+        $this->assertSame(['a' => 'é/b'], Blocks::decodeValues('{"a":"é/b"}'));
+        $this->assertSame([], Blocks::decodeValues('[1,2]'));
+        $this->assertSame([], Blocks::decodeValues('nope'));
     }
 }

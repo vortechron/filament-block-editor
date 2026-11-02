@@ -1,0 +1,110 @@
+import type { SectionLayout } from '@/types';
+
+/**
+ * What is picked on the canvas. Nothing picked is the page itself. An
+ * item is one block inside a section's editor, like a heading or a
+ * button.
+ */
+export type Selection = {
+    sectionId: string | null;
+    itemId: string | null;
+};
+
+export const NOTHING_SELECTED: Selection = { sectionId: null, itemId: null };
+
+/** The two panels the sidebar opens on when nothing is being edited. */
+export type HomePanelName = 'add' | 'layers';
+
+export type SidebarPanel =
+    | { name: HomePanelName }
+    | { name: 'section' }
+    | { name: 'item' };
+
+/** The picked section's tabs: its words and items, or its look. */
+export type SectionTab = 'content' | 'style';
+
+/** How wide the canvas is: a laptop screen or a phone. */
+export type Device = 'desktop' | 'phone';
+
+/**
+ * Something that can be added inside a section. Each one is a block the
+ * public page already draws (Rendering\BlockNoteRenderer). `own:<kind>`
+ * is one of the host's own blocks.
+ */
+export type ItemKey =
+    | `own:${string}`
+    | 'heading'
+    | 'subheading'
+    | 'paragraph'
+    | 'bulletList'
+    | 'numberedList'
+    | 'quote'
+    | 'toggle'
+    | 'image'
+    | 'gallery'
+    | 'video'
+    | 'twoColumns'
+    | 'threeColumns'
+    | 'card'
+    | 'spacer'
+    | 'divider'
+    | 'button'
+    | 'layoutItem';
+
+/** Where a new item goes in a section: next to a block, or at the end. */
+export type ItemPlace =
+    | { blockId: string; placement: 'before' | 'after' }
+    | { blockId: null };
+
+/**
+ * Next to an item found by its place on the page, for a drop on the page.
+ * The section's editor turns it into a block id once it is open.
+ */
+export type PagePlace = { path: string; placement: 'before' | 'after' };
+
+/** One block as the item panel needs it. */
+export type ItemSnapshot = {
+    id: string;
+    type: string;
+    props: Record<string, unknown>;
+    /** The block's words, for the sidebar title. */
+    text: string;
+    isFirst: boolean;
+    isLast: boolean;
+};
+
+/**
+ * One section's open editor, as the rest of the builder talks to it. Made
+ * in section-editor-handle.ts, next to the lazily loaded editor.
+ */
+export type SectionEditorHandle = {
+    /** Adds an item and returns its block id, or null when it failed. */
+    insertItem: (
+        key: ItemKey,
+        place: ItemPlace,
+        layout: SectionLayout,
+    ) => string | null;
+    getItem: (blockId: string) => ItemSnapshot | null;
+    updateItem: (blockId: string, props: Record<string, unknown>) => void;
+    changeItemType: (
+        blockId: string,
+        type: string,
+        props?: Record<string, unknown>,
+    ) => void;
+    moveItem: (blockId: string, offset: -1 | 1) => void;
+    duplicateItem: (blockId: string) => string | null;
+    removeItem: (blockId: string) => void;
+    /**
+     * The block at a place the page marked with `data-item`, like "1.0",
+     * or null when the editor has no block there.
+     */
+    itemAtPath: (path: string) => string | null;
+    /** A block's place in the section, the way the page marks it. */
+    pathOf: (blockId: string) => string | null;
+    /** Puts the cursor in a block and scrolls to it. */
+    focusItem: (blockId: string) => void;
+    /** The block holding the cursor while the editor has focus. */
+    cursorItemId: () => string | null;
+    /** Runs `listener` after every change and cursor move. */
+    subscribe: (listener: () => void) => () => void;
+};

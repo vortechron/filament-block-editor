@@ -1,0 +1,95 @@
+/*
+ * What the page builder's canvas adds to the page: the label of a section
+ * that is still empty, and the spot where a photo, a video or a missing
+ * block goes. Only a preview draws them (Rendering\RenderContext), so these
+ * rules do nothing on the public page.
+ */
+
+/* A new, empty section still shows where it will go. */
+[data-preview] [data-block-id]:not(:has(*))::before {
+    content: attr(data-empty-label);
+    display: block;
+    margin: 1rem 1.25rem;
+    padding: 1.25rem;
+    border: 2px dashed #cbd5e1;
+    border-radius: 1rem;
+    color: #64748b;
+    font:
+        600 0.875rem/1.4 system-ui,
+        sans-serif;
+    text-align: center;
+}
+
+/* Where a photo or video goes, until the author adds one. */
+.bn-media-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: 100%;
+    min-height: 12rem;
+    aspect-ratio: 4 / 3;
+    margin: 0;
+    padding: 1.25rem;
+    border: 2px dashed color-mix(in srgb, var(--sf-ink, #0f172a) 22%, transparent);
+    border-radius: var(--sf-radius, 1.25rem);
+    background: color-mix(in srgb, var(--sf-ink, #0f172a) 5%, transparent);
+    color: var(--sf-text, #475569);
+    font:
+        600 0.9375rem/1.4 system-ui,
+        sans-serif;
+    letter-spacing: 0;
+    text-align: center;
+    text-transform: none;
+}
+
+.bn-media-empty::before {
+    content: '📷';
+    font-size: 2rem;
+    line-height: 1;
+}
+
+.bn-media-empty[data-empty-media='video']::before {
+    content: '🎬';
+}
+
+/* An own block whose definition is missing. */
+.bn-media-empty[data-empty-media='block'] {
+    min-height: 6rem;
+    aspect-ratio: auto;
+}
+
+.bn-media-empty[data-empty-media='block']::before {
+    content: '🧩';
+}
+
+:is(.sf-hero-media, .sf-product-media) .bn-media-empty {
+    aspect-ratio: 4 / 5;
+}
+
+/* Behind the words of a poster or a bento tile: dark, so they stay easy to read. */
+:is(.sf-poster-media, .sf-bento-media) .bn-media-empty {
+    align-items: flex-end;
+    justify-content: flex-start;
+    min-height: 0;
+    aspect-ratio: auto;
+    border: 0;
+    border-radius: 0;
+    background: repeating-linear-gradient(
+        -45deg,
+        #334155 0 14px,
+        #2b3647 14px 28px
+    );
+    color: #e2e8f0;
+}
+
+:is(.sf-poster-media, .sf-bento-media) .bn-media-empty::before {
+    display: none;
+}
+
+/* The section the author is editing right now. */
+[data-preview] [data-block-id][data-editing] {
+    outline: 3px solid #3b82f6;
+    outline-offset: -3px;
+}

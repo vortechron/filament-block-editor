@@ -1,25 +1,30 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>{{ $page->title }}</title>
-    <x-filament-block-editor::styles :blocks="$page->contentBlocks" :content="$page->summary" />
-    <style>
-        body { margin: 0; font-family: system-ui, sans-serif; color: #1f2937; }
-        .demo-header, .demo-summary { max-width: 53rem; margin: 0 auto; padding: 1.5rem; }
-        .demo-header h1 { margin: 0; font-size: 1.25rem; }
-    </style>
-</head>
-<body>
-    <header class="demo-header"><h1>{{ $page->title }}</h1></header>
-
-    @if (filled($page->summary))
-        <x-filament-block-editor::content :content="$page->summary" class="demo-summary" />
-    @endif
-
-    <main>
-        <x-filament-block-editor::blocks :blocks="$page->contentBlocks" :page="$page" />
-    </main>
-</body>
+<html lang="{{ $locale }}">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <title>Filament Block Editor: sample page</title>
+        <style>
+            body { margin: 0; }
+            nav { position: sticky; top: 0; z-index: 10; display: flex; gap: 1rem; padding: .75rem 1.25rem; background: #0f172a; font: 600 .875rem system-ui; }
+            nav a { color: #fff; text-decoration: none; }
+            .notice { padding: 1rem 1.25rem; border-radius: .75rem; background: #dbeafe; font: 1rem/1.5 system-ui; }
+            .notice-warning { background: #fef3c7; }
+        </style>
+        <link rel="stylesheet" href="/page.css">
+        {{-- Theme the page here with the custom properties of resources/css/page/tokens.css. --}}
+        <style>
+            .sf-page { /* --sf-accent: #16a34a; */ }
+        </style>
+    </head>
+    <body>
+        <nav>
+            <a href="#hero">Hero</a>
+            <a href="#faq">FAQ</a>
+            <a href="#notice">Own block</a>
+            <a href="/?locale={{ $locale === 'ms' ? 'en' : 'ms' }}">{{ $locale === 'ms' ? 'English' : 'Bahasa Melayu' }}</a>
+            <a href="/?builder=1">Builder view</a>
+        </nav>
+        <x-filament-block-editor::page :sections="$sections" :context="$context" />
+    </body>
 </html>

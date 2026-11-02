@@ -1,0 +1,15 @@
+/*
+ * The public page stylesheet: everything a rendered page needs, and nothing
+ * for the page builder's own screens. Build it into resources/dist/page.css:
+ *
+ *     npx esbuild resources/css/page/index.css --bundle --minify --outfile=resources/dist/page.css
+ *
+ * Plain CSS, no Tailwind. Theme it with the custom properties in tokens.css.
+ */
+@import './tokens.css';
+@import './sections.css';
+@import './layouts.css';
+@import './layouts-more.css';
+@import './styles.css';
+@import './parts.css';
+@import './preview.css';

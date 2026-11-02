@@ -1,0 +1,463 @@
+/*
+ * The shell of every section and the words inside it.
+ * Layouts (layouts.css, layouts-more.css) arrange these parts.
+ */
+
+/* ---------- Free design sections ---------- */
+
+/*
+ * HTML from Rendering\SectionLayoutRenderer inside resources/views/section.blade.php.
+ * The bn-* names come from BlockNote\BlockNoteRenderer.
+ *
+ * Colours and shapes come from the page tokens on .sf-page (tokens.css), so
+ * every layout follows the page's theme. A section sets --sf-words and
+ * --sf-heading for its words; a card, tile or review sets them back, because
+ * it always sits on its own light surface.
+ */
+.sf-rich-section {
+    --sf-words: var(--sf-text);
+    --sf-heading: var(--sf-ink);
+
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+    container-type: inline-size;
+    padding-block: var(--sf-pad);
+    background: var(--sf-surface);
+    color: var(--sf-words);
+}
+
+/* A section of only the app's own blocks: the app's markup decides its
+   colours and background, unless the author picked a colour or photo. */
+.sf-rich-section.sf-own-section:not(.sf-has-bg) {
+    background: none;
+}
+
+.sf-rich-section.sf-own-section:not(.sf-text-color) {
+    color: inherit;
+}
+
+/* Plain sections take turns with a softer band, so the page has a rhythm. */
+.sf-page
+    > [data-block-id]:nth-child(even)
+    > .sf-rich-section:not(
+        .sf-has-bg,
+        .sf-layout-hero,
+        .sf-layout-banner,
+        .sf-layout-product,
+        .sf-layout-poster,
+        .sf-layout-marquee,
+        .sf-own-section
+    ) {
+    background: var(--sf-alt);
+}
+
+.sf-rich-picture,
+.sf-rich-tint {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    width: 100%;
+    height: 100%;
+}
+
+.sf-rich-picture {
+    object-fit: cover;
+}
+
+.sf-rich-tint {
+    background: #0f172a;
+}
+
+.sf-rich-light {
+    --sf-words: rgb(255 255 255 / 0.88);
+    --sf-heading: #ffffff;
+}
+
+.sf-container {
+    position: relative;
+    width: 100%;
+    max-width: 76rem;
+    margin-inline: auto;
+    padding-inline: var(--sf-gutter);
+}
+
+.sf-flush .sf-container {
+    padding-inline: 0;
+}
+
+.sf-body > * + * {
+    margin-top: clamp(1.75rem, 4vw, 3rem);
+}
+
+.sf-rich-card .sf-body {
+    --sf-words: var(--sf-text);
+    --sf-heading: var(--sf-ink);
+
+    max-width: 46rem;
+    margin-inline: auto;
+    padding: clamp(1.5rem, 4vw, 2.75rem);
+    border-radius: var(--sf-radius);
+    background: var(--sf-card);
+    box-shadow: 0 30px 60px -30px rgb(0 0 0 / 0.55);
+}
+
+/* Text before a grid: a centred heading and a line or two. */
+.sf-intro {
+    max-width: 46rem;
+    margin-inline: auto;
+    text-align: center;
+}
+
+/* ---------- Words inside a section ---------- */
+
+.sf-rich {
+    /* The section edge, for items stretched past the text. */
+    --sf-rich-bleed-full: 100cqw;
+
+    color: var(--sf-words);
+    font-size: 1.0625rem;
+    line-height: 1.7;
+    overflow-wrap: break-word;
+}
+
+@media (width >= 48rem) {
+    .sf-rich {
+        font-size: 1.125rem;
+    }
+}
+
+.sf-rich > :first-child,
+.sf-rich .bn-column > :first-child {
+    margin-top: 0;
+}
+
+.sf-rich > :last-child,
+.sf-rich .bn-column > :last-child {
+    margin-bottom: 0;
+}
+
+.sf-rich :is(h1, h2, h3, h4),
+.sf-rich .bn-card-title {
+    font-family: var(--sf-heading-font);
+    font-weight: var(--sf-heading-weight);
+    letter-spacing: var(--sf-heading-tracking);
+    text-transform: var(--sf-heading-case);
+}
+
+.sf-rich :is(h1, h2, h3, h4) {
+    margin: 1.5rem 0 0.75rem;
+    color: var(--sf-heading);
+    line-height: 1.12;
+    text-wrap: balance;
+}
+
+.sf-rich h1 {
+    font-size: clamp(2.25rem, 1.4rem + 3.6vw, 4.25rem);
+    line-height: 1.04;
+}
+
+.sf-rich h2 {
+    font-size: clamp(1.75rem, 1.25rem + 2vw, 2.75rem);
+}
+
+.sf-rich h3 {
+    font-size: clamp(1.2rem, 1.1rem + 0.4vw, 1.4rem);
+    line-height: 1.25;
+}
+
+.sf-rich h4 {
+    font-size: 1.125rem;
+}
+
+.sf-rich p {
+    margin: 0.75rem 0;
+    text-wrap: pretty;
+}
+
+/* The line under a big headline reads as its subtitle. */
+.sf-rich h1 + p {
+    font-size: clamp(1.125rem, 1rem + 0.5vw, 1.375rem);
+}
+
+.sf-rich :is(ul, ol) {
+    margin: 0.75rem 0 0.75rem 1.5rem;
+}
+
+.sf-rich ul {
+    list-style: disc;
+}
+
+.sf-rich ol {
+    list-style: decimal;
+}
+
+.sf-rich li + li {
+    margin-top: 0.35rem;
+}
+
+.sf-rich .bn-checklist {
+    margin-left: 0;
+    list-style: none;
+}
+
+.sf-rich a:not(.bn-button) {
+    color: var(--sf-accent);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.sf-rich-light .sf-rich a:not(.bn-button) {
+    color: #ffffff;
+}
+
+.sf-rich blockquote {
+    margin: 1rem 0;
+    border-left: 4px solid var(--sf-accent);
+    padding-left: 1rem;
+    font-style: italic;
+}
+
+.sf-rich hr {
+    margin: 1.75rem 0;
+    border-color: currentColor;
+    opacity: 0.2;
+}
+
+.sf-rich pre {
+    margin: 1rem 0;
+    overflow-x: auto;
+    border-radius: 0.75rem;
+    background: #f1f5f9;
+    padding: 0.75rem 1rem;
+    color: #0f172a;
+    font-size: 0.875rem;
+}
+
+.sf-rich .bn-indent {
+    margin-left: 1.25rem;
+}
+
+.sf-rich :is(figure, .bn-video-embed, video, audio) {
+    margin: 1.25rem 0;
+}
+
+.sf-rich img {
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--sf-radius);
+}
+
+.sf-rich figcaption {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    opacity: 0.75;
+}
+
+.sf-rich .bn-video-embed {
+    position: relative;
+    overflow: hidden;
+    border-radius: var(--sf-radius);
+    padding-top: 56.25%;
+}
+
+.sf-rich .bn-video-embed iframe {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    border: 0;
+}
+
+.sf-rich video {
+    width: 100%;
+    border-radius: var(--sf-radius);
+}
+
+.sf-rich audio {
+    width: 100%;
+}
+
+.sf-rich .bn-table {
+    margin: 1rem 0;
+    overflow-x: auto;
+}
+
+.sf-rich table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 1rem;
+}
+
+.sf-rich td {
+    border: 1px solid rgb(15 23 42 / 0.12);
+    padding: 0.5rem 0.75rem;
+    vertical-align: top;
+}
+
+.sf-rich .bn-toggle summary {
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.sf-rich .bn-columns {
+    display: flex;
+    gap: clamp(1.5rem, 4vw, 3rem);
+}
+
+.sf-rich .bn-column {
+    flex-basis: 0;
+    flex-shrink: 1;
+    min-width: 0;
+}
+
+/* An item made narrower or wider in the editor. */
+.sf-rich .bn-width {
+    max-width: 100%;
+}
+
+.sf-rich .bn-width[class*='bn-bleed-'] {
+    max-width: none;
+    width: calc(
+        100% + (var(--sf-rich-bleed-full, 100%) - 100%) * var(--bleed, 0)
+    );
+    margin-left: calc(
+        (100% - var(--sf-rich-bleed-full, 100%)) * var(--bleed, 0) / 2
+    );
+}
+
+.sf-rich .bn-bleed-1 {
+    --bleed: 0.1667;
+}
+
+.sf-rich .bn-bleed-2 {
+    --bleed: 0.3333;
+}
+
+.sf-rich .bn-bleed-3 {
+    --bleed: 0.5;
+}
+
+.sf-rich .bn-bleed-4 {
+    --bleed: 0.6667;
+}
+
+.sf-rich .bn-bleed-5 {
+    --bleed: 0.8333;
+}
+
+.sf-rich .bn-bleed-6 {
+    --bleed: 1;
+}
+
+.sf-rich .bn-width[class*='bn-bleed-'] img,
+.sf-rich .bn-width[class*='bn-bleed-'] .bn-video-embed {
+    border-radius: 0;
+}
+
+/* A narrow section is too small to split a row. */
+@container (width < 36rem) {
+    .sf-rich .bn-columns {
+        flex-direction: column;
+        gap: 0;
+    }
+
+    .sf-rich .bn-width:not([class*='bn-bleed-']) {
+        width: 100% !important;
+        margin-left: 0 !important;
+    }
+}
+
+/* A fold-out card. The card stays white with dark text everywhere. */
+.sf-rich .bn-card {
+    margin: 1rem 0;
+    overflow: hidden;
+    border-radius: var(--sf-radius);
+    background: #ffffff;
+    color: #1f2937;
+    box-shadow:
+        0 0 0 1px rgb(15 23 42 / 0.08),
+        0 8px 24px rgb(15 23 42 / 0.12);
+}
+
+.sf-rich .bn-card-head {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 1rem;
+    cursor: pointer;
+    list-style: none;
+    padding: 1rem 1.25rem;
+}
+
+.sf-rich .bn-card-head::-webkit-details-marker {
+    display: none;
+}
+
+.sf-rich .bn-card-has-image {
+    min-height: 9rem;
+}
+
+.sf-rich .bn-card-head .bn-card-image {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    border-radius: 0;
+    object-fit: cover;
+}
+
+.sf-rich .bn-card-has-image::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgb(0 0 0 / 0.7), transparent 65%);
+}
+
+.sf-rich .bn-card-title,
+.sf-rich .bn-card-toggle {
+    position: relative;
+    z-index: 1;
+}
+
+.sf-rich .bn-card-title {
+    color: #111827;
+    font-size: 1.25rem;
+    line-height: 1.2;
+}
+
+.sf-rich .bn-card-has-image .bn-card-title {
+    color: #ffffff;
+    text-shadow: 0 1px 3px rgb(0 0 0 / 0.45);
+}
+
+.sf-rich .bn-card-toggle {
+    flex-shrink: 0;
+    border-radius: 0.5rem;
+    padding: 0.55rem 0.9rem;
+    font-size: 0.75rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    line-height: 1;
+    text-transform: uppercase;
+    white-space: nowrap;
+}
+
+.sf-rich .bn-card[open] .bn-card-show,
+.sf-rich .bn-card:not([open]) .bn-card-hide {
+    display: none;
+}
+
+.sf-rich .bn-card-body {
+    --sf-words: #1f2937;
+    --sf-heading: #111827;
+
+    padding: 0.25rem 1.25rem 1.25rem;
+}
+
+.sf-rich .bn-card-body a {
+    color: var(--sf-accent);
+}
+

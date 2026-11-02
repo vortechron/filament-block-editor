@@ -1,0 +1,184 @@
+/*
+ * A section's own style inside the page editor: heading font, alignment,
+ * word colour, corners and buttons. Mirrors resources/css/page/
+ * styles.css on the attributes rich-editor.tsx sets on .nj-look. Loaded
+ * after section-look.css, and with a doubled .nj-look, so it wins over
+ * the theme's own rules there.
+ */
+
+/* ---------- Heading fonts (app/Enums/SectionFont.php) ---------- */
+
+.nj-look.nj-look[data-font='grotesk'] {
+    --sf-heading-font: var(--font-bricolage-grotesque), system-ui, sans-serif;
+    --sf-heading-weight: 800;
+    --sf-heading-tracking: -0.035em;
+    --sf-heading-case: none;
+}
+
+.nj-look.nj-look[data-font='condensed'] {
+    --sf-heading-font:
+        var(--font-barlow-condensed), 'Arial Narrow', system-ui, sans-serif;
+    --sf-heading-weight: 800;
+    --sf-heading-tracking: -0.005em;
+    --sf-heading-case: uppercase;
+}
+
+.nj-look.nj-look[data-font='serif'] {
+    --sf-heading-font: var(--font-bodoni-moda), 'Didot', Georgia, serif;
+    --sf-heading-weight: 500;
+    --sf-heading-tracking: -0.015em;
+    --sf-heading-case: none;
+}
+
+.nj-look.nj-look[data-font='poster'] {
+    --sf-heading-font: var(--font-anton), Impact, 'Arial Narrow', sans-serif;
+    --sf-heading-weight: 400;
+    --sf-heading-tracking: 0.01em;
+    --sf-heading-case: uppercase;
+}
+
+.nj-look.nj-look[data-font='geometric'] {
+    --sf-heading-font: var(--font-jost), system-ui, sans-serif;
+    --sf-heading-weight: 600;
+    --sf-heading-tracking: -0.025em;
+    --sf-heading-case: none;
+}
+
+.nj-look.nj-look[data-font='mono'] {
+    --sf-heading-font: var(--font-geist-mono), ui-monospace, monospace;
+    --sf-heading-weight: 500;
+    --sf-heading-tracking: -0.045em;
+    --sf-heading-case: none;
+}
+
+/* ---------- Alignment ---------- */
+
+/* Block content is a flex row, so justify-content moves it too. */
+.nj-look[data-align='left'] .bn-editor .bn-block-content {
+    justify-content: flex-start !important;
+    text-align: left !important;
+}
+
+.nj-look[data-align='center'] .bn-editor .bn-block-content {
+    justify-content: center !important;
+    text-align: center !important;
+}
+
+/* The hero's price and button sit side by side as inline blocks. */
+.nj-look[data-align='left'] .bn-editor > .bn-block-group {
+    text-align: left !important;
+}
+
+.nj-look[data-align='center'] .bn-editor > .bn-block-group {
+    text-align: center !important;
+}
+
+/* ---------- Word colour ---------- */
+
+.nj-look.nj-look[data-text-color] .bnk-blocknote {
+    --nj-heading: var(--nj-custom-text);
+    --nj-text: color-mix(in srgb, var(--nj-custom-text) 82%, transparent);
+}
+
+/* ---------- Corners ---------- */
+
+.nj-look.nj-look[data-corners='square'] {
+    --sf-radius: 0px;
+}
+
+.nj-look.nj-look[data-corners='soft'] {
+    --sf-radius: 0.75rem;
+}
+
+.nj-look.nj-look[data-corners='round'] {
+    --sf-radius: 2rem;
+}
+
+.nj-look.nj-look:is(
+        [data-corners='square'],
+        [data-corners='soft'],
+        [data-corners='round']
+    )
+    :is(.nj-button, .nj-price) {
+    border-radius: calc(var(--sf-radius) * 0.6);
+}
+
+.nj-look.nj-look[data-corners='round'] :is(.nj-button, .nj-price) {
+    border-radius: 9999px;
+}
+
+/* ---------- Buttons ---------- */
+
+.nj-look.nj-look:not([data-button='theme']) .nj-button {
+    border: 0;
+    font-family: var(--sf-body-font);
+    font-size: 1.125rem;
+    font-weight: 800;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.nj-look.nj-look[data-button='solid'] .nj-button {
+    border-radius: calc(var(--sf-radius) * 0.5);
+    box-shadow: none;
+}
+
+.nj-look.nj-look[data-button='outline'] .nj-button {
+    border: 2px solid currentColor;
+    border-radius: calc(var(--sf-radius) * 0.5);
+    background: transparent;
+    box-shadow: none;
+    color: var(--nj-heading);
+    font-size: 1rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.nj-look.nj-look[data-button='pill'] .nj-button {
+    border-radius: 9999px;
+    box-shadow: 0 16px 30px -14px var(--accent);
+}
+
+.nj-look.nj-look[data-button='shadow'] .nj-button {
+    border: 2.5px solid var(--sf-ink);
+    border-radius: calc(var(--sf-radius) * 0.4);
+    box-shadow: 6px 6px 0 var(--sf-ink);
+}
+
+/* ---------- Stand-in layouts (section-look-layout.ts) ---------- */
+
+/*
+ * The editor draws some layouts with a stand-in. These keep the colours
+ * the page uses, so the section does not look lighter or darker here.
+ */
+.nj-look.nj-look[data-section-layout='poster']:not([data-text-color])
+    .bnk-blocknote:not(.bnk-blocknote-has-bg):not(
+        :has([data-content-type='image'])
+    ) {
+    --nj-text: color-mix(in srgb, var(--accent-ink) 86%, transparent);
+    --nj-heading: var(--accent-ink);
+
+    background: var(--accent);
+}
+
+.nj-look.nj-look[data-section-layout='poster']
+    .bnk-blocknote:not(.bnk-blocknote-has-bg)::before {
+    display: none;
+}
+
+.nj-look.nj-look[data-section-layout='marquee']:not([data-text-color])
+    .bnk-blocknote:not(.bnk-blocknote-has-bg) {
+    --nj-text: rgb(255 255 255 / 0.85);
+    --nj-heading: #ffffff;
+
+    background: var(--sf-ink);
+}
+
+.nj-look.nj-look[data-section-layout='poster']:not([data-text-color])
+    .bnk-blocknote:not(.bnk-blocknote-has-bg):not(
+        :has([data-content-type='image'])
+    )
+    :is(.nj-button, .nj-price) {
+    background: var(--accent-ink);
+    color: var(--accent);
+}

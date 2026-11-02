@@ -1,6 +1,6 @@
 {
     "name": "vortechron/filament-block-editor",
-    "description": "A Notion-style block editor and page builder for Filament 5: BlockNote content, styled sections, block styles, saved blocks and a media library.",
+    "description": "A page builder for Laravel and Filament 5: BlockNote content in styled sections, rendered to plain HTML and CSS, with your own blocks and section templates.",
     "keywords": [
         "filament",
         "filament-plugin",
@@ -20,9 +20,8 @@
     ],
     "require": {
         "php": "^8.2",
-        "filament/filament": "^5.0",
-        "spatie/laravel-package-tools": "^1.16",
-        "symfony/html-sanitizer": "^7.1|^8.0"
+        "filament/filament": "^5.7",
+        "spatie/laravel-package-tools": "^1.16"
     },
     "require-dev": {
         "laravel/pint": "^1.18",
@@ -31,16 +30,14 @@
     },
     "autoload": {
         "psr-4": {
-            "Vortechron\\FilamentBlockEditor\\": "src/",
-            "Vortechron\\FilamentBlockEditor\\Database\\Factories\\": "database/factories/"
+            "Vortechron\\FilamentBlockEditor\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
             "Vortechron\\FilamentBlockEditor\\Tests\\": "tests/",
             "Workbench\\App\\": "workbench/app/",
-            "Workbench\\Database\\Factories\\": "workbench/database/factories/",
-            "Workbench\\Database\\Seeders\\": "workbench/database/seeders/"
+            "Workbench\\Database\\Factories\\": "workbench/database/factories/"
         }
     },
     "scripts": {

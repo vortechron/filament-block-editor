@@ -1,0 +1,315 @@
+<?php
+
+namespace Vortechron\FilamentBlockEditor\Blocks;
+
+use Illuminate\Support\Str;
+use InvalidArgumentException;
+use Vortechron\FilamentBlockEditor\Support\Urls;
+
+/**
+ * One field of an own block (OwnBlock). The builder draws a form input for
+ * it; clean() enforces its type on the PHP side before the block is drawn.
+ *
+ *     Field::text('heading')->label('Heading')->default('Stationery')
+ *     Field::list('items')->fields([Field::text('name')])->maxItems(6)
+ */
+final class Field
+{
+    public const TYPES = ['text', 'textarea', 'select', 'toggle', 'number', 'image', 'link', 'list'];
+
+    private string $label;
+
+    private mixed $default = null;
+
+    /**
+     * @var list<array{value: string, label: string}>
+     */
+    private array $options = [];
+
+    /**
+     * @var list<Field>
+     */
+    private array $fields = [];
+
+    private ?int $maxItems = null;
+
+    private int|float|null $min = null;
+
+    private int|float|null $max = null;
+
+    private function __construct(public readonly string $name, public readonly string $type)
+    {
+        if (preg_match('/^[A-Za-z0-9_-]+$/', $name) !== 1) {
+            throw new InvalidArgumentException("A field name may only hold letters, digits, dashes and underscores. Got [{$name}].");
+        }
+
+        $this->label = Str::headline($name);
+    }
+
+    public static function text(string $name): self
+    {
+        return new self($name, 'text');
+    }
+
+    public static function textarea(string $name): self
+    {
+        return new self($name, 'textarea');
+    }
+
+    public static function select(string $name): self
+    {
+        return new self($name, 'select');
+    }
+
+    public static function toggle(string $name): self
+    {
+        return new self($name, 'toggle');
+    }
+
+    public static function number(string $name): self
+    {
+        return new self($name, 'number');
+    }
+
+    /**
+     * A picture: a web address or a path on this site, from the builder's upload.
+     */
+    public static function image(string $name): self
+    {
+        return new self($name, 'image');
+    }
+
+    /**
+     * A link, with the same allow-list as the button block: http(s), mailto:,
+     * tel:, "#anchor" and paths on this site.
+     */
+    public static function link(string $name): self
+    {
+        return new self($name, 'link');
+    }
+
+    /**
+     * A repeating group of fields, such as a list of items.
+     */
+    public static function list(string $name): self
+    {
+        return new self($name, 'list');
+    }
+
+    public function label(string $label): self
+    {
+        $this->label = $label;
+
+        return $this;
+    }
+
+    public function default(mixed $default): self
+    {
+        $this->default = $default;
+
+        return $this;
+    }
+
+    /**
+     * The choices of a select: `['value' => 'Label']`, or a list of
+     * `['value' => ..., 'label' => ...]`, or a list of plain strings.
+     *
+     * @param  array<int|string, mixed>  $options
+     */
+    public function options(array $options): self
+    {
+        $this->options = [];
+
+        foreach ($options as $key => $option) {
+            $this->options[] = match (true) {
+                is_array($option) && isset($option['value']) => ['value' => (string) $option['value'], 'label' => (string) ($option['label'] ?? $option['value'])],
+                is_int($key) && is_scalar($option) => ['value' => (string) $option, 'label' => (string) $option],
+                default => ['value' => (string) $key, 'label' => is_scalar($option) ? (string) $option : (string) $key],
+            };
+        }
+
+        return $this;
+    }
+
+    /**
+     * The fields of each item of a list.
+     *
+     * @param  list<Field>  $fields
+     */
+    public function fields(array $fields): self
+    {
+        $this->fields = array_values($fields);
+
+        return $this;
+    }
+
+    public function maxItems(?int $maxItems): self
+    {
+        $this->maxItems = $maxItems;
+
+        return $this;
+    }
+
+    public function min(int|float|null $min): self
+    {
+        $this->min = $min;
+
+        return $this;
+    }
+
+    public function max(int|float|null $max): self
+    {
+        $this->max = $max;
+
+        return $this;
+    }
+
+    /**
+     * What the builder gets for this field.
+     *
+     * @return array<string, mixed>
+     */
+    public function toArray(): array
+    {
+        $default = $this->defaultValue();
+
+        return [
+            'name' => $this->name,
+            'label' => $this->label,
+            'type' => $this->type,
+            ...($this->type === 'select' ? ['options' => $this->options] : []),
+            ...($this->type === 'list' ? ['fields' => array_map(fn (Field $field): array => $field->toArray(), $this->fields)] : []),
+            ...($this->type === 'list' && $this->maxItems !== null ? ['maxItems' => $this->maxItems] : []),
+            ...($this->type === 'number' && $this->min !== null ? ['min' => $this->min] : []),
+            ...($this->type === 'number' && $this->max !== null ? ['max' => $this->max] : []),
+            ...($default !== null ? ['default' => $default] : []),
+        ];
+    }
+
+    /**
+     * The value used when none is given, or none is valid.
+     */
+    public function defaultValue(): mixed
+    {
+        return match ($this->type) {
+            'text', 'textarea' => $this->scalarText($this->default) ?? '',
+            'select' => $this->selectDefault(),
+            'toggle' => filter_var($this->default, FILTER_VALIDATE_BOOLEAN),
+            'number' => $this->clean($this->default, useDefault: false),
+            'image' => Urls::media($this->default),
+            'link' => Urls::link($this->default),
+            'list' => is_array($this->default) ? $this->clean($this->default, useDefault: false) : [],
+        };
+    }
+
+    /**
+     * The value cleaned to this field's type. Anything that does not fit
+     * becomes the field's default.
+     */
+    public function clean(mixed $value, bool $useDefault = true): mixed
+    {
+        $fallback = fn (): mixed => $useDefault ? $this->defaultValue() : null;
+
+        return match ($this->type) {
+            'text', 'textarea' => $this->scalarText($value) ?? $fallback(),
+            'select' => $this->cleanSelect($value) ?? $fallback(),
+            'toggle' => is_bool($value) || is_scalar($value) ? filter_var($value, FILTER_VALIDATE_BOOLEAN) : $fallback(),
+            'number' => $this->cleanNumber($value) ?? $fallback(),
+            'image' => Urls::media($value) ?? $fallback(),
+            'link' => Urls::link($value) ?? $fallback(),
+            'list' => is_array($value) ? $this->cleanList($value) : $fallback(),
+        };
+    }
+
+    private function scalarText(mixed $value): ?string
+    {
+        return is_string($value) ? $value : (is_int($value) || is_float($value) ? (string) $value : null);
+    }
+
+    private function selectDefault(): ?string
+    {
+        $default = $this->cleanSelect($this->default);
+
+        return $default ?? ($this->options[0]['value'] ?? null);
+    }
+
+    private function cleanSelect(mixed $value): ?string
+    {
+        if (! is_string($value) && ! is_int($value)) {
+            return null;
+        }
+
+        foreach ($this->options as $option) {
+            if ($option['value'] === (string) $value) {
+                return $option['value'];
+            }
+        }
+
+        return null;
+    }
+
+    private function cleanNumber(mixed $value): int|float|null
+    {
+        if (! is_numeric($value)) {
+            return null;
+        }
+
+        $number = $value + 0;
+
+        if (is_float($number) && ! is_finite($number)) {
+            return null;
+        }
+
+        if ($this->min !== null) {
+            $number = max($this->min, $number);
+        }
+
+        if ($this->max !== null) {
+            $number = min($this->max, $number);
+        }
+
+        return $number;
+    }
+
+    /**
+     * @param  array<mixed>  $items
+     * @return list<array<string, mixed>>
+     */
+    private function cleanList(array $items): array
+    {
+        $clean = [];
+
+        foreach (array_values($items) as $item) {
+            if ($this->maxItems !== null && count($clean) >= $this->maxItems) {
+                break;
+            }
+
+            if (! is_array($item)) {
+                continue;
+            }
+
+            $clean[] = self::cleanFields($this->fields, $item);
+        }
+
+        return $clean;
+    }
+
+    /**
+     * The values of a group of fields: the declared fields only, in
+     * their order, each cleaned.
+     *
+     * @param  list<Field>  $fields
+     * @param  array<mixed>  $values
+     * @return array<string, mixed>
+     */
+    public static function cleanFields(array $fields, array $values): array
+    {
+        $clean = [];
+
+        foreach ($fields as $field) {
+            $clean[$field->name] = array_key_exists($field->name, $values) ? $field->clean($values[$field->name]) : $field->defaultValue();
+        }
+
+        return $clean;
+    }
+}

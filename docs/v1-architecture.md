@@ -39,7 +39,9 @@ A page is a list of sections. Same shape as NakJual's `SalesPageBlocks`:
         "align": "auto",
         "text_color": null,
         "corners": "theme",
-        "button": "theme"
+        "button": "theme",
+        "anchor": null,
+        "width": "normal"
       }
     }
   ]
@@ -53,6 +55,10 @@ A page is a list of sections. Same shape as NakJual's `SalesPageBlocks`:
   an `http(s)://` URL or a root-relative `/...` URL. `normalize()` drops anything else (`javascript:`,
   `data:`, `//host`). There is no `image_url` field: the renderer uses `image` directly.
 - At most 30 sections (`PageContent::MAX_SECTIONS`).
+- `anchor` (added during the build): optional slug, max 40 characters, printed as `id` on the section so menu
+  links like `#about` jump to it.
+- `width` (added during the build): `normal` or `full`. `full` adds `sf-full`: the section body has no max
+  width and no side padding, so with `padding: none` an own block draws edge to edge with its own markup.
 
 ## Blocks inside a section
 
@@ -72,7 +78,8 @@ these changes:
     opens the item panel with a generated form built from the definition's fields. Unknown kinds show a
     warning card and keep their values.
   - PHP: `Blocks\BlockRegistry::render(kind, values, RenderContext)` renders the definition's Blade view with
-    `$values` (array, defaults applied), `$block` (the raw block) and `$context`. Unknown kind → empty string
+    `$values` (array, defaults applied), `$block` (the raw block) and `$context`. The output is wrapped in
+    `<div class="bn-own-block" data-own-block="{kind}">`. Unknown kind → empty string
     (in builder preview: a `bn-media-empty` style placeholder saying the block is missing).
 
 ## Own blocks (how a host adds its own)

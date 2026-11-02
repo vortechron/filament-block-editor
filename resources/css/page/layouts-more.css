@@ -1,0 +1,687 @@
+/*
+ * The second set of layouts (Enums\SectionLayout): Feature (product),
+ * Poster, Magazine (editorial), Bento, Steps, Big numbers (stats), Compare
+ * and Ticker (marquee). HTML from Rendering\SectionLayoutRenderer.
+ *
+ * Like layouts.css, every colour and shape comes from the page tokens on
+ * .sf-page, so these follow the page's theme and a section's own style
+ * (styles.css). The phone look comes first; @container rules widen it.
+ */
+
+/* ---------- Layout: Feature (Product), a photo beside the details ---------- */
+
+.sf-product-split {
+    display: grid;
+    align-items: start;
+    gap: clamp(1.75rem, 4vw, 4.5rem);
+}
+
+.sf-product-media :is(figure, .bn-video-embed, video, .sf-gallery) {
+    margin: 0;
+}
+
+.sf-product-media :is(.bn-image, .bn-image img) {
+    width: 100% !important;
+}
+
+.sf-product-media img {
+    display: block;
+    aspect-ratio: 1;
+    object-fit: cover;
+}
+
+.sf-product-media :is(img, .bn-video-embed, video, .sf-gallery-track) {
+    border-radius: var(--sf-radius);
+    background: var(--sf-alt);
+}
+
+.sf-product-media .sf-gallery-track img {
+    border-radius: 0;
+}
+
+.sf-product-buy {
+    max-width: 36rem;
+    margin-inline: auto;
+}
+
+/* .sf-page wins over the section's own heading sizes. */
+.sf-page .sf-product-buy :is(h1, h2) {
+    margin-top: 0;
+    font-size: clamp(2rem, 1.4rem + 2.2vw, 3.25rem);
+    line-height: 1.05;
+}
+
+.sf-product-buy h1 + p {
+    font-size: 1.125rem;
+}
+
+/* Points read like a spec list: thin lines, no dots. */
+.sf-product-buy ul {
+    margin: 1.5rem 0;
+    list-style: none;
+    border-top: 1px solid
+        color-mix(in srgb, var(--sf-heading) 12%, transparent);
+}
+
+.sf-product-buy li {
+    margin: 0;
+    padding: 0.8rem 0;
+    border-bottom: 1px solid
+        color-mix(in srgb, var(--sf-heading) 12%, transparent);
+    color: var(--sf-heading);
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.sf-product-buy li + li {
+    margin-top: 0;
+}
+
+.sf-product-buy .bn-button {
+    margin-left: 0;
+}
+
+@container (width >= 56rem) {
+    .sf-product-split {
+        grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
+    }
+
+    .sf-product-split .sf-product-media {
+        position: sticky;
+        top: 1.5rem;
+    }
+
+    .sf-product-split .sf-product-buy {
+        max-width: none;
+        margin: 0;
+        padding-top: 1rem;
+    }
+
+    .sf-product-buy :is(h1, h2, h3, h4, p) {
+        text-align: left !important;
+    }
+}
+
+/* ---------- Layout: Poster, words over a full photo ---------- */
+
+.sf-layout-poster:has(.sf-poster-photo) {
+    display: flex;
+    align-items: flex-end;
+    min-height: min(92svh, 58rem);
+}
+
+.sf-layout-poster:has(.sf-poster-photo)
+    :is(.sf-container, .sf-body, .sf-poster) {
+    position: static;
+}
+
+.sf-poster-media {
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+}
+
+.sf-poster-media
+    :is(
+        figure,
+        .bn-image,
+        .bn-image img,
+        .bn-width,
+        .sf-gallery,
+        .sf-gallery-track,
+        .sf-gallery-track > div,
+        img,
+        video,
+        .bn-video-embed
+    ) {
+    width: 100% !important;
+    height: 100%;
+    margin: 0;
+    border-radius: 0;
+}
+
+.sf-poster-media img {
+    object-fit: cover;
+    aspect-ratio: auto;
+}
+
+.sf-poster-media [data-gallery-controls] {
+    display: none;
+}
+
+.sf-poster-media::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        to top,
+        rgb(0 0 0 / 0.82),
+        rgb(0 0 0 / 0.35) 45%,
+        rgb(0 0 0 / 0.05) 80%
+    );
+}
+
+/*
+ * Dark words were picked for a light photo, so the photo is not
+ * darkened. On a narrow screen the words cover the photo, so a soft fade
+ * of the page colour sits behind them instead.
+ */
+.sf-layout-poster.sf-dark-text .sf-poster-media::after {
+    background: linear-gradient(
+        to top,
+        color-mix(in srgb, var(--sf-surface) 92%, transparent),
+        color-mix(in srgb, var(--sf-surface) 65%, transparent) 50%,
+        transparent 80%
+    );
+}
+
+@container (width >= 56rem) {
+    .sf-layout-poster.sf-dark-text .sf-poster-media::after {
+        display: none;
+    }
+}
+
+.sf-layout-poster:not(.sf-text-color) .sf-poster-photo .sf-poster-copy {
+    --sf-words: rgb(255 255 255 / 0.86);
+    --sf-heading: #ffffff;
+}
+
+.sf-poster-copy {
+    max-width: 50rem;
+}
+
+.sf-page .sf-poster-copy h1 {
+    font-size: clamp(3rem, 1.4rem + 6.5vw, 7.5rem);
+    line-height: 0.92;
+    letter-spacing: calc(var(--sf-heading-tracking) - 0.015em);
+}
+
+/* Without a photo it is a loud band of big words in the page colour. */
+.sf-layout-poster:not(.sf-has-bg):not(:has(.sf-poster-photo)) {
+    --sf-words: color-mix(in srgb, var(--sf-accent-ink) 86%, transparent);
+    --sf-heading: var(--sf-accent-ink);
+
+    background: var(--sf-accent);
+}
+
+.sf-layout-poster:not(.sf-has-bg):not(:has(.sf-poster-photo)) .bn-button-solid {
+    border-color: var(--sf-accent-ink);
+    background: var(--sf-accent-ink);
+    color: var(--sf-accent);
+}
+
+.sf-layout-poster:not(.sf-has-bg):not(:has(.sf-poster-photo)) .bn-button-outline {
+    color: var(--sf-accent-ink);
+}
+
+.sf-layout-poster:not(.sf-has-bg):not(:has(.sf-poster-photo))
+    .sf-rich
+    a:not(.bn-button) {
+    color: inherit;
+}
+
+.sf-poster:not(.sf-poster-photo) .sf-poster-copy {
+    max-width: 64rem;
+    margin-inline: auto;
+    text-align: center;
+}
+
+/* Beside a wide photo the words keep to the left part of it. */
+@container (width >= 56rem) {
+    .sf-poster-photo .sf-poster-copy {
+        max-width: min(48%, 40rem);
+    }
+
+    .sf-page .sf-poster-photo .sf-poster-copy h1 {
+        font-size: clamp(3rem, 1.2rem + 4.2vw, 6rem);
+    }
+}
+
+@container (width >= 40rem) {
+    .sf-poster-copy .bn-button {
+        margin: 2rem 0.75rem 0 0;
+        min-width: 12rem;
+    }
+}
+
+/* ---------- Layout: Magazine ---------- */
+
+.sf-editorial-head > :first-child {
+    padding-top: 1.25rem;
+    border-top: 2px solid var(--sf-heading);
+}
+
+/* A short line before the heading reads as the story's label. */
+.sf-editorial-head p:not(:last-child) {
+    color: var(--sf-accent);
+    font-size: 0.8125rem;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+}
+
+.sf-rich-light .sf-editorial-head p:not(:last-child) {
+    color: inherit;
+}
+
+.sf-page .sf-editorial-head :is(h1, h2) {
+    font-size: clamp(2.25rem, 1.3rem + 3.4vw, 4.5rem);
+    line-height: 1;
+}
+
+.sf-editorial-body {
+    font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.1875rem);
+    line-height: 1.8;
+}
+
+.sf-editorial-body > p:first-child::first-letter {
+    float: left;
+    margin: 0.08em 0.12em 0 0;
+    color: var(--sf-accent);
+    font-family: var(--sf-heading-font);
+    font-size: 4.25em;
+    font-weight: var(--sf-heading-weight);
+    line-height: 0.8;
+}
+
+.sf-rich-light .sf-editorial-body > p:first-child::first-letter {
+    color: inherit;
+}
+
+.sf-editorial-body blockquote {
+    margin: 2rem 0;
+    padding: 1.5rem 0;
+    border-block: 1px solid
+        color-mix(in srgb, var(--sf-heading) 25%, transparent);
+    border-left: 0;
+    color: var(--sf-heading);
+    font-family: var(--sf-heading-font);
+    font-size: clamp(1.5rem, 1.2rem + 1.2vw, 2.25rem);
+    font-style: normal;
+    line-height: 1.2;
+}
+
+.sf-editorial:not(.sf-editorial-split) .sf-editorial-body {
+    max-width: 44rem;
+    margin-inline: auto;
+}
+
+@container (width >= 56rem) {
+    .sf-editorial-split {
+        display: grid;
+        grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+        align-items: start;
+        gap: clamp(3rem, 6vw, 6rem);
+    }
+
+    .sf-editorial-split .sf-editorial-head {
+        position: sticky;
+        top: 2rem;
+    }
+}
+
+/* ---------- Layout: Bento, tiles of mixed sizes ---------- */
+
+.sf-grid-bento {
+    grid-auto-flow: dense;
+}
+
+.sf-bento {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    overflow: hidden;
+    min-height: 11rem;
+    border-radius: var(--sf-radius);
+    padding: clamp(1.5rem, 3vw, 2.25rem);
+}
+
+.sf-bento :is(p, li) {
+    font-size: 1rem;
+}
+
+.sf-bento h3 {
+    margin-top: 0;
+}
+
+/* The first tile is the loudest, in the page colour. */
+.sf-bento:first-child:not(.sf-bento-photo) {
+    --sf-words: color-mix(in srgb, var(--sf-accent-ink) 85%, transparent);
+    --sf-heading: var(--sf-accent-ink);
+
+    border-color: transparent;
+    background: var(--sf-accent);
+}
+
+.sf-page .sf-bento:first-child h3 {
+    font-size: clamp(1.75rem, 1.2rem + 2vw, 2.75rem);
+    line-height: 1.05;
+}
+
+.sf-bento:nth-child(4):not(.sf-bento-photo) {
+    --sf-words: rgb(255 255 255 / 0.8);
+    --sf-heading: #ffffff;
+
+    border-color: transparent;
+    background: var(--sf-ink);
+}
+
+.sf-bento:nth-child(3):not(.sf-bento-photo) {
+    background: var(--sf-accent-tint);
+}
+
+.sf-bento-photo {
+    --sf-words: rgb(255 255 255 / 0.86);
+    --sf-heading: #ffffff;
+
+    min-height: 18rem;
+    border-color: transparent;
+    background: var(--sf-ink);
+}
+
+.sf-bento-media {
+    position: absolute;
+    inset: 0;
+}
+
+.sf-bento-media :is(figure, .bn-image, .bn-width, img) {
+    width: 100% !important;
+    height: 100%;
+    margin: 0;
+    border-radius: 0;
+    object-fit: cover;
+}
+
+.sf-bento-media::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgb(0 0 0 / 0.75), transparent 65%);
+}
+
+.sf-bento-copy {
+    position: relative;
+}
+
+@container (width >= 40rem) {
+    .sf-grid-bento {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .sf-bento:first-child {
+        grid-column: span 2;
+        min-height: 16rem;
+    }
+}
+
+@container (width >= 56rem) {
+    .sf-grid-bento {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-auto-rows: minmax(12rem, auto);
+    }
+
+    .sf-bento:first-child {
+        grid-row: span 2;
+    }
+
+    /* Fill the grid whatever the number of tiles. */
+    .sf-grid-bento:has(> :nth-child(2):last-child) > :nth-child(2),
+    .sf-grid-bento:has(> :nth-child(3):last-child) > :not(:first-child),
+    .sf-bento:nth-child(4):last-child,
+    .sf-bento:nth-child(n + 6) {
+        grid-column: span 2;
+    }
+
+    .sf-grid-bento:has(> :nth-child(2):last-child) > :nth-child(2) {
+        grid-row: span 2;
+    }
+}
+
+/* ---------- Steps, Big numbers and Compare: open items ---------- */
+
+/* These sit on the section itself, so they keep its colours. */
+:is(.sf-step, .sf-stat) {
+    --sf-words: inherit;
+    --sf-heading: inherit;
+
+    border: 0;
+    background: none;
+    box-shadow: none;
+}
+
+/* ---------- Layout: Steps ---------- */
+
+.sf-grid-steps {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+    gap: clamp(1.75rem, 3vw, 2.5rem);
+    counter-reset: sf-step;
+}
+
+.sf-step {
+    counter-increment: sf-step;
+    padding-top: 1.25rem;
+    border-top: 3px solid var(--sf-accent);
+}
+
+.sf-rich-light .sf-step {
+    border-top-color: currentColor;
+}
+
+.sf-step-number::before {
+    content: counter(sf-step, decimal-leading-zero);
+    display: block;
+    margin-bottom: 0.75rem;
+    color: transparent;
+    font-family: var(--sf-heading-font);
+    font-size: clamp(3.25rem, 2.4rem + 3vw, 5.25rem);
+    font-weight: 800;
+    line-height: 1;
+    letter-spacing: -0.04em;
+    -webkit-text-stroke: 1.5px var(--sf-heading);
+}
+
+.sf-step h3 {
+    margin-top: 0;
+}
+
+.sf-step :is(p, li) {
+    font-size: 1rem;
+}
+
+/* ---------- Layout: Big numbers ---------- */
+
+.sf-grid-stats {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+    gap: clamp(1.75rem, 3vw, 3rem);
+}
+
+.sf-stat::before {
+    content: '';
+    display: block;
+    width: 2.5rem;
+    height: 4px;
+    margin-bottom: 1rem;
+    border-radius: 2px;
+    background: var(--sf-accent);
+}
+
+.sf-rich-light .sf-stat::before {
+    background: currentColor;
+}
+
+.sf-align-center .sf-stat::before {
+    margin-inline: auto;
+}
+
+.sf-page .sf-stat h3 {
+    margin: 0 0 0.5rem;
+    font-size: clamp(2.75rem, 1.8rem + 3.6vw, 5.25rem);
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+}
+
+.sf-stat p {
+    margin: 0;
+    font-size: 0.875rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+/* ---------- Layout: Compare ---------- */
+
+.sf-grid-compare {
+    max-width: 64rem;
+    margin-inline: auto;
+}
+
+.sf-compare {
+    border-radius: var(--sf-radius);
+    padding: clamp(1.5rem, 3vw, 2.25rem);
+}
+
+.sf-compare h3 {
+    margin-top: 0;
+}
+
+.sf-compare .sf-tile {
+    padding: 0.75rem 0;
+    border: 0;
+    border-top: 1px solid rgb(15 23 42 / 0.08);
+    border-radius: 0;
+    background: none;
+    box-shadow: none;
+}
+
+.sf-compare-before {
+    --sf-heading: var(--sf-text);
+
+    background: color-mix(in srgb, var(--sf-ink) 4%, var(--sf-card));
+    box-shadow: none;
+}
+
+.sf-compare-before .sf-tile-text {
+    opacity: 0.75;
+}
+
+.sf-compare-after {
+    border: 2px solid var(--sf-accent);
+}
+
+/* Mixed with the ink, so a light page colour (lime, yellow) still reads. */
+.sf-compare-after h3 {
+    color: color-mix(in srgb, var(--sf-accent) 65%, var(--sf-ink));
+}
+
+@container (width >= 40rem) {
+    .sf-grid-compare {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        align-items: center;
+    }
+
+    .sf-compare-after {
+        padding-block: clamp(2rem, 4vw, 3rem);
+    }
+}
+
+/* ---------- Layout: Ticker ---------- */
+
+.sf-layout-marquee {
+    --sf-pad-scale: 0.4;
+
+    padding-block: calc(var(--sf-pad) * var(--sf-pad-scale));
+}
+
+.sf-layout-marquee:not(.sf-has-bg) {
+    --sf-words: rgb(255 255 255 / 0.85);
+    --sf-heading: #ffffff;
+
+    background: var(--sf-ink);
+}
+
+.sf-marquee {
+    overflow: hidden;
+    width: 100cqw;
+    margin-inline: calc(50% - 50cqw);
+    mask-image: linear-gradient(
+        to right,
+        transparent,
+        #000 6%,
+        #000 94%,
+        transparent
+    );
+}
+
+.sf-marquee-track {
+    display: flex;
+    width: max-content;
+    animation: sf-marquee 32s linear infinite;
+}
+
+.sf-marquee:hover .sf-marquee-track {
+    animation-play-state: paused;
+}
+
+.sf-marquee-list {
+    display: flex;
+    gap: 3rem;
+    margin: 0;
+    padding: 0 3rem 0 0;
+    list-style: none;
+}
+
+.sf-marquee-item {
+    display: flex;
+    align-items: center;
+    gap: 3rem;
+    margin: 0;
+    color: var(--sf-heading);
+    font-family: var(--sf-heading-font);
+    font-size: clamp(1.25rem, 1rem + 1.2vw, 2rem);
+    font-weight: var(--sf-heading-weight);
+    letter-spacing: var(--sf-heading-tracking);
+    text-transform: var(--sf-heading-case);
+    white-space: nowrap;
+}
+
+.sf-marquee-item::after {
+    content: '✦';
+    color: var(--sf-accent);
+    font-size: 0.7em;
+}
+
+.sf-rich-light .sf-marquee-item::after,
+.sf-text-color .sf-marquee-item::after {
+    color: inherit;
+    opacity: 0.55;
+}
+
+@keyframes sf-marquee {
+    to {
+        transform: translateX(-50%);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .sf-marquee {
+        mask-image: none;
+    }
+
+    .sf-marquee-track {
+        width: auto;
+        justify-content: center;
+        animation: none;
+    }
+
+    .sf-marquee-list {
+        flex-wrap: wrap;
+        justify-content: center;
+        gap: 0.75rem 2rem;
+        padding: 0 var(--sf-gutter);
+    }
+
+    .sf-marquee-list[aria-hidden='true'] {
+        display: none;
+    }
+}

@@ -1,0 +1,512 @@
+/*
+ * The look of a "Free design" section inside the page editor, so the
+ * BlockNote editor reads like the finished section on the public page.
+ *
+ * It mirrors the public page CSS (resources/css/page: parts.css, sections.css and
+ * layouts.css) on BlockNote's own HTML. The rules in this file and in
+ * section-look-grids.css are the base look, the one that fits a phone:
+ * cards, tiles and reviews stack. section-look-wide.css adds what the page
+ * does on a wider screen. Keep the three in step with the page CSS when
+ * a theme or a layout changes.
+ *
+ * .nj-look wraps the editor (rich-editor.tsx). It carries data-theme,
+ * data-layout and the accent colour variables (accent-tokens.ts). It is a
+ * size container, like .sf-rich-section on the public page, so the width of
+ * the editor canvas (not the browser window) decides which look applies.
+ *
+ * "Top blocks" below are .bn-editor > .bn-block-group > .bn-block-outer.
+ * The page's own blocks sit in .node-button, .node-gallery and
+ * .node-ownBlock wrappers.
+ */
+
+@import './section-look-grids.css';
+@import './section-look-wide.css';
+
+/* ---------- Page tokens, the same as .sf-page ---------- */
+
+.nj-look {
+    container-type: inline-size;
+
+    --sf-ink: #0f172a;
+    --sf-ink-soft: #475569;
+    --sf-surface: #ffffff;
+    --sf-card: #ffffff;
+    --sf-card-line: 1px solid rgb(15 23 42 / 0.08);
+    --sf-card-shadow:
+        0 1px 2px rgb(15 23 42 / 0.04), 0 18px 40px -24px rgb(15 23 42 / 0.3);
+    --sf-radius: 1.25rem;
+    --sf-body-font:
+        system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+        'Noto Sans', sans-serif;
+    --sf-heading-font: inherit;
+    --sf-heading-weight: 800;
+    --sf-heading-tracking: -0.025em;
+    --sf-heading-case: none;
+    --nj-text: var(--sf-ink-soft);
+    --nj-heading: var(--sf-ink);
+}
+
+.nj-look[data-theme='promo'] {
+    --ink: #141414;
+    --flyer: #ffd60a;
+    --sf-ink: var(--ink);
+    --sf-ink-soft: #2b2b2b;
+    --sf-surface: var(--flyer);
+    --sf-card-line: 3px solid var(--ink);
+    --sf-card-shadow: 5px 5px 0 var(--ink);
+    --sf-radius: 0.75rem;
+    --sf-heading-font: var(--font-anton), Impact, 'Arial Narrow', sans-serif;
+    --sf-heading-weight: 400;
+    --sf-heading-tracking: 0.01em;
+    --sf-heading-case: uppercase;
+}
+
+.nj-look[data-theme='elegant'] {
+    --ink: #2d2a32;
+    --ink-soft: #66606b;
+    --sf-ink: var(--ink);
+    --sf-ink-soft: var(--ink-soft);
+    --sf-surface: #fffdfc;
+    --sf-card-line: 1px solid var(--accent-soft);
+    --sf-card-shadow: 0 30px 60px -40px rgb(45 42 50 / 0.4);
+    --sf-radius: 1.75rem;
+    --sf-body-font: var(--font-jost), system-ui, sans-serif;
+    --sf-heading-font: var(--font-bodoni-moda), 'Didot', Georgia, serif;
+    --sf-heading-weight: 500;
+    --sf-heading-tracking: -0.01em;
+}
+
+/* ---------- The section and its words ---------- */
+
+.nj-look .bnk-blocknote:not(.bnk-blocknote-has-bg) {
+    background: var(--sf-surface);
+}
+
+/* White words on a dark colour or a photo, like .sf-rich-light. */
+.nj-look .bnk-blocknote-light-text {
+    --nj-text: rgb(255 255 255 / 0.88);
+    --nj-heading: #ffffff;
+}
+
+.nj-look .bnk-blocknote .bn-editor {
+    color: var(--nj-text);
+    font-family: var(--sf-body-font);
+    font-size: 1.0625rem;
+    line-height: 1.7;
+}
+
+.nj-look .bnk-blocknote:not(.bnk-blocknote-card) .bn-editor {
+    background: transparent;
+}
+
+.nj-look .bn-editor .bn-block-outer {
+    line-height: inherit;
+}
+
+.nj-look[data-theme='elegant'] .bnk-blocknote .bn-editor {
+    line-height: 1.8;
+}
+
+.nj-look .bn-editor .bn-block-content[data-content-type='heading'] {
+    color: var(--nj-heading);
+    font-family: var(--sf-heading-font);
+    letter-spacing: var(--sf-heading-tracking);
+    line-height: 1.12;
+    text-transform: var(--sf-heading-case);
+    text-wrap: balance;
+}
+
+.nj-look
+    .bn-editor
+    .bn-block-outer
+    > .bn-block
+    > .bn-block-content[data-content-type='heading'] {
+    font-weight: var(--sf-heading-weight);
+}
+
+/* BlockNote sizes headings with --level. */
+.nj-look .bn-editor [data-content-type='heading'][data-level='1'] {
+    --level: 2.5rem;
+
+    line-height: 1.04;
+}
+
+.nj-look .bn-editor [data-content-type='heading'][data-level='2'] {
+    --level: 1.875rem;
+}
+
+.nj-look .bn-editor [data-content-type='heading'][data-level='3'] {
+    --level: 1.25rem;
+
+    line-height: 1.25;
+}
+
+.nj-look .bn-editor [data-content-type='heading'][data-level='4'] {
+    --level: 1.125rem;
+}
+
+/* The line under a big headline reads as its subtitle. */
+.nj-look
+    .bn-editor
+    .bn-block-outer:has(
+        > .bn-block > [data-content-type='heading'][data-level='1']
+    )
+    + .bn-block-outer
+    > .bn-block
+    > [data-content-type='paragraph'] {
+    font-size: 1.1875rem;
+}
+
+.nj-look[data-theme='promo']
+    .bn-editor
+    [data-content-type='heading'][data-level='1'] {
+    --level: 3rem;
+
+    line-height: 0.95;
+}
+
+.nj-look[data-theme='promo']
+    .bn-editor
+    [data-content-type='heading'][data-level='2'] {
+    --level: 2.25rem;
+
+    line-height: 1;
+}
+
+.nj-look[data-theme='promo']
+    .bn-editor
+    [data-content-type='heading'][data-level='3'] {
+    --level: 1.45rem;
+
+    line-height: 1.1;
+}
+
+.nj-look[data-theme='elegant']
+    .bn-editor
+    [data-content-type='heading'][data-level='1'] {
+    --level: 2.75rem;
+
+    line-height: 1.08;
+}
+
+/* Elegant centres its section headings, unless the user aligned one. */
+.nj-look[data-theme='elegant'][data-layout='plain']
+    .bn-editor
+    [data-content-type='heading'][data-level='2']:not([data-text-alignment]) {
+    justify-content: center;
+    text-align: center;
+}
+
+/* Help text under the page's own blocks, readable on any section colour. */
+.nj-look .nj-hint {
+    color: var(--nj-text);
+    opacity: 0.75;
+}
+
+/* ---------- Buttons ---------- */
+
+.nj-look .nj-button {
+    min-height: 3.5rem;
+    border-radius: 1rem;
+    background: var(--accent);
+    box-shadow:
+        0 10px 15px -3px color-mix(in srgb, var(--accent) 30%, transparent),
+        0 4px 6px -4px color-mix(in srgb, var(--accent) 30%, transparent);
+    color: var(--accent-ink);
+    font-family: var(--sf-body-font);
+    font-size: 1.125rem;
+    font-weight: 800;
+}
+
+.nj-look .nj-button::placeholder {
+    color: inherit;
+    opacity: 0.8;
+}
+
+/* BlockNote zeroes the padding of every <p>, so it is set here. */
+.nj-look .nj-price {
+    padding: 0.75rem 1.5rem;
+    border-radius: 1rem;
+    background: var(--accent);
+    box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+    color: var(--accent-ink);
+}
+
+.nj-look .nj-price-amount {
+    font-size: 1.875rem;
+    font-weight: 800;
+}
+
+.nj-look[data-theme='promo'] .nj-button {
+    border: 3px solid var(--ink);
+    border-radius: 0.75rem;
+    box-shadow: 5px 5px 0 var(--ink);
+    font-family: var(--font-anton), Impact, 'Arial Narrow', sans-serif;
+    font-size: 1.375rem;
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+/* A round sale sticker. */
+.nj-look[data-theme='promo'] .nj-price {
+    display: inline-grid;
+    place-content: center;
+    width: 6.5rem;
+    aspect-ratio: 1;
+    padding: 0;
+    border: 3px solid var(--ink);
+    border-radius: 9999px;
+    outline: 2px dashed var(--accent-ink);
+    outline-offset: -9px;
+    box-shadow: 3px 3px 0 var(--ink);
+    line-height: 1.1;
+    transform: rotate(10deg);
+}
+
+.nj-look[data-theme='promo'] .nj-price-amount {
+    font-family: var(--font-anton), Impact, 'Arial Narrow', sans-serif;
+    font-size: 1.75rem;
+    font-weight: 400;
+    line-height: 1;
+}
+
+.nj-look[data-theme='promo'] .nj-countdown {
+    background: var(--ink);
+    color: var(--flyer);
+}
+
+.nj-look[data-theme='elegant'] .nj-button {
+    border-radius: 9999px;
+    box-shadow: 0 14px 28px -16px var(--accent);
+    font-size: 1.0625rem;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+}
+
+/* A quiet price card instead of a bold sticker. */
+.nj-look[data-theme='elegant'] .nj-price {
+    border: 1px solid var(--accent-soft);
+    background: #ffffff;
+    box-shadow: 0 18px 36px -24px rgb(45 42 50 / 0.45);
+    color: var(--ink);
+}
+
+.nj-look[data-theme='elegant'] .nj-price-amount {
+    font-family: var(--font-bodoni-moda), 'Didot', Georgia, serif;
+    font-weight: 500;
+}
+
+.nj-look[data-theme='elegant'] .nj-countdown {
+    background: var(--accent-tint);
+    color: var(--ink);
+}
+
+/* ---------- Layout: Hero ---------- */
+
+.nj-look[data-layout='hero'] .bnk-blocknote:not(.bnk-blocknote-has-bg) {
+    position: relative;
+    isolation: isolate;
+    background:
+        radial-gradient(
+            ellipse 75% 65% at 50% -5%,
+            var(--accent-tint),
+            transparent 70%
+        ),
+        var(--sf-surface);
+}
+
+/* A faint grid behind the words, fading out at the edges. */
+.nj-look[data-theme='classic'][data-layout='hero']
+    .bnk-blocknote:not(.bnk-blocknote-has-bg)::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background-image:
+        linear-gradient(rgb(15 23 42 / 0.05) 1px, transparent 1px),
+        linear-gradient(90deg, rgb(15 23 42 / 0.05) 1px, transparent 1px);
+    background-size: 44px 44px;
+    mask-image: radial-gradient(
+        ellipse 65% 75% at 50% 0%,
+        #000 25%,
+        transparent 75%
+    );
+    pointer-events: none;
+}
+
+.nj-look[data-theme='promo'][data-layout='hero']
+    .bnk-blocknote:not(.bnk-blocknote-has-bg) {
+    border-bottom: 3px solid var(--ink);
+    background:
+        repeating-linear-gradient(
+            -45deg,
+            rgb(20 20 20 / 0.05) 0 14px,
+            transparent 14px 28px
+        ),
+        var(--flyer);
+}
+
+.nj-look[data-theme='elegant'][data-layout='hero']
+    .bnk-blocknote:not(.bnk-blocknote-has-bg) {
+    background: linear-gradient(
+        180deg,
+        var(--accent-tint) 0%,
+        var(--sf-surface) 100%
+    );
+}
+
+.nj-look[data-layout='hero']
+    .bn-editor
+    .bn-block-content:not([data-text-alignment]),
+.nj-look[data-layout='banner']
+    .bn-editor
+    .bn-block-content:not([data-text-alignment]),
+.nj-look[data-layout='highlight']
+    .bn-editor
+    .bn-block-content:not([data-text-alignment]) {
+    justify-content: center;
+    text-align: center;
+}
+
+.nj-look[data-layout='hero'] [data-content-type='image'] .bn-visual-media {
+    border-radius: calc(var(--sf-radius) * 1.4);
+    box-shadow: 0 40px 70px -35px rgb(15 23 42 / 0.5);
+}
+
+.nj-look[data-theme='promo'][data-layout='hero']
+    [data-content-type='image']
+    .bn-visual-media {
+    border: 3px solid var(--ink);
+    border-radius: 0.75rem;
+    box-shadow: 8px 8px 0 var(--ink);
+    transform: rotate(-1.5deg);
+}
+
+/* An arch-shaped frame, like a boutique window. */
+.nj-look[data-theme='elegant'][data-layout='hero']
+    [data-content-type='image']
+    .bn-visual-media {
+    border-radius: 999px 999px 1.75rem 1.75rem;
+}
+
+/* ---------- Layout: Banner ---------- */
+
+.nj-look[data-layout='banner'] .bnk-blocknote:not(.bnk-blocknote-has-bg) {
+    --nj-text: var(--accent-ink);
+    --nj-heading: var(--accent-ink);
+
+    background:
+        radial-gradient(
+            ellipse 70% 90% at 50% 130%,
+            rgb(255 255 255 / 0.22),
+            transparent 65%
+        ),
+        var(--accent);
+}
+
+.nj-look[data-theme='promo'][data-layout='banner']
+    .bnk-blocknote:not(.bnk-blocknote-has-bg) {
+    --nj-text: #ffffff;
+    --nj-heading: var(--flyer);
+
+    background: var(--ink);
+}
+
+.nj-look[data-theme='elegant'][data-layout='banner']
+    .bnk-blocknote:not(.bnk-blocknote-has-bg) {
+    --nj-text: rgb(255 255 255 / 0.82);
+    --nj-heading: #ffffff;
+
+    background:
+        radial-gradient(
+            ellipse 70% 90% at 50% 130%,
+            var(--accent),
+            transparent 70%
+        ),
+        var(--ink);
+}
+
+.nj-look[data-layout='banner']
+    .bn-editor
+    [data-content-type='heading'][data-level='2'] {
+    --level: 2.25rem;
+}
+
+/* On the page colour, the button and price swap colours to stand out. */
+.nj-look[data-layout='banner']
+    .bnk-blocknote:not(.bnk-blocknote-has-bg)
+    :is(.nj-button, .nj-price) {
+    background: var(--accent-ink);
+    box-shadow: 0 18px 40px -18px rgb(0 0 0 / 0.55);
+    color: var(--accent);
+}
+
+.nj-look[data-theme='promo'][data-layout='banner']
+    .bnk-blocknote:not(.bnk-blocknote-has-bg)
+    :is(.nj-button, .nj-price) {
+    border-color: var(--flyer);
+    background: var(--accent);
+    box-shadow: 5px 5px 0 var(--flyer);
+    color: var(--accent-ink);
+}
+
+.nj-look[data-theme='elegant'][data-layout='banner']
+    .bnk-blocknote:not(.bnk-blocknote-has-bg)
+    :is(.nj-button, .nj-price) {
+    background: var(--accent);
+    color: var(--accent-ink);
+}
+
+/* ---------- Layout: Highlight ---------- */
+
+.nj-look[data-layout='highlight'] .bnk-blocknote .bn-editor {
+    --nj-text: var(--sf-ink-soft);
+    --nj-heading: var(--sf-ink);
+
+    max-width: 46rem;
+    padding-block: 2.25rem;
+    border: var(--sf-card-line);
+    border-top: 6px solid var(--accent);
+    border-radius: calc(var(--sf-radius) * 1.4);
+    background: var(--sf-card);
+    box-shadow:
+        0 50px 90px -50px rgb(15 23 42 / 0.45),
+        var(--sf-card-shadow);
+}
+
+.nj-look[data-theme='promo'][data-layout='highlight']
+    .bnk-blocknote
+    .bn-editor {
+    border-top: var(--sf-card-line);
+    box-shadow: 8px 8px 0 var(--ink);
+    outline: 2px dashed var(--ink);
+    outline-offset: -14px;
+}
+
+.nj-look[data-theme='elegant'][data-layout='highlight']
+    .bnk-blocknote
+    .bn-editor {
+    border-top: var(--sf-card-line);
+    outline: 1px solid var(--accent-soft);
+    outline-offset: -10px;
+}
+
+.nj-look[data-layout='highlight'] .nj-price-amount {
+    font-size: 2.25rem;
+}
+
+/* ---------- The words in the page builder's sidebar ---------- */
+
+/*
+ * The sidebar is narrow, and the page beside it shows the real sizes, so
+ * headings there are smaller than the section look's own.
+ */
+.nj-look.nj-words {
+    --nj-h1: 1.75rem;
+    --nj-h1-lh: 1.15;
+    --nj-h1-split: 1.75rem;
+    --nj-h2: 1.4rem;
+    --nj-h3: 1.15rem;
+}

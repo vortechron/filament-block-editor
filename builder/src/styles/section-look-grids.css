@@ -1,0 +1,587 @@
+/*
+ * The grid layouts of a "Free design" section inside the page editor:
+ * Cards, Ticks, Reviews and FAQ. Part of section-look.css, which explains
+ * how the editor mirrors the public page.
+ *
+ * The public page groups the top blocks into items in
+ * Rendering\SectionLayoutRenderer. BlockNote keeps every block
+ * separate, so the rules below find the same items with :has() and
+ * sibling selectors, and draw one item across its blocks.
+ */
+
+/* ---------- Grids: the words before the first item are centred ---------- */
+
+.nj-look[data-layout='cards']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:not(
+        :has(> .bn-block > [data-content-type='heading'][data-level='3']),
+        .bn-block-outer:has(
+                > .bn-block > [data-content-type='heading'][data-level='3']
+            )
+            ~ .bn-block-outer
+    )
+    > .bn-block
+    > .bn-block-content:not([data-text-alignment]),
+.nj-look[data-layout='ticks']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:not(
+        :has(
+            > .bn-block
+                > :is(
+                    [data-content-type='bulletListItem'],
+                    [data-content-type='numberedListItem'],
+                    [data-content-type='checkListItem']
+                )
+        ),
+        .bn-block-outer:has(
+                > .bn-block
+                    > :is(
+                        [data-content-type='bulletListItem'],
+                        [data-content-type='numberedListItem'],
+                        [data-content-type='checkListItem']
+                    )
+            )
+            ~ .bn-block-outer
+    )
+    > .bn-block
+    > .bn-block-content:not([data-text-alignment]),
+.nj-look[data-layout='reviews']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:not(
+        :has(> .bn-block > [data-content-type='quote']),
+        .bn-block-outer:has(> .bn-block > [data-content-type='quote'])
+            ~ .bn-block-outer
+    )
+    > .bn-block
+    > .bn-block-content:not([data-text-alignment]),
+.nj-look[data-layout='faq']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:not(
+        :has(> .bn-block > [data-content-type='toggleListItem']),
+        .bn-block-outer:has(> .bn-block > [data-content-type='toggleListItem'])
+            ~ .bn-block-outer
+    )
+    > .bn-block
+    > .bn-block-content:not([data-text-alignment]) {
+    justify-content: center;
+    text-align: center;
+}
+
+/* ---------- Layout: Cards ---------- */
+
+/*
+ * Each Heading 3 starts a card. The blocks under it stay in the card, up
+ * to the next big heading (1 to 3) or a sales block, the same split as
+ * SectionLayoutRenderer::segments().
+ */
+.nj-look[data-layout='cards'] .bn-editor > .bn-block-group {
+    counter-reset: nj-card;
+}
+
+.nj-look[data-layout='cards']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:has(
+        > .bn-block > [data-content-type='heading'][data-level='3']
+    ) {
+    counter-increment: nj-card;
+}
+
+/* The card's top: the heading and its number. */
+.nj-look[data-layout='cards']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:has(
+        > .bn-block > [data-content-type='heading'][data-level='3']
+    )
+    > .bn-block {
+    --nj-heading: var(--sf-ink);
+
+    margin-top: 1rem;
+    padding: 1.5rem 1.5rem 0.25rem;
+    border: var(--sf-card-line);
+    border-bottom: 0;
+    border-radius: var(--sf-radius) var(--sf-radius) 0 0;
+    background: var(--sf-card);
+    color: var(--sf-ink-soft);
+}
+
+.nj-look[data-layout='cards']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:has(
+        > .bn-block > [data-content-type='heading'][data-level='3']
+    )
+    > .bn-block::before {
+    content: counter(nj-card, decimal-leading-zero);
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    margin-bottom: 0.75rem;
+    border-radius: 0.875rem;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-family: var(--sf-body-font);
+    font-size: 0.9375rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+/* The card's middle: the blocks under the heading. */
+.nj-look[data-layout='cards']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:has(
+        > .bn-block > [data-content-type='heading'][data-level='3']
+    )
+    ~ .bn-block-outer:not(
+        :has(
+            > .bn-block
+                > [data-content-type='heading']:is(
+                    [data-level='1'],
+                    [data-level='2'],
+                    [data-level='3']
+                ),
+            > .bn-block
+                > :is(.node-button, .node-priceTag, .node-countdown)
+        ),
+        .bn-block-outer:has(
+                > .bn-block
+                    > [data-content-type='heading']:is(
+                        [data-level='1'],
+                        [data-level='2']
+                    ),
+                > .bn-block
+                    > :is(.node-button, .node-priceTag, .node-countdown)
+            )
+            ~ .bn-block-outer
+    )
+    > .bn-block,
+.nj-look[data-layout='cards']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:has(
+        > .bn-block
+            > [data-content-type='heading']:is(
+                [data-level='1'],
+                [data-level='2']
+            ),
+        > .bn-block > :is(.node-button, .node-priceTag, .node-countdown)
+    )
+    ~ .bn-block-outer:has(
+        > .bn-block > [data-content-type='heading'][data-level='3']
+    )
+    ~ .bn-block-outer:not(
+        :has(
+            > .bn-block
+                > [data-content-type='heading']:is(
+                    [data-level='1'],
+                    [data-level='2'],
+                    [data-level='3']
+                ),
+            > .bn-block
+                > :is(.node-button, .node-priceTag, .node-countdown)
+        )
+    )
+    > .bn-block {
+    --nj-heading: var(--sf-ink);
+
+    padding-inline: 1.5rem;
+    border-inline: var(--sf-card-line);
+    background: var(--sf-card);
+    color: var(--sf-ink-soft);
+    font-size: 1rem;
+}
+
+/* The card's bottom: a card block with no card block right after it. */
+.nj-look[data-layout='cards']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:has(
+        > .bn-block > [data-content-type='heading'][data-level='3']
+    ):not(
+        :has(
+            + .bn-block-outer
+                > .bn-block
+                > :is(
+                    .bn-block-content:not(
+                        [data-content-type='heading']:is(
+                            [data-level='1'],
+                            [data-level='2'],
+                            [data-level='3']
+                        )
+                    ),
+                    .react-renderer:not(
+                        .node-button,
+                        .node-priceTag,
+                        .node-countdown
+                    )
+                )
+        )
+    )
+    > .bn-block,
+.nj-look[data-layout='cards']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:has(
+        > .bn-block > [data-content-type='heading'][data-level='3']
+    )
+    ~ .bn-block-outer:not(
+        :has(
+            > .bn-block
+                > [data-content-type='heading']:is(
+                    [data-level='1'],
+                    [data-level='2'],
+                    [data-level='3']
+                ),
+            > .bn-block
+                > :is(.node-button, .node-priceTag, .node-countdown)
+        )
+    ):not(
+        .bn-block-outer:has(
+                > .bn-block
+                    > [data-content-type='heading']:is(
+                        [data-level='1'],
+                        [data-level='2']
+                    ),
+                > .bn-block
+                    > :is(.node-button, .node-priceTag, .node-countdown)
+            )
+            ~ .bn-block-outer
+    ):not(
+        :has(
+            + .bn-block-outer
+                > .bn-block
+                > :is(
+                    .bn-block-content:not(
+                        [data-content-type='heading']:is(
+                            [data-level='1'],
+                            [data-level='2'],
+                            [data-level='3']
+                        )
+                    ),
+                    .react-renderer:not(
+                        .node-button,
+                        .node-priceTag,
+                        .node-countdown
+                    )
+                )
+        )
+    )
+    > .bn-block,
+.nj-look[data-layout='cards']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:has(
+        > .bn-block
+            > [data-content-type='heading']:is(
+                [data-level='1'],
+                [data-level='2']
+            ),
+        > .bn-block > :is(.node-button, .node-priceTag, .node-countdown)
+    )
+    ~ .bn-block-outer:has(
+        > .bn-block > [data-content-type='heading'][data-level='3']
+    )
+    ~ .bn-block-outer:not(
+        :has(
+            > .bn-block
+                > [data-content-type='heading']:is(
+                    [data-level='1'],
+                    [data-level='2'],
+                    [data-level='3']
+                ),
+            > .bn-block
+                > :is(.node-button, .node-priceTag, .node-countdown)
+        )
+    ):not(
+        :has(
+            + .bn-block-outer
+                > .bn-block
+                > :is(
+                    .bn-block-content:not(
+                        [data-content-type='heading']:is(
+                            [data-level='1'],
+                            [data-level='2'],
+                            [data-level='3']
+                        )
+                    ),
+                    .react-renderer:not(
+                        .node-button,
+                        .node-priceTag,
+                        .node-countdown
+                    )
+                )
+        )
+    )
+    > .bn-block {
+    margin-bottom: 0.25rem;
+    padding-bottom: 1.5rem;
+    border-bottom: var(--sf-card-line);
+    border-radius: 0 0 var(--sf-radius) var(--sf-radius);
+}
+
+.nj-look[data-theme='promo'][data-layout='cards']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:has(
+        > .bn-block > [data-content-type='heading'][data-level='3']
+    )
+    > .bn-block::before {
+    border: 2px solid var(--ink);
+    border-radius: 0.5rem;
+    font-family: var(--font-anton), Impact, 'Arial Narrow', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 400;
+}
+
+.nj-look[data-theme='elegant'][data-layout='cards']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:has(
+        > .bn-block > [data-content-type='heading'][data-level='3']
+    )
+    > .bn-block::before {
+    margin-inline: auto;
+    border: 1px solid var(--accent);
+    border-radius: 9999px;
+    background: transparent;
+    color: var(--ink);
+    font-family: var(--font-bodoni-moda), 'Didot', Georgia, serif;
+    font-size: 1.125rem;
+    font-weight: 500;
+}
+
+/* Elegant centres a card's heading and the line under it. */
+.nj-look[data-theme='elegant'][data-layout='cards']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:has(
+        > .bn-block > [data-content-type='heading'][data-level='3']
+    )
+    > .bn-block
+    > .bn-block-content:not([data-text-alignment]),
+.nj-look[data-theme='elegant'][data-layout='cards']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:has(
+        > .bn-block > [data-content-type='heading'][data-level='3']
+    )
+    + .bn-block-outer
+    > .bn-block
+    > [data-content-type='paragraph']:not([data-text-alignment]) {
+    justify-content: center;
+    text-align: center;
+}
+
+/* ---------- Layout: Ticks ---------- */
+
+/* Each list item is a tile. A typed ✅ or ❌ shows as its mark. */
+.nj-look[data-layout='ticks'] .bn-editor > .bn-block-group {
+    counter-reset: nj-tile;
+}
+
+.nj-look[data-layout='ticks']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:has(
+        > .bn-block
+            > :is(
+                [data-content-type='bulletListItem'],
+                [data-content-type='numberedListItem'],
+                [data-content-type='checkListItem']
+            )
+    ) {
+    counter-increment: nj-tile;
+}
+
+.nj-look[data-layout='ticks']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:has(
+        > .bn-block
+            > :is(
+                [data-content-type='bulletListItem'],
+                [data-content-type='numberedListItem'],
+                [data-content-type='checkListItem']
+            )
+    )
+    > .bn-block {
+    --nj-heading: var(--sf-ink);
+
+    margin-block: 0.4375rem;
+    padding: 0.875rem 1.25rem;
+    border: var(--sf-card-line);
+    border-radius: calc(var(--sf-radius) * 0.8);
+    background: var(--sf-card);
+    box-shadow: var(--sf-card-shadow);
+    color: var(--sf-ink);
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.55;
+}
+
+.nj-look[data-layout='ticks']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer
+    > .bn-block
+    > .bn-block-content[data-content-type='bulletListItem']::before {
+    display: none;
+}
+
+.nj-look[data-layout='ticks']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer
+    > .bn-block
+    > .bn-block-content[data-content-type='numberedListItem']::before {
+    content: counter(nj-tile);
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 1.875rem;
+    min-width: 0;
+    height: 1.875rem;
+    margin-right: 0.875rem;
+    padding: 0;
+    border-radius: 9999px;
+    background: var(--accent);
+    color: var(--accent-ink);
+    font-size: 0.9375rem;
+    font-weight: 800;
+    line-height: 1;
+}
+
+.nj-look[data-theme='promo'][data-layout='ticks']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer
+    > .bn-block
+    > .bn-block-content[data-content-type='numberedListItem']::before {
+    border: 2px solid var(--ink);
+}
+
+/* ---------- Layout: Reviews ---------- */
+
+/* Each quote is a review card. The line under it is the stars and name. */
+.nj-look[data-layout='reviews']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:has(> .bn-block > [data-content-type='quote'])
+    > .bn-block {
+    --nj-heading: var(--sf-ink);
+
+    position: relative;
+    margin-top: 1rem;
+    padding: 1.5rem 1.5rem 1.25rem;
+    border: var(--sf-card-line);
+    border-radius: var(--sf-radius);
+    background: var(--sf-card);
+    box-shadow: var(--sf-card-shadow);
+    color: var(--sf-ink);
+}
+
+.nj-look[data-layout='reviews']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:has(> .bn-block > [data-content-type='quote'])
+    > .bn-block::after {
+    content: '\201C';
+    position: absolute;
+    top: 0.5rem;
+    right: 1.25rem;
+    color: var(--accent);
+    font:
+        700 5rem/1 Georgia,
+        serif;
+    opacity: 0.2;
+    pointer-events: none;
+}
+
+.nj-look[data-layout='reviews'] [data-content-type='quote'] blockquote {
+    padding-left: 0;
+    border-left: 0;
+    color: inherit;
+    font-size: 1.0625rem;
+    line-height: 1.65;
+}
+
+.nj-look[data-layout='reviews']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:has(> .bn-block > [data-content-type='quote']):has(
+        + .bn-block-outer > .bn-block > [data-content-type='paragraph']
+    )
+    > .bn-block {
+    padding-bottom: 0.5rem;
+    border-bottom: 0;
+    border-radius: var(--sf-radius) var(--sf-radius) 0 0;
+    box-shadow: none;
+}
+
+.nj-look[data-layout='reviews']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:has(> .bn-block > [data-content-type='quote'])
+    + .bn-block-outer:has(> .bn-block > [data-content-type='paragraph'])
+    > .bn-block {
+    padding: 0.25rem 1.5rem 1.5rem;
+    border: var(--sf-card-line);
+    border-top: 0;
+    border-radius: 0 0 var(--sf-radius) var(--sf-radius);
+    background: var(--sf-card);
+    color: var(--sf-ink);
+    font-size: 0.9375rem;
+    font-weight: 700;
+}
+
+.nj-look[data-theme='promo'][data-layout='reviews']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:has(> .bn-block > [data-content-type='quote'])
+    > .bn-block::after {
+    color: var(--ink);
+    opacity: 0.12;
+}
+
+.nj-look[data-theme='elegant'][data-layout='reviews']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:has(> .bn-block > [data-content-type='quote'])
+    > .bn-block::after {
+    font-family: var(--font-bodoni-moda), 'Didot', Georgia, serif;
+}
+
+/* ---------- Layout: FAQ ---------- */
+
+/* Each toggle is a question row. Its answer opens inside it. */
+.nj-look[data-layout='faq']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:has(
+        > .bn-block > [data-content-type='toggleListItem'],
+        > .bn-block > [data-content-type='heading'] .bn-toggle-wrapper
+    )
+    > .bn-block {
+    --nj-heading: var(--sf-ink);
+
+    margin-block: 0.375rem;
+    padding: 0.75rem 1rem;
+    border: var(--sf-card-line);
+    border-radius: calc(var(--sf-radius) * 0.8);
+    background: var(--sf-card);
+    box-shadow: var(--sf-card-shadow);
+    color: var(--sf-ink-soft);
+    font-size: 1rem;
+}
+
+.nj-look[data-layout='faq'] .bn-editor [data-content-type='toggleListItem'] {
+    color: var(--sf-ink);
+    font-size: 1.0625rem;
+}

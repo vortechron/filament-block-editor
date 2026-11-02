@@ -2,26 +2,30 @@
 
 namespace Workbench\App\Providers;
 
-use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\ServiceProvider;
-use Vortechron\FilamentBlockEditor\PageSections;
+use Vortechron\FilamentBlockEditor\Blocks\BlockRegistry;
+use Vortechron\FilamentBlockEditor\Blocks\Field;
+use Vortechron\FilamentBlockEditor\Blocks\OwnBlock;
 
 class WorkbenchServiceProvider extends ServiceProvider
 {
     public function boot(): void
     {
-        // Demo only: link uploads by path, so they load on whatever address
-        // the demo is opened from (localhost, a tailnet name, ...).
-        config(['filesystems.disks.public.url' => '/storage']);
-
         $this->loadViewsFrom(__DIR__.'/../../resources/views', 'workbench');
 
-        PageSections::register(
-            'contact',
-            'Contact form',
-            'workbench::sections.contact',
-            Heroicon::OutlinedEnvelope,
-            'The contact form, drawn by the page.',
+        // A demo own block, so the sample page shows how a host draws its own markup.
+        $this->app->make(BlockRegistry::class)->register(
+            OwnBlock::make('notice')
+                ->label('Notice')
+                ->icon('megaphone')
+                ->description('A coloured note with a title and a link.')
+                ->fields([
+                    Field::text('title')->label('Title')->default('Good to know'),
+                    Field::textarea('text')->label('Text'),
+                    Field::select('tone')->label('Tone')->options(['info' => 'Info', 'warning' => 'Warning'])->default('info'),
+                    Field::link('link')->label('Link'),
+                ])
+                ->view('workbench::blocks.notice'),
         );
     }
 }

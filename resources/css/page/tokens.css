@@ -1,0 +1,125 @@
+/*
+ * Page tokens: the custom properties a page reads. Every one has a default,
+ * so the page looks right with no setup. To theme a page, set any of them in
+ * your own CSS after this file, on `:root`, on `.sf-page`, or in the
+ * `style` attribute of the page wrapper:
+ *
+ *     .sf-page { --sf-accent: #16a34a; --sf-radius: 0.5rem; }
+ *
+ * Colours
+ *   --sf-accent        the brand colour: buttons, numbers, links, bands
+ *   --sf-accent-ink    text on the accent colour (white by default)
+ *   --sf-accent-tint   a pale accent for backgrounds (10% accent by default)
+ *   --sf-accent-soft   a light accent for thin borders (30% accent by default)
+ *   --sf-ink           headings and strong text
+ *   --sf-text          body text
+ *   --sf-surface       the page and section background
+ *   --sf-alt           the softer band every second plain section takes
+ *   --sf-card          the background of cards, tiles and reviews
+ *   --sf-card-line     the border of a card (a full `border` value)
+ *   --sf-card-shadow   the shadow of a card
+ *
+ * Shape and space
+ *   --sf-radius        corner radius of cards, photos and buttons
+ *   --sf-gutter        space between the section text and the screen edge
+ *
+ * Type
+ *   --sf-body-font          the body font (a font-family list)
+ *   --sf-heading-font       the heading font; `inherit` follows the body font
+ *   --sf-heading-weight     heading weight
+ *   --sf-heading-tracking   heading letter spacing
+ *   --sf-heading-case       `none` or `uppercase`
+ *   --font-{alias}          the font behind a section's heading font choice:
+ *                           --font-bricolage-grotesque, --font-barlow-condensed,
+ *                           --font-bodoni-moda, --font-anton, --font-jost and
+ *                           --font-geist-mono. Load the web font yourself.
+ *
+ * Inside a section the stylesheet sets the working tokens --sf-words and
+ * --sf-heading (the colours of that section's words). Do not set those.
+ */
+:root {
+    --sf-accent: #2563eb;
+    --sf-accent-ink: #ffffff;
+    --sf-ink: #0f172a;
+    --sf-text: #475569;
+    --sf-surface: #ffffff;
+    --sf-alt: #f8fafc;
+    --sf-card: #ffffff;
+    --sf-card-line: 1px solid rgb(15 23 42 / 0.08);
+    --sf-card-shadow:
+        0 1px 2px rgb(15 23 42 / 0.04), 0 18px 40px -24px rgb(15 23 42 / 0.3);
+    --sf-radius: 1.25rem;
+    --sf-gutter: clamp(1.25rem, 4vw, 2.5rem);
+    --sf-body-font:
+        system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial,
+        'Noto Sans', sans-serif;
+    --sf-heading-font: inherit;
+    --sf-heading-weight: 800;
+    --sf-heading-tracking: -0.025em;
+    --sf-heading-case: none;
+}
+
+/*
+ * Tints are worked out from the accent of the page they sit on, so setting
+ * --sf-accent on .sf-page is enough. They are not on :root, because a
+ * variable that uses var() keeps the value it had where it was written.
+ */
+:where(.sf-page) {
+    --sf-accent-tint: color-mix(in srgb, var(--sf-accent) 10%, white);
+    --sf-accent-soft: color-mix(in srgb, var(--sf-accent) 30%, white);
+
+    color: var(--sf-ink);
+    font-family: var(--sf-body-font);
+}
+
+/*
+ * A small reset, only inside the page, so the section CSS does not depend on
+ * the host's own base styles. Zero specificity: any rule after it wins.
+ */
+:where(.sf-page),
+:where(.sf-page) :where(*, ::before, ::after) {
+    box-sizing: border-box;
+}
+
+:where(.sf-page) :where(h1, h2, h3, h4, h5, h6) {
+    font-size: inherit;
+    font-weight: inherit;
+}
+
+:where(.sf-page)
+    :where(h1, h2, h3, h4, h5, h6, p, figure, blockquote, pre, hr, ul, ol) {
+    margin: 0;
+}
+
+:where(.sf-page) :where(ul, ol) {
+    padding: 0;
+}
+
+:where(.sf-page) :where(img, video, audio, iframe, canvas) {
+    display: block;
+}
+
+:where(.sf-page) :where(img, video) {
+    max-width: 100%;
+    height: auto;
+}
+
+:where(.sf-page) :where(hr) {
+    height: 0;
+    border: 0;
+    border-top: 1px solid;
+}
+
+:where(.sf-page) :where(a) {
+    color: inherit;
+    text-decoration: inherit;
+}
+
+:where(.sf-page) :where(button) {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: inherit;
+    font: inherit;
+    cursor: pointer;
+}

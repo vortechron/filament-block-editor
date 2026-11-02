@@ -1,222 +1,183 @@
-# Filament Block Editor
+# Block Editor
 
-A Notion-style block editor and page builder for **Filament 5**.
+A visual page builder, like a small Elementor, that works in any web app and plugs into **Filament 5**.
 
-Build web pages out of full-width sections. Each section is a [BlockNote](https://www.blocknotejs.org) document that already wears its background, padding and width while you edit it, so the form looks like the finished page.
+The client builds pages from sections. They pick ready-made sections, type straight into the page, drag things
+around, and see the real page in a live frame on desktop or phone width. You keep control of the design: your
+own CSS themes the page, and your own blocks draw the parts of the design that must not break.
 
-- **Block editor field** – headings, lists, quotes, code, tables, images, video (YouTube, Vimeo, Loom or a file), audio, files, two and three columns, fold-out cards, spacers, per-item width and spacing, and a font picker.
-- **Page builder field** – a list of sections with a "+" menu above and below: blank block, ready-made designs, saved blocks, media, or one of your page's own sections (a contact form, a pricing table).
-- **Style sheet** – per section: colour, image or looping video background, tint, blur, position, background card, content width, full screen height, padding and spacing. Every change shows in the editor straight away.
-- **Block styles** – save a look once and let many blocks follow it. Change one setting on a block and only that setting stops following.
-- **Saved blocks** – save any section to the library and reuse it on any page.
-- **Media library** – upload once, reuse everywhere. A file still in use cannot be deleted.
-- **Public rendering** – safe, sanitised HTML from PHP. No JavaScript needed on the public page.
-- **Teams** – in a panel with tenancy, every tenant gets its own library. Without tenancy, the app shares one.
+It started as the page builder of [NakJual](https://nakjual.com) and is made generic here.
+
+- **Builder (JavaScript):** `mountPageBuilder(element, options)`. No framework needed: it talks to your app only
+  through an adapter with three calls (save, preview, upload). React is bundled inside.
+- **Content (PHP, Laravel):** cleans the page value, draws it as HTML with Blade, ready-made section templates,
+  and an own-block registry.
+- **Filament:** one trait turns any Filament page into the full-screen builder.
 
 ## Requirements
 
-- PHP 8.2+
-- Laravel 11.28+
-- Filament 5
+- PHP 8.3+, Laravel 11+ (the content layer)
+- Filament 5 (the Filament layer only)
+- No Node in your app: the builder is shipped prebuilt in `resources/dist/`.
 
-## Installation
+## Install
 
 ```bash
-composer require vortechron/filament-block-editor
-php artisan migrate
-php artisan filament:assets
-php artisan storage:link
+composer config repositories.vortechron-block-editor vcs https://github.com/vortechron/filament-block-editor.git
+composer require vortechron/filament-block-editor:^1.0
+php artisan filament:assets   # with Filament
+# or, without Filament:
+php artisan vendor:publish --tag=filament-block-editor-assets
 ```
 
-The package runs its own migrations. It creates four tables: `block_editor_blocks`, `block_editor_saved_blocks`, `block_editor_styles` and `block_editor_media`.
+## Show a page
 
-Add the plugin to every panel that uses the editor:
-
-```php
-use Vortechron\FilamentBlockEditor\FilamentBlockEditorPlugin;
-
-public function panel(Panel $panel): Panel
-{
-    return $panel
-        // ...
-        ->plugin(FilamentBlockEditorPlugin::make());
-}
-```
-
-The plugin adds three screens under a **Content** navigation group (Saved Blocks, Block Styles, Media), and the upload routes the editor uses. Those routes sit behind the panel's own sign-in and tenant checks.
-
-## A page made of sections
-
-Add the trait to the model that owns the page:
-
-```php
-use Vortechron\FilamentBlockEditor\Models\Concerns\HasContentBlocks;
-
-class Page extends Model
-{
-    use HasContentBlocks;
-}
-```
-
-Add the field to its form:
-
-```php
-use Vortechron\FilamentBlockEditor\Forms\Components\BlockSections;
-
-public static function form(Schema $schema): Schema
-{
-    return $schema->components([
-        TextInput::make('title'),
-        BlockSections::make(), // edits $page->contentBlocks
-    ]);
-}
-```
-
-Tip: give the create and edit pages a full width, so a section is edited at the width your visitors see:
-
-```php
-protected Width|string|null $maxContentWidth = Width::Full;
-```
-
-Show it on your site:
+A page is a list of sections stored as JSON (see [The page value](docs/php.md#the-page-value)). Draw it with:
 
 ```blade
 <head>
-    <x-filament-block-editor::styles :blocks="$page->contentBlocks" />
+    <x-filament-block-editor::styles />
 </head>
 <body>
-    <x-filament-block-editor::blocks :blocks="$page->contentBlocks" :page="$page" />
+    <x-filament-block-editor::page :sections="$page->sections" />
 </body>
 ```
 
-Eager load the styles when you query many pages: `->with('contentBlocks.blockStyle')`.
+Theme it with CSS custom properties (`--sf-accent`, `--sf-text`, `--sf-heading-font`, ...): see
+[docs/php.md](docs/php.md#theme-it-with-css-variables).
 
-### More than one list of sections
+## Edit a page in Filament
+
+Use the trait on any Filament page, standalone or inside a resource:
 
 ```php
-public function footerBlocks(): MorphMany
+use Filament\Resources\Pages\Concerns\InteractsWithRecord;
+use Filament\Resources\Pages\Page;
+use Vortechron\FilamentBlockEditor\Filament\Concerns\InteractsWithPageBuilder;
+use Vortechron\FilamentBlockEditor\Rendering\RenderContext;
+
+class BuildPage extends Page
 {
-    return $this->contentBlocksIn('footer');
+    use InteractsWithPageBuilder;
+    use InteractsWithRecord;
+
+    protected static string $resource = PageResource::class;
+
+    public function mount(int|string $record): void
+    {
+        $this->record = $this->resolveRecord($record);
+    }
+
+    protected function getPageBuilderValue(): array
+    {
+        return ['sections' => $this->record->sections ?? []];
+    }
+
+    protected function savePageBuilderValue(array $value): void
+    {
+        $this->record->update(['sections' => $value['sections']]); // already validated and cleaned
+    }
+
+    protected function renderPageBuilderPreview(array $sections): string
+    {
+        // Your real page view, drawn with the builder's marks so a click picks a section.
+        return view('pages.show', [
+            'page' => $this->record,
+            'sections' => $sections,
+            'context' => new RenderContext(forBuilder: true, isPreview: true),
+        ])->render();
+    }
+
+    protected function getPageBuilderBackUrl(): ?string
+    {
+        return PageResource::getUrl();
+    }
 }
 ```
 
-```php
-BlockSections::make('footerBlocks')->collection('footer'),
-```
+Register the route like any resource page (`'build' => BuildPage::route('/{record}/build')`) and add
+`FilamentBlockEditorPlugin::make()` to the panel. Uploads go to `config('filament-block-editor.disk')`
+(`public` by default; any public disk, such as S3 or MinIO, works). For a page that is not a resource page,
+extend `Vortechron\FilamentBlockEditor\Filament\Pages\PageBuilderPage`.
 
-### Copy a page
+## Your own blocks
 
-```php
-$template->copyContentBlocksTo($newPage);
-```
-
-## Just the editor
-
-For a single rich text field, use the editor on its own. Store it in a JSON column cast to `array`:
+Draw the parts of a design the client fills in but cannot break. Declare the fields in PHP; the builder gets a
+generated form, and your Blade view draws the block:
 
 ```php
-use Vortechron\FilamentBlockEditor\Forms\Components\BlockNoteEditor;
+use Vortechron\FilamentBlockEditor\Blocks\BlockRegistry;
+use Vortechron\FilamentBlockEditor\Blocks\Field;
+use Vortechron\FilamentBlockEditor\Blocks\OwnBlock;
 
-BlockNoteEditor::make('body'),
-```
-
-```blade
-<x-filament-block-editor::styles :content="$post->body" />
-<x-filament-block-editor::content :content="$post->body" />
-```
-
-## Your own page sections
-
-Let editors place sections that your site draws itself:
-
-```php
-use Vortechron\FilamentBlockEditor\PageSections;
-
-// In a service provider's boot()
-PageSections::register(
-    kind: 'contact',
-    label: 'Contact form',
-    view: 'sections.contact',      // receives $block and $page
-    icon: Heroicon::OutlinedEnvelope,
-    description: 'The contact form.',
-    repeatable: false,             // only once per page
+app(BlockRegistry::class)->register(
+    OwnBlock::make('pricing')
+        ->label('Pricing')
+        ->icon('tag')                                 // a lucide icon name
+        ->fields([
+            Field::text('heading')->label('Heading')->default('Our packages'),
+            Field::list('plans')->label('Plans')->maxItems(4)->fields([
+                Field::text('name')->label('Name'),
+                Field::number('price')->label('Price'),
+                Field::toggle('popular')->label('Popular'),
+            ]),
+        ])
+        ->view('blocks.pricing'),                    // gets $values, $block, $context
 );
 ```
 
-Limit what one field offers with `BlockSections::make()->sections(['contact'])`.
+Field types: `text`, `textarea`, `select`, `toggle`, `number`, `image`, `link`, `list`. Values are cleaned by the
+definition before your view sees them. A section with `width: full` and `padding: none` lets your block draw edge
+to edge. More in [docs/php.md](docs/php.md#your-own-blocks).
 
-## Your own ready-made designs
+## Use the builder anywhere else
 
-```php
-use Vortechron\FilamentBlockEditor\Support\BlockPresetLibrary;
+The builder needs only an element and an adapter. Any backend works, as long as it can draw the page for the
+preview (the PHP layer does that for Laravel; another stack draws the same HTML from the same JSON):
 
-BlockPresetLibrary::register('pricing', 'Pricing', 'Content sections', [
-    'content' => [
-        BlockPresetLibrary::heading(2, 'Simple pricing', 'center'),
-        BlockPresetLibrary::paragraph('One plan. Everything included.', 'center'),
-    ],
-    'padding_size' => 'lg',
-    'content_width' => 'narrow',
-]);
+```html
+<link rel="stylesheet" href="/vendor/filament-block-editor/page-builder.css">
+<div id="builder" style="position: fixed; inset: 0"></div>
+<script type="module">
+  import { mountPageBuilder } from '/vendor/filament-block-editor/page-builder.js';
+
+  mountPageBuilder(document.getElementById('builder'), {
+    value: { sections: await (await fetch('/api/pages/1')).json() },
+    adapter: {
+      save: (value) => fetch('/api/pages/1', { method: 'PUT', body: JSON.stringify(value) }).then(() => ({ ok: true })),
+      preview: (value) => fetch('/api/pages/1/preview', { method: 'POST', body: JSON.stringify(value) }).then((r) => r.text()),
+      upload: (file) => { const body = new FormData(); body.append('file', file); return fetch('/api/uploads', { method: 'POST', body }).then((r) => r.json()); },
+    },
+    blocks: [/* own block definitions, from BlockRegistry::definitions() */],
+    templates: [/* from SectionTemplates::all('en') */],
+    locale: 'en',
+    title: 'Home',
+    backUrl: '/admin',
+  });
+</script>
 ```
 
-## Plugin options
+The full option list and the adapter types are in [docs/v1-architecture.md](docs/v1-architecture.md) and
+`builder/src/index.ts`.
 
-```php
-FilamentBlockEditorPlugin::make()
-    ->navigationGroup('Website')
-    ->savedBlocks()          // show the Saved Blocks screen (default)
-    ->blockStyles()          // show the Block Styles screen (default)
-    ->mediaLibrary()         // show the Media screen (default)
-    ->canManageLibraryUsing(fn (): bool => auth()->user()->isAdmin());
-```
+## What changed from 0.1
 
-People who cannot manage the library can still use it from the page builder.
+1.0 is a rewrite. The 0.1 form field (`BlockSections`), the `ContentBlock`, `BlockStyle`, `SavedBlock` and media
+library models and screens, and block presets are gone. No project used 0.1.
 
-## Configuration
+## Package development
 
 ```bash
-php artisan vendor:publish --tag=filament-block-editor-config
+composer install && npm install
+npm run build        # builder, its stylesheet and the public page.css into resources/dist
+npm test             # builder tests (Vitest)
+vendor/bin/phpunit   # PHP tests
+vendor/bin/pint --test
 ```
 
-| Key | Default | What it does |
-|---|---|---|
-| `disk` | `public` | Where uploads are stored. Must be publicly readable. |
-| `directory` | `block-editor` | Folder on that disk. |
-| `max_upload_size` | `20480` | Largest upload, in KB. |
-| `fonts.enabled` | `true` | Show the font picker. |
-| `fonts.web_fonts_url` | Bunny Fonts | Where web fonts load from. `null` to load them yourself. |
-| `run_migrations` | `true` | Set to `false` if you publish the migrations. |
+`builder/demo/index.html` mounts the built bundle with an in-memory adapter for a quick look in a browser. The
+workbench has a sample page at `/` (`composer serve`) and a demo builder at `/admin/demo-builder`.
 
-## Styling the public page
+## License
 
-The public stylesheet uses CSS custom properties you can override on any parent element:
-
-```css
-main {
-    --fbe-heading-font: 'Inter', sans-serif;
-    --fbe-text-size: 1rem;
-    --fbe-line-height: 1.75rem;
-    --fbe-accent: #4f46e5;
-}
-```
-
-## Development
-
-```bash
-composer install
-npm install
-npm run build              # builds resources/dist
-vendor/bin/phpunit
-composer serve             # demo app at http://127.0.0.1:8000/admin (admin@example.com / password)
-```
-
-`resources/dist` is committed, so apps never need Node.
-
-The editor itself (columns, item width and spacing, cards, spacers, video embeds, the media sheet and the section preview) lives in [@vortechron/blocknote-kit](https://github.com/vortechron/blocknote-kit), so projects without Filament can use it too. `resources/js/index.js` only connects the kit to Livewire and to the panel's upload routes. To pick up a new kit version, change its tag in `package.json`, run `npm install`, then `npm run build`.
-
-## Licence
-
-GPL-3.0-or-later. See [LICENSE](LICENSE).
-
-Why GPL: the two and three column layout comes from [`@blocknote/xl-multi-column`](https://www.blocknotejs.org/docs/features/blocks/layout), which is licensed GPL-3.0 or commercial, and its code is bundled in `resources/dist`. The rest of BlockNote is MPL-2.0, Mantine and React are MIT.
+GPL-3.0-or-later, as before (see `LICENSE`).

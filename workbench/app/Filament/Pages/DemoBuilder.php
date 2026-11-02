@@ -1,0 +1,45 @@
+<?php
+
+namespace Workbench\App\Filament\Pages;
+
+use Vortechron\FilamentBlockEditor\Filament\Pages\PageBuilderPage;
+use Vortechron\FilamentBlockEditor\Rendering\RenderContext;
+use Workbench\App\Support\SamplePage;
+
+/**
+ * The builder on the workbench panel: /admin/demo-builder. The page lives in
+ * memory, which is enough for tests and a manual look.
+ */
+class DemoBuilder extends PageBuilderPage
+{
+    protected static ?string $slug = 'demo-builder';
+
+    /** @var array{sections: array<mixed>}|null */
+    public static ?array $saved = null;
+
+    protected static ?string $title = 'Demo page';
+
+    protected function getPageBuilderValue(): array
+    {
+        return self::$saved ?? ['sections' => SamplePage::sections('ms')];
+    }
+
+    protected function savePageBuilderValue(array $value): void
+    {
+        self::$saved = $value;
+    }
+
+    protected function renderPageBuilderPreview(array $sections): string
+    {
+        return view('workbench::page', [
+            'locale' => 'ms',
+            'sections' => $sections,
+            'context' => new RenderContext(forBuilder: true, isPreview: true),
+        ])->render();
+    }
+
+    protected function getPageBuilderBackUrl(): ?string
+    {
+        return url('/admin');
+    }
+}

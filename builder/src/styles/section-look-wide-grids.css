@@ -1,0 +1,575 @@
+/*
+ * The grid layouts of a "Free design" section on a wide editor canvas:
+ * Ticks, Cards, Reviews and FAQ. Part of section-look-wide.css, which
+ * explains how the wide look works. The base (phone) look of the same
+ * layouts is in section-look-grids.css.
+ *
+ * Tiles and questions are one block each, so they become real grid items.
+ * Cards and reviews are made of several blocks that BlockNote keeps apart,
+ * so each block is put in its item's column with :nth-child(... of ...) and
+ * sibling selectors. Each layout counts its columns from the canvas width,
+ * like the page's auto-fit grids do from the section width.
+ */
+
+/* ---------- Layout: Ticks, tiles in a grid ---------- */
+
+/*
+ * .sf-grid-ticks fits 20rem tiles into 62rem: two columns, then three.
+ * The tiles of one row are as tall as the tallest.
+ */
+@container (width >= 44.5rem) {
+    .nj-look[data-layout='ticks'] .bn-editor > .bn-block-group {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        column-gap: 0.875rem;
+
+        &
+            > :not(
+                .bn-block-outer:has(
+                    > .bn-block
+                        > :is(
+                            [data-content-type='bulletListItem'],
+                            [data-content-type='numberedListItem'],
+                            [data-content-type='checkListItem']
+                        )
+                )
+            ) {
+            grid-column: 1 / -1;
+        }
+
+        &
+            > .bn-block-outer:has(
+                > .bn-block
+                    > :is(
+                        [data-content-type='bulletListItem'],
+                        [data-content-type='numberedListItem'],
+                        [data-content-type='checkListItem']
+                    )
+            ) {
+            display: flex;
+            flex-direction: column;
+
+            & > .bn-block {
+                flex: 1;
+            }
+        }
+    }
+}
+
+@container (width >= 66.75rem) {
+    .nj-look[data-layout='ticks'] .bn-editor > .bn-block-group {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+/* ---------- Layout: Cards, a grid of cards ---------- */
+
+/*
+ * .sf-grid-cards fits 16rem cards into 76rem: two, three, then four columns.
+ * Here it stops at three: CSS cannot count the cards, and a fourth empty
+ * column would push the usual three cards to the left.
+ *
+ * A card is a Heading 3 and the blocks under it, which BlockNote keeps as
+ * separate blocks. The Nth card goes in column N, then N + 3 and so on, like
+ * the page's grid. Its heading takes that column, and so do the (up to three)
+ * blocks right after it. Each column stacks on its own, so a short card does
+ * not wait for a tall one in the next column. A button or a big heading
+ * after the cards, and any block we cannot place, take the whole width.
+ */
+@container (width >= 37rem) {
+    .nj-look[data-layout='cards'] .bn-editor > .bn-block-group {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-auto-flow: row dense;
+        column-gap: clamp(1rem, 2cqw, 1.5rem);
+
+        & > .bn-block-outer,
+        & > .bn-trailing-block {
+            grid-column: 1 / -1;
+        }
+
+        /* The blocks of a card are as wide as the card, whatever their height. */
+        & > .bn-block-outer {
+            display: flex;
+            flex-direction: column;
+
+            & > .bn-block {
+                flex: 1;
+            }
+        }
+
+        &
+            > .bn-block-outer:nth-child(
+                2n + 1 of .bn-block-outer:has(
+                    > .bn-block > [data-content-type='heading'][data-level='3']
+                )
+            ) {
+            grid-column: 1;
+
+            &
+                + .bn-block-outer:not(
+                    :has(
+                        > .bn-block
+                            > [data-content-type='heading'][data-level='3']
+                    )
+                ) {
+                grid-column: 1;
+
+                &
+                    + .bn-block-outer:not(
+                        :has(
+                            > .bn-block
+                                > [data-content-type='heading'][data-level='3']
+                        )
+                    ) {
+                    grid-column: 1;
+
+                    &
+                        + .bn-block-outer:not(
+                            :has(
+                                > .bn-block
+                                    > [data-content-type='heading'][data-level='3']
+                            )
+                        ) {
+                        grid-column: 1;
+                    }
+                }
+            }
+        }
+
+        &
+            > .bn-block-outer:nth-child(
+                2n of .bn-block-outer:has(
+                    > .bn-block > [data-content-type='heading'][data-level='3']
+                )
+            ) {
+            grid-column: 2;
+
+            &
+                + .bn-block-outer:not(
+                    :has(
+                        > .bn-block
+                            > [data-content-type='heading'][data-level='3']
+                    )
+                ) {
+                grid-column: 2;
+
+                &
+                    + .bn-block-outer:not(
+                        :has(
+                            > .bn-block
+                                > [data-content-type='heading'][data-level='3']
+                        )
+                    ) {
+                    grid-column: 2;
+
+                    &
+                        + .bn-block-outer:not(
+                            :has(
+                                > .bn-block
+                                    > [data-content-type='heading'][data-level='3']
+                            )
+                        ) {
+                        grid-column: 2;
+                    }
+                }
+            }
+        }
+
+        /* After a card, the button or a big heading and all that follows. */
+        &
+            > .bn-block-outer:has(
+                > .bn-block > [data-content-type='heading'][data-level='3']
+            )
+            ~ .bn-block-outer:has(
+                > .bn-block
+                    > :is(
+                        [data-content-type='heading']:is(
+                            [data-level='1'],
+                            [data-level='2'],
+                            :not([data-level])
+                        ),
+                        .node-button,
+                        .node-priceTag,
+                        .node-countdown
+                    )
+            ),
+        &
+            > .bn-block-outer:has(
+                > .bn-block > [data-content-type='heading'][data-level='3']
+            )
+            ~ .bn-block-outer:has(
+                > .bn-block
+                    > :is(
+                        [data-content-type='heading']:is(
+                            [data-level='1'],
+                            [data-level='2'],
+                            :not([data-level])
+                        ),
+                        .node-button,
+                        .node-priceTag,
+                        .node-countdown
+                    )
+            )
+            ~ .bn-block-outer {
+            grid-column: 1 / -1 !important;
+        }
+    }
+}
+
+@container (width >= 56rem) {
+    .nj-look[data-layout='cards'] .bn-editor > .bn-block-group {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+
+        &
+            > .bn-block-outer:nth-child(
+                3n + 1 of .bn-block-outer:has(
+                    > .bn-block > [data-content-type='heading'][data-level='3']
+                )
+            ) {
+            grid-column: 1;
+
+            &
+                + .bn-block-outer:not(
+                    :has(
+                        > .bn-block
+                            > [data-content-type='heading'][data-level='3']
+                    )
+                ) {
+                grid-column: 1;
+
+                &
+                    + .bn-block-outer:not(
+                        :has(
+                            > .bn-block
+                                > [data-content-type='heading'][data-level='3']
+                        )
+                    ) {
+                    grid-column: 1;
+
+                    &
+                        + .bn-block-outer:not(
+                            :has(
+                                > .bn-block
+                                    > [data-content-type='heading'][data-level='3']
+                            )
+                        ) {
+                        grid-column: 1;
+                    }
+                }
+            }
+        }
+
+        &
+            > .bn-block-outer:nth-child(
+                3n + 2 of .bn-block-outer:has(
+                    > .bn-block > [data-content-type='heading'][data-level='3']
+                )
+            ) {
+            grid-column: 2;
+
+            &
+                + .bn-block-outer:not(
+                    :has(
+                        > .bn-block
+                            > [data-content-type='heading'][data-level='3']
+                    )
+                ) {
+                grid-column: 2;
+
+                &
+                    + .bn-block-outer:not(
+                        :has(
+                            > .bn-block
+                                > [data-content-type='heading'][data-level='3']
+                        )
+                    ) {
+                    grid-column: 2;
+
+                    &
+                        + .bn-block-outer:not(
+                            :has(
+                                > .bn-block
+                                    > [data-content-type='heading'][data-level='3']
+                            )
+                        ) {
+                        grid-column: 2;
+                    }
+                }
+            }
+        }
+
+        &
+            > .bn-block-outer:nth-child(
+                3n of .bn-block-outer:has(
+                    > .bn-block > [data-content-type='heading'][data-level='3']
+                )
+            ) {
+            grid-column: 3;
+
+            &
+                + .bn-block-outer:not(
+                    :has(
+                        > .bn-block
+                            > [data-content-type='heading'][data-level='3']
+                    )
+                ) {
+                grid-column: 3;
+
+                &
+                    + .bn-block-outer:not(
+                        :has(
+                            > .bn-block
+                                > [data-content-type='heading'][data-level='3']
+                        )
+                    ) {
+                    grid-column: 3;
+
+                    &
+                        + .bn-block-outer:not(
+                            :has(
+                                > .bn-block
+                                    > [data-content-type='heading'][data-level='3']
+                            )
+                        ) {
+                        grid-column: 3;
+                    }
+                }
+            }
+        }
+    }
+}
+
+/* ---------- Layout: Reviews, a grid of quotes ---------- */
+
+/*
+ * .sf-grid-reviews fits 19rem reviews into 76rem: two, then three columns.
+ * A quote and the line under it (stars and name) share one column. A quote
+ * with no line under it takes both rows. A single review is a 42rem column.
+ */
+@container (width >= 44rem) {
+    .nj-look[data-layout='reviews'] .bn-editor > .bn-block-group {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-auto-flow: row dense;
+        column-gap: clamp(1rem, 2cqw, 1.5rem);
+
+        /* Words before and after the reviews take the whole row. */
+        & > .bn-block-outer,
+        & > .bn-trailing-block {
+            grid-column: 1 / -1;
+        }
+
+        /* A review is as tall as the tallest in its row. */
+        & > .bn-block-outer:has(> .bn-block > [data-content-type='quote']),
+        &
+            > .bn-block-outer:has(> .bn-block > [data-content-type='quote'])
+            + .bn-block-outer:has(
+                > .bn-block > [data-content-type='paragraph']
+            ) {
+            display: flex;
+            flex-direction: column;
+
+            & > .bn-block {
+                flex: 1;
+            }
+        }
+
+        &
+            > .bn-block-outer:has(
+                > .bn-block > [data-content-type='quote']
+            ):not(
+                :has(
+                    + .bn-block-outer
+                        > .bn-block
+                        > [data-content-type='paragraph']
+                )
+            ) {
+            grid-row: span 2;
+        }
+
+        &
+            > .bn-block-outer:nth-child(
+                2n + 1 of .bn-block-outer:has(
+                    > .bn-block > [data-content-type='quote']
+                )
+            ) {
+            grid-column: 1;
+
+            &
+                + .bn-block-outer:has(
+                    > .bn-block > [data-content-type='paragraph']
+                ) {
+                grid-column: 1;
+            }
+        }
+
+        &
+            > .bn-block-outer:nth-child(
+                2n of .bn-block-outer:has(
+                    > .bn-block > [data-content-type='quote']
+                )
+            ) {
+            grid-column: 2;
+
+            &
+                + .bn-block-outer:has(
+                    > .bn-block > [data-content-type='paragraph']
+                ) {
+                grid-column: 2;
+            }
+        }
+
+        &
+            > .bn-block-outer:nth-child(
+                1 of .bn-block-outer:has(
+                    > .bn-block > [data-content-type='quote']
+                )
+            ):nth-last-child(
+                1 of .bn-block-outer:has(
+                    > .bn-block > [data-content-type='quote']
+                )
+            ) {
+            grid-column: 1 / -1;
+            justify-self: center;
+            width: min(100%, 42rem);
+
+            &
+                + .bn-block-outer:has(
+                    > .bn-block > [data-content-type='paragraph']
+                ) {
+                grid-column: 1 / -1;
+                justify-self: center;
+                width: min(100%, 42rem);
+            }
+        }
+    }
+}
+
+@container (width >= 65rem) {
+    .nj-look[data-layout='reviews'] .bn-editor > .bn-block-group {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+
+        &
+            > .bn-block-outer:nth-child(
+                3n + 1 of .bn-block-outer:has(
+                    > .bn-block > [data-content-type='quote']
+                )
+            ) {
+            grid-column: 1;
+
+            &
+                + .bn-block-outer:has(
+                    > .bn-block > [data-content-type='paragraph']
+                ) {
+                grid-column: 1;
+            }
+        }
+
+        &
+            > .bn-block-outer:nth-child(
+                3n + 2 of .bn-block-outer:has(
+                    > .bn-block > [data-content-type='quote']
+                )
+            ) {
+            grid-column: 2;
+
+            &
+                + .bn-block-outer:has(
+                    > .bn-block > [data-content-type='paragraph']
+                ) {
+                grid-column: 2;
+            }
+        }
+
+        &
+            > .bn-block-outer:nth-child(
+                3n of .bn-block-outer:has(
+                    > .bn-block > [data-content-type='quote']
+                )
+            ) {
+            grid-column: 3;
+
+            &
+                + .bn-block-outer:has(
+                    > .bn-block > [data-content-type='paragraph']
+                ) {
+                grid-column: 3;
+            }
+        }
+    }
+}
+
+/* ---------- Layout: FAQ, the heading beside the questions ---------- */
+
+/*
+ * From 56rem, when words come before the first question, the page puts them
+ * on the left and the questions on the right (.sf-layout-faq .sf-body). The
+ * words float left, the questions leave room for them.
+ */
+@container (width >= 56rem) {
+    .nj-look[data-layout='faq']
+        .bn-editor
+        > .bn-block-group:has(
+            > .bn-block-outer:first-child
+                > .bn-block
+                > :not([data-content-type='toggleListItem'])
+        ):has(
+            > .bn-block-outer > .bn-block > [data-content-type='toggleListItem']
+        ) {
+        display: flow-root;
+
+        &
+            > .bn-block-outer:not(
+                :has(
+                    > .bn-block > [data-content-type='toggleListItem'],
+                    > .bn-block
+                        > [data-content-type='heading']
+                        .bn-toggle-wrapper
+                ),
+                .bn-block-outer:has(
+                        > .bn-block > [data-content-type='toggleListItem'],
+                        > .bn-block
+                            > [data-content-type='heading']
+                            .bn-toggle-wrapper
+                    )
+                    ~ .bn-block-outer
+            ) {
+            float: left;
+            clear: left;
+            width: calc((100% - 4rem) / 2.6);
+            margin: 0;
+
+            & .bn-block-content:not([data-text-alignment]) {
+                justify-content: flex-start !important;
+                text-align: left !important;
+            }
+        }
+
+        &
+            > .bn-block-outer:has(
+                > .bn-block > [data-content-type='toggleListItem'],
+                > .bn-block > [data-content-type='heading'] .bn-toggle-wrapper
+            ) {
+            width: auto;
+            margin-left: calc((100% - 4rem) / 2.6 + 4rem);
+        }
+
+        & > .bn-trailing-block,
+        &
+            > .bn-block-outer:has(
+                > .bn-block > [data-content-type='toggleListItem'],
+                > .bn-block > [data-content-type='heading'] .bn-toggle-wrapper
+            )
+            ~ .bn-block-outer:not(
+                :has(
+                    > .bn-block > [data-content-type='toggleListItem'],
+                    > .bn-block
+                        > [data-content-type='heading']
+                        .bn-toggle-wrapper
+                )
+            ) {
+            clear: both;
+        }
+    }
+}

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ms">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Page builder demo</title>
+        <link rel="stylesheet" href="../../resources/dist/page-builder.css" />
+        <style>
+            /* The host page's own styles: the builder must not change them. */
+            html,
+            body {
+                margin: 0;
+                font-family: Georgia, serif;
+                background: #fafafa;
+            }
+            #builder {
+                position: fixed;
+                inset: 0;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="builder"></div>
+        <script type="module" src="./demo.js"></script>
+    </body>
+</html>

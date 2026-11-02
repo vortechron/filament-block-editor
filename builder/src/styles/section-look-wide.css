@@ -1,0 +1,493 @@
+/*
+ * The wide look of a "Free design" section inside the page editor: what
+ * the public page does on a tablet, a laptop or a desktop. Part of
+ * section-look.css, which explains how the editor mirrors the public page.
+ *
+ * .nj-look is a size container (like .sf-rich-section on the public page),
+ * so each @container rule here uses the public page's own breakpoint and the
+ * width of the editor canvas decides, not the browser window. That is what
+ * lets the Phone mode of a wide screen look like a phone.
+ *
+ * This file is read before the rules of section-look.css, so a rule that
+ * must win over one of them has one more class or attribute in its selector.
+ *
+ * The grid layouts (ticks, cards, reviews, FAQ) are in
+ * section-look-wide-grids.css.
+ */
+
+@import './section-look-wide-grids.css';
+
+/* ---------- Tokens ---------- */
+
+.nj-look {
+    /* BlockNote keeps 54px on each side of the words for its drag handle. */
+    --nj-gutters: 6.75rem;
+
+    /*
+     * The page sizes headings with the window width (vw) in sections.css and
+     * layouts.css. The canvas width decides here, so vw becomes cqw.
+     */
+    --nj-h1: clamp(2.25rem, 1.4rem + 3.6cqw, 4.25rem);
+    --nj-h1-lh: 1.04;
+    --nj-h1-split: clamp(2.25rem, 0.9rem + 3.4cqw, 3.75rem);
+    --nj-h2: clamp(1.75rem, 1.25rem + 2cqw, 2.75rem);
+    --nj-h3: clamp(1.2rem, 1.1rem + 0.4cqw, 1.4rem);
+}
+
+.nj-look[data-layout='banner'] {
+    --nj-h2: clamp(2rem, 1.3rem + 3cqw, 3.5rem);
+}
+
+.nj-look[data-theme='promo'] {
+    --nj-h1: clamp(2.75rem, 1.6rem + 5.2cqw, 5.75rem);
+    --nj-h1-lh: 0.95;
+    --nj-h1-split: clamp(2.75rem, 1rem + 4cqw, 4.5rem);
+    --nj-h2: clamp(2.1rem, 1.5rem + 2.8cqw, 3.5rem);
+    --nj-h3: clamp(1.35rem, 1.2rem + 0.6cqw, 1.65rem);
+}
+
+.nj-look[data-theme='elegant'] {
+    --nj-h1: clamp(2.5rem, 1.5rem + 3.8cqw, 4.5rem);
+    --nj-h1-lh: 1.08;
+    --nj-h1-split: clamp(2.5rem, 1rem + 3.4cqw, 4rem);
+}
+
+/* ---------- A narrow canvas, the phone look ---------- */
+
+/*
+ * The editor kit drops the side space of a phone with a media query on the
+ * window. In Phone mode on a wide screen the canvas is what is narrow.
+ */
+@container (width < 40rem) {
+    .nj-look .bnk-blocknote {
+        padding-inline: 1.25rem !important;
+    }
+
+    .nj-look .bnk-blocknote .bn-editor {
+        padding-inline: 1.75rem;
+    }
+}
+
+/*
+ * On a wider canvas the 54px of .bn-editor is the side space, so the kit's
+ * own side padding (inline style) would only squeeze the words more than
+ * the page's gutter does (.sf-container).
+ */
+@container (width >= 40rem) {
+    .nj-look .bnk-blocknote {
+        padding-inline: 0 !important;
+    }
+}
+
+/* ---------- Words ---------- */
+
+/*
+ * BlockNote leaves data-level off a level 1 heading (it is the default), so
+ * "a Heading 1" is written :not([data-level]) next to [data-level='1'].
+ */
+
+/* .sf-rich is a little bigger from 48rem. */
+@container (width >= 48rem) {
+    .nj-look .bnk-blocknote .bn-container .bn-editor {
+        font-size: 1.125rem;
+    }
+}
+
+.nj-look
+    .bnk-blocknote
+    .bn-container
+    .bn-editor
+    [data-content-type='heading']:is([data-level='1'], :not([data-level])) {
+    --level: var(--nj-h1);
+
+    line-height: var(--nj-h1-lh);
+}
+
+.nj-look
+    .bnk-blocknote
+    .bn-container
+    .bn-editor
+    [data-content-type='heading'][data-level='2'] {
+    --level: var(--nj-h2);
+}
+
+.nj-look
+    .bnk-blocknote
+    .bn-container
+    .bn-editor
+    [data-content-type='heading'][data-level='3'] {
+    --level: var(--nj-h3);
+}
+
+.nj-look
+    .bnk-blocknote
+    .bn-container
+    .bn-editor
+    .bn-block-outer:has(
+        > .bn-block
+            > [data-content-type='heading']:is(
+                [data-level='1'],
+                :not([data-level])
+            )
+    )
+    + .bn-block-outer
+    > .bn-block
+    > [data-content-type='paragraph'] {
+    font-size: clamp(1.125rem, 1rem + 0.5cqw, 1.375rem);
+}
+
+/* Highlight: the card gets roomier on a wider canvas. */
+.nj-look[data-layout='highlight'] .bnk-blocknote .bn-container .bn-editor {
+    padding-block: clamp(2.25rem, 5cqw, 3.75rem);
+}
+
+/* ---------- Inner widths, where the page centres its words ---------- */
+
+/*
+ * The page keeps the words of each layout in a centred column (.sf-body).
+ * The same width sits on .bn-editor here, plus --nj-gutters for the drag
+ * handle. Highlight keeps its own width in section-look.css.
+ */
+.nj-look[data-layout='plain'] .bn-editor {
+    max-width: calc(46rem + var(--nj-gutters));
+}
+
+.nj-look[data-layout='banner'] .bn-editor {
+    max-width: calc(52rem + var(--nj-gutters));
+}
+
+.nj-look[data-layout='hero'] .bn-editor {
+    max-width: calc(54rem + var(--nj-gutters));
+}
+
+.nj-look[data-layout='ticks'] .bn-editor {
+    max-width: calc(62rem + var(--nj-gutters));
+}
+
+.nj-look[data-layout='faq'] .bn-editor {
+    max-width: calc(68rem + var(--nj-gutters));
+}
+
+.nj-look[data-layout='cards'] .bn-editor,
+.nj-look[data-layout='reviews'] .bn-editor {
+    max-width: calc(76rem + var(--nj-gutters));
+}
+
+/* The card over a photo is as narrow as the plain column (.sf-rich-card). */
+.nj-look:not([data-layout='banner'], [data-layout='faq'])
+    .bnk-blocknote-card
+    .bn-editor {
+    max-width: 46rem;
+}
+
+/*
+ * The words before the first item of a grid are a centred 46rem column
+ * (.sf-intro). column-span and justify-self do nothing until the top blocks
+ * become columns or a grid.
+ */
+.nj-look[data-layout='cards']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:not(
+        :has(> .bn-block > [data-content-type='heading'][data-level='3']),
+        .bn-block-outer:has(
+                > .bn-block > [data-content-type='heading'][data-level='3']
+            )
+            ~ .bn-block-outer
+    ),
+.nj-look[data-layout='ticks']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:not(
+        :has(
+            > .bn-block
+                > :is(
+                    [data-content-type='bulletListItem'],
+                    [data-content-type='numberedListItem'],
+                    [data-content-type='checkListItem']
+                )
+        ),
+        .bn-block-outer:has(
+                > .bn-block
+                    > :is(
+                        [data-content-type='bulletListItem'],
+                        [data-content-type='numberedListItem'],
+                        [data-content-type='checkListItem']
+                    )
+            )
+            ~ .bn-block-outer
+    ),
+.nj-look[data-layout='reviews']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:not(
+        :has(> .bn-block > [data-content-type='quote']),
+        .bn-block-outer:has(> .bn-block > [data-content-type='quote'])
+            ~ .bn-block-outer
+    ),
+.nj-look[data-layout='faq']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:not(
+        :has(
+            > .bn-block > [data-content-type='toggleListItem'],
+            > .bn-block > [data-content-type='heading'] .bn-toggle-wrapper
+        ),
+        .bn-block-outer:has(
+                > .bn-block > [data-content-type='toggleListItem'],
+                > .bn-block > [data-content-type='heading'] .bn-toggle-wrapper
+            )
+            ~ .bn-block-outer
+    ) {
+    column-span: all;
+    width: min(100%, 46rem);
+    margin-inline: auto;
+    justify-self: center;
+}
+
+/* The questions are a 46rem column too (.sf-grid-faq). */
+.nj-look[data-layout='faq']
+    .bn-editor
+    > .bn-block-group
+    > .bn-block-outer:has(
+        > .bn-block > [data-content-type='toggleListItem'],
+        > .bn-block > [data-content-type='heading'] .bn-toggle-wrapper
+    ) {
+    width: min(100%, 46rem);
+    margin-inline: auto;
+}
+
+/* ---------- Order button and price on one line ---------- */
+
+/*
+ * The hint is longer than the button, so it must not stretch the button.
+ * BlockNote sets min-width: 2px !important on every <p>.
+ */
+.nj-look .nj-hint {
+    width: 0;
+    min-width: 100% !important;
+}
+
+@container (width >= 40rem) {
+    /* .sf-layout-banner .sf-rich-order: a button that fits its label. */
+    .nj-look[data-layout='banner'] .bn-editor > .bn-block-group {
+        text-align: center;
+    }
+
+    .nj-look[data-layout='banner']
+        .bn-editor
+        > .bn-block-group
+        > .bn-block-outer:has(> .bn-block > .node-button) {
+        display: inline-block;
+        vertical-align: middle;
+    }
+
+    .nj-look[data-layout='banner'] .bn-editor .node-button .nj-button {
+        width: auto;
+        min-width: 18rem;
+        field-sizing: content;
+    }
+
+    /* .sf-hero-copy .sf-rich-price and .sf-rich-order share one line. */
+    .nj-look[data-layout='hero'] .bn-editor > .bn-block-group {
+        text-align: center;
+    }
+
+    .nj-look[data-layout='hero']
+        .bn-editor
+        > .bn-block-group
+        > .bn-block-outer:has(
+            > .bn-block > :is(.node-priceTag, .node-button)
+        ) {
+        display: inline-block;
+        margin: 1.5rem 0.5rem 0;
+        vertical-align: middle;
+    }
+
+    .nj-look[data-layout='hero'] .bn-editor .node-button .nj-button {
+        width: auto;
+        min-width: 16rem;
+        field-sizing: content;
+    }
+}
+
+/* ---------- Layout: Hero, the photo beside the words ---------- */
+
+/*
+ * From 56rem the page puts the first photo, video or slideshow beside the
+ * words (.sf-hero-split). Here the top blocks become a grid: the words in
+ * the left columns, the photo across every row on the right. The first and
+ * last rows share the spare height, so the words stay centred next to a
+ * taller photo. A price right before the order button takes the two small
+ * columns, so the two sit on one line.
+ */
+@container (width >= 56rem) {
+    .nj-look[data-layout='hero']
+        .bn-editor:has(
+            > .bn-block-group
+                > .bn-block-outer
+                > .bn-block
+                > :is(
+                    [data-content-type='image'],
+                    [data-content-type='video'],
+                    .node-gallery
+                )
+        ) {
+        max-width: calc(76rem + var(--nj-gutters));
+    }
+
+    .nj-look[data-layout='hero']
+        .bn-editor
+        > .bn-block-group:has(
+            > .bn-block-outer
+                > .bn-block
+                > :is(
+                    [data-content-type='image'],
+                    [data-content-type='video'],
+                    .node-gallery
+                )
+        ) {
+        --nj-hero-gap: clamp(2rem, 5cqw, 4.5rem);
+
+        display: grid;
+        grid-template-columns:
+            auto auto minmax(0, 1fr)
+            calc((100% - var(--nj-hero-gap)) * 0.475 + var(--nj-hero-gap));
+        grid-template-rows: 1fr repeat(40, auto) 1fr;
+        text-align: left;
+
+        &::before {
+            content: '';
+            grid-column: 1 / 4;
+            grid-row: 1;
+        }
+
+        & > .bn-block-outer {
+            grid-column: 1 / 4;
+        }
+
+        & > .bn-trailing-block {
+            grid-column: 1 / -1;
+        }
+
+        /* The first photo, video or slideshow. */
+        &
+            > .bn-block-outer:has(
+                > .bn-block
+                    > :is(
+                        [data-content-type='image'],
+                        [data-content-type='video'],
+                        .node-gallery
+                    )
+            ):not(
+                .bn-block-outer:has(
+                        > .bn-block
+                            > :is(
+                                [data-content-type='image'],
+                                [data-content-type='video'],
+                                .node-gallery
+                            )
+                    )
+                    ~ .bn-block-outer
+            ) {
+            grid-column: 4;
+            grid-row: 1 / -1;
+            align-self: center;
+            margin-left: var(--nj-hero-gap);
+        }
+
+        /* Beside a photo the words line up on the left, whatever their alignment. */
+        &
+            .bn-block-content:is(
+                [data-content-type='heading'],
+                [data-content-type='paragraph']
+            ) {
+            justify-content: flex-start !important;
+            text-align: left !important;
+        }
+
+        & :is(.node-priceTag, .node-button) .bn-block-content > div,
+        & .node-button .nj-hint {
+            text-align: left;
+        }
+
+        /* Half the width, so a smaller headline keeps to a few lines. */
+        &
+            [data-content-type='heading']:is(
+                [data-level='1'],
+                :not([data-level])
+            ) {
+            --level: var(--nj-h1-split);
+        }
+
+        & .bn-file-block-content-wrapper {
+            width: 100% !important;
+        }
+
+        & .bn-visual-media {
+            max-height: min(72vh, 42rem);
+            object-fit: cover;
+        }
+    }
+}
+
+/* The words column is only wide enough for the price and button side by side here. */
+@container (width >= 60rem) {
+    .nj-look[data-layout='hero']
+        .bn-editor
+        > .bn-block-group:has(
+            > .bn-block-outer
+                > .bn-block
+                > :is(
+                    [data-content-type='image'],
+                    [data-content-type='video'],
+                    .node-gallery
+                )
+        ) {
+        &
+            > .bn-block-outer:has(> .bn-block > .node-priceTag):has(
+                + .bn-block-outer > .bn-block > .node-button
+            ) {
+            grid-column: 1;
+        }
+
+        &
+            > .bn-block-outer:has(> .bn-block > .node-priceTag)
+            + .bn-block-outer:has(> .bn-block > .node-button) {
+            grid-column: 2;
+            justify-self: start;
+        }
+    }
+}
+
+/* ---------- Columns and sized items on a narrow canvas ---------- */
+
+/*
+ * .sf-rich .bn-columns and .bn-width: a narrow section is too small to
+ * split a row. Photos that bleed past the words keep their width.
+ */
+@container (width < 36rem) {
+    .nj-look .bnk-blocknote .bn-block-column-list {
+        flex-direction: column;
+    }
+
+    .nj-look .bnk-blocknote .bn-block-column {
+        flex: none !important;
+        width: 100% !important;
+        padding-inline: 0;
+    }
+
+    .nj-look
+        .bnk-blocknote
+        :is(.bn-block-content, .bn-block-column-list)[data-width]:not(
+            [data-width='13'],
+            [data-width='14'],
+            [data-width='15'],
+            [data-width='16'],
+            [data-width='17'],
+            [data-width='18']
+        ) {
+        width: 100% !important;
+        margin-left: 0 !important;
+    }
+}

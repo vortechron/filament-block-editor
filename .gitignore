@@ -7,3 +7,5 @@
 # resources/dist is committed on purpose: apps install the built editor
 # without Node.
 /workbench/storage
+/builder/node_modules
+node_modules/

@@ -1,0 +1,189 @@
+/*
+ * A section's own style, on top of the page: its heading font, alignment,
+ * word colour, corners and buttons. The classes come from
+ * resources/views/section.blade.php; "theme" and "auto" add no class, so the
+ * page decides. Keep in step with the builder's editor.css.
+ */
+
+/* ---------- Full width ---------- */
+
+/* The section's content has no maximum width and no side space. */
+.sf-full > .sf-container {
+    max-width: none;
+    padding-inline: 0;
+}
+
+.sf-full > .sf-container > .sf-body {
+    max-width: none;
+}
+
+/* ---------- Heading fonts (Enums\SectionFont) ---------- */
+
+.sf-font-grotesk {
+    --sf-heading-font:
+        var(--font-bricolage-grotesque, 'Bricolage Grotesque'), system-ui,
+        sans-serif;
+    --sf-heading-weight: 800;
+    --sf-heading-tracking: -0.035em;
+    --sf-heading-case: none;
+}
+
+.sf-font-condensed {
+    --sf-heading-font:
+        var(--font-barlow-condensed, 'Barlow Condensed'), 'Arial Narrow',
+        system-ui, sans-serif;
+    --sf-heading-weight: 800;
+    --sf-heading-tracking: -0.005em;
+    --sf-heading-case: uppercase;
+}
+
+.sf-font-serif {
+    --sf-heading-font:
+        var(--font-bodoni-moda, 'Bodoni Moda'), 'Didot', Georgia, serif;
+    --sf-heading-weight: 500;
+    --sf-heading-tracking: -0.015em;
+    --sf-heading-case: none;
+}
+
+.sf-font-poster {
+    --sf-heading-font:
+        var(--font-anton, Anton), Impact, 'Arial Narrow', sans-serif;
+    --sf-heading-weight: 400;
+    --sf-heading-tracking: 0.01em;
+    --sf-heading-case: uppercase;
+}
+
+.sf-font-geometric {
+    --sf-heading-font: var(--font-jost, Jost), system-ui, sans-serif;
+    --sf-heading-weight: 600;
+    --sf-heading-tracking: -0.025em;
+    --sf-heading-case: none;
+}
+
+.sf-font-mono {
+    --sf-heading-font:
+        var(--font-geist-mono, 'Geist Mono'), ui-monospace, monospace;
+    --sf-heading-weight: 500;
+    --sf-heading-tracking: -0.045em;
+    --sf-heading-case: none;
+}
+
+/* ---------- Alignment ---------- */
+
+/* Buttons sit side by side, with a gap after each. Centred words centre them. */
+:is(.sf-layout-banner, .sf-highlight, .sf-align-center, .sf-hero:not(.sf-hero-split))
+    .bn-button {
+    margin-inline: 0.375rem;
+}
+
+.sf-align-left .bn-button {
+    margin-inline: 0 0.75rem;
+}
+
+.sf-align-left
+    :is(.sf-body, .sf-hero, .sf-intro, .sf-highlight, .sf-poster-copy) {
+    text-align: left;
+}
+
+.sf-align-left .sf-body :is(h1, h2, h3, h4, p) {
+    text-align: left !important;
+}
+
+.sf-align-left
+    :is(
+        .sf-intro,
+        .sf-hero-copy,
+        .sf-poster:not(.sf-poster-photo) .sf-poster-copy
+    ) {
+    margin-inline: 0 auto;
+}
+
+.sf-align-center :is(.sf-body, .sf-poster-copy, .sf-editorial-body) {
+    text-align: center;
+}
+
+.sf-align-center .sf-body :is(h1, h2, h3, h4, p) {
+    text-align: center !important;
+}
+
+.sf-align-center :is(.sf-poster-copy, .sf-editorial-body) {
+    margin-inline: auto;
+}
+
+/* ---------- Word colour ---------- */
+
+.sf-text-color {
+    --sf-heading: var(--sf-custom-text);
+    --sf-words: color-mix(in srgb, var(--sf-custom-text) 82%, transparent);
+}
+
+/* ---------- Corners ---------- */
+
+.sf-corners-square {
+    --sf-radius: 0px;
+}
+
+.sf-corners-soft {
+    --sf-radius: 0.75rem;
+}
+
+.sf-corners-round {
+    --sf-radius: 2rem;
+}
+
+.sf-rich-section:is(.sf-corners-square, .sf-corners-soft, .sf-corners-round)
+    :is(.bn-button, .sf-gallery-track) {
+    border-radius: calc(var(--sf-radius) * 0.6);
+}
+
+.sf-rich-section.sf-corners-round .bn-button {
+    border-radius: 9999px;
+}
+
+/* ---------- Buttons ---------- */
+
+/*
+ * A section's button style changes the button blocks inside it. Solid,
+ * outline, pill and shadow each set every property the others set, so none
+ * leaks into another. A button block that is already "outline" keeps its
+ * transparent fill and takes only the shape.
+ */
+.sf-rich-section.sf-button-solid .bn-button {
+    border-radius: calc(var(--sf-radius) * 0.5);
+    box-shadow: none;
+}
+
+.sf-rich-section.sf-button-outline .bn-button {
+    border: 2px solid currentColor;
+    border-radius: calc(var(--sf-radius) * 0.5);
+    background: transparent;
+    box-shadow: none;
+    color: var(--sf-heading, var(--sf-ink));
+    font-size: 1rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.sf-rich-section.sf-button-pill .bn-button {
+    border-radius: 9999px;
+}
+
+.sf-rich-section.sf-button-pill .bn-button-solid {
+    box-shadow: 0 16px 30px -14px var(--sf-accent);
+}
+
+.sf-rich-section.sf-button-shadow .bn-button {
+    border: 2.5px solid var(--sf-ink);
+    border-radius: calc(var(--sf-radius) * 0.4);
+    box-shadow: 6px 6px 0 var(--sf-ink);
+}
+
+.sf-rich-section.sf-button-shadow .bn-button:active {
+    box-shadow: 2px 2px 0 var(--sf-ink);
+    transform: translate(4px, 4px);
+}
+
+.sf-rich-light.sf-button-shadow .bn-button {
+    border-color: #ffffff;
+    box-shadow: 6px 6px 0 #ffffff;
+}
