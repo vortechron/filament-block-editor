@@ -64,6 +64,28 @@ class OwnBlockTest extends TestCase
         $this->assertArrayNotHasKey('siteInfo', OwnBlock::make('x')->usesSiteInfo()->toArray());
     }
 
+    public function test_it_names_the_shop_values_its_view_shows(): void
+    {
+        $definition = OwnBlock::make('contact-card')->showsValues('site.phone', 'site.email', 'site.phone')->toArray();
+
+        $this->assertSame(['site.phone', 'site.email'], $definition['showsValues']);
+        $this->assertArrayNotHasKey('showsValues', $this->board()->toArray());
+        $this->assertArrayNotHasKey('showsValues', OwnBlock::make('x')->showsValues()->toArray());
+        $this->assertSame(['contact'], OwnBlock::make('both')->usesSiteInfo('contact')->showsValues('site.address')->toArray()['siteInfo']);
+    }
+
+    public function test_a_shop_value_that_is_not_a_dynamic_value_key_is_refused(): void
+    {
+        foreach (['phone', 'Site.Phone', '@site.phone', '{site.phone}', 'site.a.b.c.d', ''] as $key) {
+            try {
+                OwnBlock::make('x')->showsValues('site.email', $key);
+                $this->fail("[{$key}] was accepted.");
+            } catch (InvalidArgumentException $exception) {
+                $this->assertStringContainsString('site.phone', $exception->getMessage());
+            }
+        }
+    }
+
     public function test_the_field_types_are_the_ones_the_builder_knows(): void
     {
         $types = array_column($this->board()->toArray()['fields'], 'type');

@@ -1,9 +1,11 @@
 import { useId } from 'react';
 import { linkOrReference } from '@/blocks/button-url';
+import { dynamicRef } from '@/lib/dynamic-values';
 import { useT } from '@/lib/i18n';
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
-import { DynamicPicker, DynamicRefChip, isDynamicRef } from './dynamic-picker';
+import { DynamicRefChip, isDynamicRef } from './dynamic-picker';
+import { DynamicValuePicker } from './dynamic-value-picker';
 
 /**
  * A link: typed (https://, #, /, mailto:, tel:), or one of the site's own
@@ -29,7 +31,11 @@ export function LinkField({
         <div className="grid grid-cols-1 content-start gap-1.5">
             <div className="flex min-h-7 items-center justify-between gap-2">
                 <Label htmlFor={id}>{label}</Label>
-                <DynamicPicker type="link" onPick={onChange} />
+                <DynamicValuePicker
+                    type="link"
+                    label={t('Shop links')}
+                    onPick={(key) => onChange(dynamicRef(key))}
+                />
             </div>
             {isDynamicRef(value) ? (
                 <DynamicRefChip

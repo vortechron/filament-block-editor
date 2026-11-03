@@ -4,6 +4,7 @@ import { Store } from 'lucide-react';
 import { createElement, useContext } from 'react';
 import { dynamicValuesOfType, findDynamicValue } from '@/lib/dynamic-values';
 import type { DynamicValueDefinition } from '@/types';
+import { CHIP_CLASS, CHIP_PREVIEW_CLASS } from './chip-style';
 import type { Translate } from './helpers';
 import { PageBlocksContext } from './page-blocks-context';
 
@@ -32,11 +33,11 @@ function DynamicChip({ valueKey }: { valueKey: string }) {
         <span
             data-dynamic={valueKey}
             title={valueKey}
-            className="mx-0.5 inline-flex items-baseline gap-1 rounded-md bg-sky-100 px-1.5 py-px align-baseline text-[0.9em] font-medium text-sky-900 ring-1 ring-sky-200"
+            className={CHIP_CLASS}
         >
             <span>{definition?.label ?? valueKey}</span>
             {definition?.preview && (
-                <span className="font-normal text-sky-700">· {definition.preview}</span>
+                <span className={CHIP_PREVIEW_CLASS}>· {definition.preview}</span>
             )}
         </span>
     );

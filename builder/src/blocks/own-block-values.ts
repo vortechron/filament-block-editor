@@ -1,3 +1,4 @@
+import { parseShortCodes } from '@/lib/short-codes';
 import type { OwnBlockDefinition, OwnBlockField } from '@/types';
 
 /**
@@ -63,10 +64,14 @@ export function valuesWithDefaults(
     return { ...defaults, ...values };
 }
 
-/** One line for the card in the editor: the first words, and list sizes. */
+/**
+ * One line for the card in the editor: the first words, and list sizes.
+ * A short code shows as its shop value's name (`labelOf`), or its key.
+ */
 export function summarizeValues(
     definition: OwnBlockDefinition,
     values: OwnValues,
+    labelOf: (key: string) => string | null = () => null,
 ): string {
     const filled = valuesWithDefaults(definition, values);
     const parts: string[] = [];
@@ -78,7 +83,13 @@ export function summarizeValues(
     );
 
     if (firstText) {
-        parts.push((filled[firstText.name] as string).trim());
+        parts.push(
+            parseShortCodes((filled[firstText.name] as string).trim())
+                .map((part) =>
+                    part.type === 'text' ? part.text : (labelOf(part.key) ?? part.key),
+                )
+                .join(''),
+        );
     }
 
     for (const field of definition.fields) {

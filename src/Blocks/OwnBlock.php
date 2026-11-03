@@ -4,6 +4,7 @@ namespace Vortechron\FilamentBlockEditor\Blocks;
 
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use Vortechron\FilamentBlockEditor\Content\DynamicValues;
 use Vortechron\FilamentBlockEditor\Rendering\RenderContext;
 
 /**
@@ -38,6 +39,11 @@ final class OwnBlock
      * @var list<string>
      */
     private array $siteInfo = [];
+
+    /**
+     * @var list<string>
+     */
+    private array $showsValues = [];
 
     private function __construct(public readonly string $kind)
     {
@@ -112,6 +118,27 @@ final class OwnBlock
         return $this;
     }
 
+    /**
+     * The shop values the view shows, by dynamic value key (such as
+     * `'site.phone'`). The builder lists each one in the block's panel with
+     * its current value, and a tap opens the shop info group it comes from.
+     * Prefer it to usesSiteInfo(): the owner sees the values themselves.
+     *
+     * @throws InvalidArgumentException when a key is not a dynamic value key
+     */
+    public function showsValues(string ...$keys): self
+    {
+        foreach ($keys as $key) {
+            if (! DynamicValues::isKey($key)) {
+                throw new InvalidArgumentException("A shop value key is a lowercase name and one to three dotted parts, such as site.phone. Got [{$key}].");
+            }
+        }
+
+        $this->showsValues = array_values(array_unique($keys));
+
+        return $this;
+    }
+
     public function getLabel(): string
     {
         return $this->label;
@@ -149,6 +176,14 @@ final class OwnBlock
     }
 
     /**
+     * @return list<string>
+     */
+    public function getShowsValues(): array
+    {
+        return $this->showsValues;
+    }
+
+    /**
      * The definition the builder gets, as JSON.
      *
      * @return array<string, mixed>
@@ -163,6 +198,7 @@ final class OwnBlock
             'fields' => array_map(fn (Field $field): array => $field->toArray(), $this->fields),
             'defaults' => $this->defaults(),
             ...($this->siteInfo === [] ? [] : ['siteInfo' => $this->siteInfo]),
+            ...($this->showsValues === [] ? [] : ['showsValues' => $this->showsValues]),
         ];
     }
 

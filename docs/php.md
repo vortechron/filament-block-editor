@@ -304,7 +304,8 @@ app(BlockRegistry::class)->register(
             Field::number('limit')->min(1)->max(12),
             Field::list('items')->fields([Field::text('name')])->maxItems(6),
         ])
-        ->usesSiteInfo('contact')                // optional: the shop info groups the view reads
+        ->showsValues('site.phone', 'site.email') // optional: the shop values the view shows
+        ->usesSiteInfo('contact')                // optional: a whole shop info group the view reads
         ->view('blocks.stationery-board'),
 );
 ```
@@ -326,15 +327,22 @@ The view gets three variables:
   values are kept, so a block that is missing for now does not lose its data.
 - For an edge-to-edge block, set the section to `padding: none` and `width: full`.
 - The builder gets `app(BlockRegistry::class)->definitions()` (a list of `OwnBlock::toArray()`) as JSON.
-- `usesSiteInfo('contact', 'hours')` names the shop info groups (the keys of `getPageBuilderSiteInfo()`'s
-  groups) that the view reads. `toArray()` sends them as `siteInfo` (left out when there are none), and the
-  builder shows those groups of the shop info form in the block's panel. See "Shop info in the builder".
+- `showsValues('site.phone', 'site.email')` names the dynamic values the view shows (each must be a dynamic
+  value key, or it throws). `toArray()` sends them as `showsValues` (left out when there are none). The
+  block's panel lists each one as a short row with its current value; a tap opens its shop info group. Prefer
+  it to `usesSiteInfo()`.
+- `usesSiteInfo('contact', 'hours')` names whole shop info groups (the keys of `getPageBuilderSiteInfo()`'s
+  groups) that the view reads. `toArray()` sends them as `siteInfo` (left out when there are none). The panel
+  shows one row for each group that none of the block's values already comes from. See "Shop info in the
+  builder".
 
 Field types: `text`, `textarea`, `select` (`options`), `toggle`, `number` (`min`, `max`), `image`, `link`,
 `list` (`fields`, `maxItems`, lists may nest).
 
 A `link` or `image` field also keeps a dynamic value such as `@site.whatsapp`; your view gets the
-resolved address (see "Dynamic values").
+resolved address (see "Dynamic values"). A `text` or `textarea` field may hold short codes such as
+`Hubungi {site.phone} hari ini`; your view gets the words with each one filled in (`DynamicValues::fill()`).
+Keep drawing them with `{{ }}`: the filled words are plain text.
 
 ## Locks and developer-only data
 
@@ -402,6 +410,12 @@ app(DynamicValues::class)->resolve('site.phone', new RenderContext);
 - In links (button `url`, inline link `href`, own block `link` fields): `@site.whatsapp`, resolved,
   then checked by `Urls::link()`. In pictures (image and video `url`, own block `image` fields):
   `@entry.photo`, resolved, then checked by `Urls::media()`.
+- In own block `text` and `textarea` fields: a short code `{site.phone}` anywhere in the words. `Field::resolve()`
+  replaces each one with `fill($text, $context)`: a text value becomes its value (`''` when empty); a key that is
+  not a text value here (unknown, or a link or a picture) becomes `''`. A key in the context's values or in
+  `drawWith()` counts as text unless it is registered as a link or a picture. Braces around anything else
+  (`{nama}`, `{Site.Phone}`) stay as typed. Not `@key` inside words: an email address would match. The builder
+  shows each short code as a chip and offers a searchable "Shop value" ("Nilai kedai") picker of text values.
 - Values in the RenderContext win: `(new RenderContext)->withValues(['entry.title' => 'Kopi'])`.
 - `definitions(?RenderContext $context)` reads each `preview` with that context's values.
 - `settings` (optional) is the shop info group the value comes from, such as `contact`. `definitions()`
@@ -434,14 +448,22 @@ context still gets them in the preview (`previewPageBuilder()` draws inside `Dyn
 
 ## Shop info in the builder
 
-The shop info form (`getPageBuilderSiteInfo()`, saved by `savePageBuilderSiteInfo()`) shows in four places:
+The shop info form (`getPageBuilderSiteInfo()`, saved by `savePageBuilderSiteInfo()`):
 
 - the top bar's "Shop info" ("Maklumat kedai") button opens the whole form;
-- the header and footer panel shows the whole form;
-- a picked item's panel shows the groups it uses: an own block's `usesSiteInfo()`, and the `settings` group of
-  each dynamic value in its words, links, pictures and form actions (`@site.email`, `@site.whatsapp_number`);
-  a form shows them in its "After sending" part;
-- the section panel shows every group used anywhere in the section.
+- a picked item's panel (Settings tab) has a "From shop info" ("Dari maklumat kedai") block: one short row
+  per shop value it shows, with the value's label and what it is now ("not filled yet" / "belum diisi" when
+  empty). The values come from an own block's `showsValues()`, the chips in its words, the short codes in its
+  text fields and the `@key` of its links, pictures and form actions (`@site.email`, `@site.whatsapp_number`);
+  only values with a `settings` group count. An own block's `usesSiteInfo()` group shows as one row when none
+  of those values comes from it. A form shows its rows in its "After sending" part;
+- the header and footer panel shows one row per shop info group, with a short summary of its fields;
+- a tap on a row opens only that row's group of the form in the sidebar; Back returns to the item or the part,
+  still picked. The section panel shows no shop info.
+
+A good save answers `['ok' => true, 'dynamicValues' => [...]]`: the dynamic values read again
+(`pageBuilderDynamicValues()`), so the rows and chips show the new values at once. Read your values when they
+are drawn (not once at boot), so the save's answer has the new ones.
 
 While the owner types, the builder previews with the unsaved values: `previewPageBuilder($value, $kit,
 $siteInfo)`, where `$siteInfo` is `['contact' => ['phone' => ...], ...]`. After the access check, the trait

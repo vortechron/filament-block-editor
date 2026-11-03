@@ -18,7 +18,9 @@ use Vortechron\FilamentBlockEditor\Support\Urls;
  * - in links (button `url`, inline link `href`, own block `link` fields):
  *   `@site.whatsapp`, resolved, then checked by Urls::link();
  * - in pictures (image and video `url`, own block `image` fields):
- *   `@entry.photo`, resolved, then checked by Urls::media().
+ *   `@entry.photo`, resolved, then checked by Urls::media();
+ * - in own block `text` and `textarea` fields: a short code `{site.phone}`
+ *   anywhere in the words, replaced by fill() (a text value only).
  *
  *     app(DynamicValues::class)->register('site.phone', 'Telefon', fn (RenderContext $context) => $settings->phone, settings: 'contact');
  *
@@ -159,6 +161,35 @@ final class DynamicValues
         }
 
         return isset($this->values[$key]) ? self::text(($this->values[$key]['resolve'])($context)) : null;
+    }
+
+    /**
+     * Words with each short code (`{site.phone}`) replaced by its value as
+     * text. A key that is not a text value here, or is empty, becomes ''.
+     * Braces around anything that is not a key (`{nama}`) stay as typed.
+     * The result is plain text: escape it when drawing.
+     */
+    public function fill(string $text, RenderContext $context): string
+    {
+        if (! str_contains($text, '{')) {
+            return $text;
+        }
+
+        return (string) preg_replace_callback('/\{('.self::KEY.')\}/', fn (array $match): string => $this->isText($match[1], $context) ? ($this->resolve($match[1], $context) ?? '') : '', $text);
+    }
+
+    /**
+     * Whether a key is a text value in this draw: registered as text, or
+     * given by the context or drawWith() without being registered as a
+     * link or a picture.
+     */
+    private function isText(string $key, RenderContext $context): bool
+    {
+        if (isset($this->values[$key])) {
+            return $this->values[$key]['type'] === 'text';
+        }
+
+        return array_key_exists($key, $context->values) || array_key_exists($key, $this->drawValues);
     }
 
     /**

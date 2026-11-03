@@ -7,7 +7,7 @@ import { FormEditor } from './form/form-editor';
 import { Group, InfoCard, propText, TextField } from './item-fields';
 import { TextItemSettings } from './item-text-settings';
 import { PhotoField, VideoField } from './media-field';
-import { SiteInfoCard } from './part/site-info-card';
+import { SiteInfoRows } from './part/site-info-rows';
 import type { ItemSnapshot, SectionEditorHandle } from './types';
 
 /** Twelfths of the text column, then past the padding to the edge. */
@@ -56,7 +56,7 @@ export function ItemSettings({
     return (
         <div className="grid grid-cols-1 gap-5">
             <KindSettings item={item} onChange={onChange} />
-            {item.type !== 'form' && <SiteInfoCard source={item} />}
+            {item.type !== 'form' && <SiteInfoRows source={item} back={{ name: 'item' }} />}
             <TextItemSettings item={item} handle={handle} onChange={onChange} />
             <PlacementSettings item={item} onChange={onChange} />
         </div>
@@ -136,6 +136,7 @@ function OwnBlockSettings({ item, onChange }: SettingsProps) {
             definition={definition}
             values={propText(item.props.values, '{}')}
             onChange={(values) => onChange({ values })}
+            allowShopValues
         />
     ) : (
         <InfoCard>

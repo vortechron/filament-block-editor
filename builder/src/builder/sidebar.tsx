@@ -1,3 +1,4 @@
+import { useLayoutEffect, useRef } from 'react';
 import {
     ChevronLeft,
     ChevronRight,
@@ -20,7 +21,7 @@ import { PartPanel } from './part/part-panel';
 import { SiteInfoForm } from './part/site-info-form';
 import { useSectionTitle } from './section-meta';
 import { SectionPanel } from './section-panel';
-import type { HomePanelName } from './types';
+import { type HomePanelName, panelUnder } from './types';
 
 type Crumb = { label: string; onClick?: () => void };
 
@@ -45,8 +46,11 @@ export function Sidebar({
 }) {
     const { builder } = useBuilderContext();
     const { panel, selection } = builder;
+    // A shop info row opens its group over the item or part it is in.
+    const under = panelUnder(panel);
     const isHome = panel.name === 'add' || panel.name === 'layers';
-    const isSection = panel.name === 'section' || panel.name === 'item';
+    const isSection = under.name === 'section' || under.name === 'item';
+    const scroll = useScrollUnder(panel.name === 'siteInfo' && under !== panel);
 
     return (
         <div className="flex h-full min-h-0 flex-col">
@@ -55,23 +59,31 @@ export function Sidebar({
                 key={
                     isSection
                         ? `section:${selection.sectionId}`
-                        : panel.name === 'part'
-                          ? `part:${panel.part}`
-                          : panel.name
+                        : under.name === 'part'
+                          ? `part:${under.part}`
+                          : under.name
                 }
+                ref={scroll.ref}
+                onScroll={scroll.onScroll}
                 className="animate-in fade-in-0 slide-in-from-left-1 min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 duration-200"
             >
                 {panel.name === 'add' && <AddPanel onAdded={onDone} />}
                 {panel.name === 'layers' && <LayersPanel onPicked={onDone} />}
                 {panel.name === 'design' && <DesignPanel />}
-                {panel.name === 'siteInfo' && <SiteInfoForm />}
+                {panel.name === 'siteInfo' && <SiteInfoForm groups={panel.groups} />}
                 {panel.name === 'part' && <PartPanel part={panel.part} />}
                 {isSection && (
                     // The section's words stay open under an item's
-                    // settings, which change the item through them.
+                    // settings, which change the item through them. The
+                    // item stays open under its shop info, so Back finds
+                    // it as it was.
                     <>
-                        {panel.name === 'item' && <ItemPanel />}
-                        <div hidden={panel.name === 'item'}>
+                        {under.name === 'item' && (
+                            <div hidden={panel.name !== 'item'}>
+                                <ItemPanel />
+                            </div>
+                        )}
+                        <div hidden={panel.name !== 'section'}>
                             <SectionPanel />
                         </div>
                     </>
@@ -79,6 +91,41 @@ export function Sidebar({
             </div>
         </div>
     );
+}
+
+/**
+ * The panel's scroll place: the shop info opened from a row starts at the
+ * top, and Back puts the item where it was.
+ */
+function useScrollUnder(isOver: boolean) {
+    const ref = useRef<HTMLDivElement>(null);
+    const lastTop = useRef(0);
+    const underTop = useRef(0);
+    const wasOver = useRef(isOver);
+
+    useLayoutEffect(() => {
+        const element = ref.current;
+
+        if (element === null || wasOver.current === isOver) {
+            return;
+        }
+
+        wasOver.current = isOver;
+
+        if (isOver) {
+            underTop.current = lastTop.current;
+            element.scrollTop = 0;
+        } else {
+            element.scrollTop = underTop.current;
+        }
+    }, [isOver]);
+
+    return {
+        ref,
+        onScroll: () => {
+            lastTop.current = ref.current?.scrollTop ?? 0;
+        },
+    };
 }
 
 function SidebarHeader() {
@@ -126,9 +173,10 @@ function SidebarHeader() {
     const sectionIndex = blocks.findIndex(
         (block) => block.id === selection.sectionId,
     );
-    const isTopBarPanel = panel.name === 'design' || panel.name === 'siteInfo';
+    const under = panelUnder(panel);
+    const isTopBarPanel = under.name === 'design' || under.name === 'siteInfo';
     const section =
-        sectionIndex === -1 || isTopBarPanel || panel.name === 'part'
+        sectionIndex === -1 || isTopBarPanel || under.name === 'part'
             ? null
             : blocks[sectionIndex];
     const goHome = () =>
@@ -146,14 +194,14 @@ function SidebarHeader() {
         return described.isOwn ? described.label : t(described.label);
     };
     const panelCrumbs: Crumb[] =
-        panel.name === 'design'
+        under.name === 'design'
             ? [{ label: t('Design') }]
-            : panel.name === 'siteInfo'
+            : under.name === 'siteInfo'
               ? [{ label: t('Shop info') }]
-              : panel.name === 'part'
-                ? [{ label: partLabel(panel.part, t) }]
+              : under.name === 'part'
+                ? [{ label: partLabel(under.part, t) }]
                 : [];
-    const isItem = panel.name === 'item';
+    const isItem = under.name === 'item';
     const sectionCrumbs: Crumb[] = section
         ? [
               {
@@ -165,11 +213,20 @@ function SidebarHeader() {
                   : []),
           ]
         : [];
-    const crumbs: Crumb[] = [
+    const underCrumbs: Crumb[] = [
         { label: t('Page'), onClick: goHome },
         ...panelCrumbs,
         ...sectionCrumbs,
     ];
+    // Shop info opened from a row: one more step, back to the row's panel.
+    const crumbs: Crumb[] =
+        under === panel
+            ? underCrumbs
+            : [
+                  ...underCrumbs.slice(0, -1),
+                  { ...underCrumbs[underCrumbs.length - 1], onClick: () => builder.openPanel(under) },
+                  { label: t('Shop info') },
+              ];
 
     const back = crumbs.at(-2)?.onClick ?? goHome;
     const current = crumbs[crumbs.length - 1];

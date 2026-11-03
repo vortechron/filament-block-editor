@@ -3,7 +3,6 @@ import { OwnBlockForm } from '@/blocks/own-block-form';
 import { parseValues } from '@/blocks/own-block-values';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
-import { cn } from '@/lib/utils';
 import { Button } from '@/ui/button';
 import { useBuilderContext } from '../builder-context';
 
@@ -13,17 +12,15 @@ import { useBuilderContext } from '../builder-context';
  * same on every page, so it saves on its own (the top bar Save saves it
  * too), and the canvas shows each change before it is saved.
  *
- * With `groups`, it is a card with only those groups, for the panel of an
- * item or a section that shows them. Without, it shows every group.
+ * With `groups`, it shows only those groups: a row of an item or a part
+ * (site-info-rows.tsx) opens the group its value comes from. Without, it
+ * shows every group.
  */
 export function SiteInfoForm({
     groups,
-    description,
 }: {
     /** The keys of the groups to show. Left out, every group shows. */
     groups?: readonly string[];
-    /** Already translated. Left out, it says where the shop info shows. */
-    description?: string;
 }) {
     const t = useT();
     const { siteInfo } = useHost();
@@ -42,13 +39,8 @@ export function SiteInfoForm({
         return null;
     }
 
-    const isCard = groups !== undefined;
-
     return (
-        <section
-            aria-label={t('Shop info')}
-            className={cn('grid grid-cols-1 gap-5', isCard && 'bg-muted/40 gap-4 rounded-xl border p-3')}
-        >
+        <section aria-label={t('Shop info')} className="grid grid-cols-1 gap-5">
             <div className="grid gap-0.5">
                 <div className="flex items-center gap-2">
                     <Store className="text-muted-foreground size-4 shrink-0" />
@@ -58,8 +50,7 @@ export function SiteInfoForm({
                     </span>
                 </div>
                 <p className="text-muted-foreground text-xs">
-                    {description ??
-                        t('The header and footer show these. So do the shop info chips in your words.')}
+                    {t('The header and footer show these. So do the shop info chips in your words.')}
                 </p>
             </div>
 

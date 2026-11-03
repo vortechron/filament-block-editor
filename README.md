@@ -131,9 +131,10 @@ The builder always gets the current kit (`kit`) and `Kit::defaults()` (`kitDefau
 for its colour and font pickers; the design panel shows only when you override `savePageBuilderKit()`.
 
 With shop info (`getPageBuilderSiteInfo()` and `savePageBuilderSiteInfo()`), the top bar gets a "Shop info"
-button, and every item or section that shows shop info gets the groups it uses in its panel. They come from an
-own block's `usesSiteInfo('contact')` and the `settings` group of each dynamic value it uses
-(`register(..., settings: 'contact')`). The canvas follows the form before it is saved: draw your preview with
+button, and every item that shows shop info lists those values as short rows ("From shop info") with what they
+are now; a tap opens that group of the form. The values come from an own block's `showsValues('site.phone')`,
+the chips, short codes and `@key` links it uses, each through its `settings` group
+(`register(..., settings: 'contact')`); an own block's `usesSiteInfo('contact')` adds a whole group. The canvas follows the form before it is saved: draw your preview with
 the unsaved values in `withPageBuilderSiteInfo()`, and never save them there. More in
 [docs/php.md](docs/php.md#shop-info-in-the-builder).
 
@@ -169,8 +170,10 @@ app(BlockRegistry::class)->register(
 ```
 
 Field types: `text`, `textarea`, `select`, `toggle`, `number`, `image`, `link`, `list`. Values are cleaned by the
-definition before your view sees them. A block that shows shop info names its groups with
-`->usesSiteInfo('contact', 'hours')`, so its panel shows those groups of the shop info form. Mark a field `->developerOnly()` to keep it to developers. A section with `width: full` and `padding: none` lets your block draw edge
+definition before your view sees them. A block that shows shop info names the values with
+`->showsValues('site.phone', 'site.address')` (or whole groups with `->usesSiteInfo('hours')`), so its panel
+lists them. A `text` or `textarea` value may hold short codes like `Hubungi {site.phone}`; your view gets them
+filled in. Mark a field `->developerOnly()` to keep it to developers. A section with `width: full` and `padding: none` lets your block draw edge
 to edge. More in [docs/php.md](docs/php.md#your-own-blocks).
 
 ## Use the builder anywhere else

@@ -1,5 +1,5 @@
 import { BlockNoteEditor } from '@blocknote/core';
-import { act, fireEvent, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { createPageSchema } from '../src/editor/page-schema';
 import { shopInfoSlashItems } from '../src/editor/dynamic-inline';
@@ -64,13 +64,10 @@ function blockProps(builder: Builder, id: string): Record<string, unknown> {
     return block.props;
 }
 
-/**
- * Radix menus open on a key press in jsdom. A menu that just closed gives
- * the focus back a moment later, which would close the next one at once.
- */
-async function openMenu(name: string) {
-    await act(() => new Promise((resolve) => setTimeout(resolve, 0)));
-    fireEvent.keyDown(screen.getByRole('button', { name }), { key: 'Enter' });
+/** Opens a shop value picker by its button and taps one of its values. */
+async function pick(button: string, value: RegExp) {
+    fireEvent.click(await screen.findByRole('button', { name: button }));
+    fireEvent.click(within(screen.getByRole('listbox', { name: button })).getByRole('option', { name: value }));
 }
 
 describe('a dynamic value in text', () => {
@@ -134,8 +131,7 @@ describe('a dynamic value in a link or a picture', () => {
 
         await pickSection(/Hubungi kami/);
         fireEvent.click(await screen.findByRole('button', { name: 'Change link' }));
-        await openMenu('Shop links');
-        fireEvent.click(await screen.findByRole('menuitem', { name: /WhatsApp/ }));
+        await pick('Shop links', /WhatsApp/);
 
         expect(blockProps(builder, 'btn00001').url).toBe('@site.whatsapp');
 
@@ -155,10 +151,8 @@ describe('a dynamic value in a link or a picture', () => {
 
         await pickSection(/Hubungi kami/);
         fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
-        await openMenu('Shop links');
-        fireEvent.click(await screen.findByRole('menuitem', { name: /WhatsApp/ }));
-        await openMenu('Shop pictures');
-        fireEvent.click(await screen.findByRole('menuitem', { name: /Logo/ }));
+        await pick('Shop links', /WhatsApp/);
+        await pick('Shop pictures', /Logo/);
 
         expect(JSON.parse(String(blockProps(builder, 'own00001').values))).toMatchObject({
             link: '@site.whatsapp',

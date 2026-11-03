@@ -59,6 +59,7 @@ final class CoreBlocks
                 ])->default('md'),
             ])
             ->usesSiteInfo('contact')
+            ->showsValues('site.address')
             ->view('filament-block-editor::core.map');
     }
 

@@ -4,6 +4,8 @@ import { Field, SwitchRow } from '@/editor/fields';
 import { ImageField } from '@/editor/image-field';
 import { LinkField } from '@/editor/link-field';
 import { SegmentedChoice } from '@/editor/segmented-choice';
+import { ShortCodeField } from '@/editor/short-code-field';
+import { dynamicValuesOfType } from '@/lib/dynamic-values';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
 import type { OwnBlockDefinition, OwnBlockField } from '@/types';
@@ -24,23 +26,32 @@ const MAX_SEGMENTS = 3;
  * The form for one own block, made from its definition's fields. It reads
  * the block's JSON values string and writes the whole object back as one
  * string on every change.
+ *
+ * With `allowShopValues`, its text and textarea fields can hold the site's
+ * own text values as `{key}` chips (short-code-field.tsx), when the site
+ * has any. Only where the page fills them in: an own block, not the shop
+ * info form itself.
  */
 export function OwnBlockForm({
     definition,
     values,
     onChange,
+    allowShopValues = false,
 }: {
     definition: OwnBlockDefinition;
     /** The block's `values` prop: a JSON object string. */
     values: string;
     onChange: (values: string) => void;
+    allowShopValues?: boolean;
 }) {
+    const { dynamicValues } = useHost();
     const current = valuesWithDefaults(definition, parseValues(values));
 
     return (
         <FieldList
             fields={definition.fields}
             values={current}
+            shortCodes={allowShopValues && dynamicValuesOfType(dynamicValues, 'text').length > 0}
             onChange={(next) => onChange(serializeValues(next))}
         />
     );
@@ -49,10 +60,13 @@ export function OwnBlockForm({
 function FieldList({
     fields,
     values,
+    shortCodes,
     onChange,
 }: {
     fields: OwnBlockField[];
     values: OwnValues;
+    /** Text fields are chip boxes for the site's text values. */
+    shortCodes: boolean;
     onChange: (values: OwnValues) => void;
 }) {
     const { developer } = useHost();
@@ -68,6 +82,7 @@ function FieldList({
                     key={field.name}
                     field={field}
                     value={values[field.name]}
+                    shortCodes={shortCodes}
                     onChange={(value) =>
                         onChange({ ...values, [field.name]: value })
                     }
@@ -91,10 +106,12 @@ export function fieldLabel(field: OwnBlockField): string {
 function OwnField({
     field,
     value,
+    shortCodes,
     onChange,
 }: {
     field: OwnBlockField;
     value: unknown;
+    shortCodes: boolean;
     onChange: (value: unknown) => void;
 }) {
     const t = useT();
@@ -102,6 +119,18 @@ function OwnField({
     const label = fieldLabel(field);
     const hint = typeof field.help === 'string' ? field.help : undefined;
     const text = typeof value === 'string' ? value : '';
+
+    if (shortCodes && (field.type === 'text' || field.type === 'textarea')) {
+        return (
+            <ShortCodeField
+                label={label}
+                hint={hint}
+                value={text}
+                multiline={field.type === 'textarea'}
+                onChange={onChange}
+            />
+        );
+    }
 
     switch (field.type) {
         case 'textarea':
@@ -178,6 +207,7 @@ function OwnField({
                     label={label}
                     hint={hint}
                     rows={Array.isArray(value) ? value : []}
+                    shortCodes={shortCodes}
                     onChange={onChange}
                 />
             );
@@ -249,12 +279,14 @@ function ListField({
     label,
     hint,
     rows,
+    shortCodes,
     onChange,
 }: {
     field: OwnBlockField;
     label: string;
     hint?: string;
     rows: unknown[];
+    shortCodes: boolean;
     onChange: (rows: OwnValues[]) => void;
 }) {
     const t = useT();
@@ -323,6 +355,7 @@ function ListField({
                         <FieldList
                             fields={fields}
                             values={{ ...newRow(), ...row }}
+                            shortCodes={shortCodes}
                             onChange={(next) =>
                                 onChange(
                                     values.map((current, position) =>

@@ -87,8 +87,10 @@ class CoreBlocksTest extends TestCase
         $this->assertSame(['No. 12, Jalan Merdeka'], array_map(trim(...), $this->texts($shop, '.fbe-map-address span')));
         $this->assertSame('https://www.google.com/maps/search/?api=1&query=No.%2012%2C%20Jalan%20Merdeka', $this->first($shop, '.fbe-map-address a')->getAttribute('href'));
         $this->assertSame(['Jalan Lain'], array_map(trim(...), $this->texts($own, '.fbe-map-address span')));
-        // Its panel in the builder shows the shop's contact group.
-        $this->assertSame(['contact'], collect(app(BlockRegistry::class)->definitions())->firstWhere('kind', 'fbe-map')['siteInfo']);
+        // Its panel in the builder shows the shop address, else the shop's contact group.
+        $map = collect(app(BlockRegistry::class)->definitions())->firstWhere('kind', 'fbe-map');
+        $this->assertSame(['site.address'], $map['showsValues']);
+        $this->assertSame(['contact'], $map['siteInfo']);
     }
 
     public function test_the_map_draws_only_a_google_maps_embed(): void

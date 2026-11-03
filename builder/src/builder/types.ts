@@ -15,15 +15,29 @@ export const NOTHING_SELECTED: Selection = { sectionId: null, itemId: null };
 /** The two panels the sidebar opens on when nothing is being edited. */
 export type HomePanelName = 'add' | 'layers';
 
+/** The panels a shop info row opens from, so Back returns to them. */
+export type SiteInfoReturn = { name: 'item' } | { name: 'part'; part: PartKey };
+
 export type SidebarPanel =
     | { name: HomePanelName }
     | { name: 'section' }
     | { name: 'item' }
     | { name: 'design' }
-    /** The whole shop info form, from the top bar. */
-    | { name: 'siteInfo' }
+    /**
+     * The shop info form: the whole form from the top bar, or only some
+     * `groups` from a row of an item or a part, which `back` returns to.
+     */
+    | { name: 'siteInfo'; groups?: readonly string[]; back?: SiteInfoReturn }
     /** The header or footer, picked on the canvas. */
     | { name: 'part'; part: PartKey };
+
+/**
+ * The panel the sidebar is about: the item or part a shop info row was
+ * opened from, while that shop info shows, else the panel itself.
+ */
+export function panelUnder(panel: SidebarPanel): SidebarPanel {
+    return panel.name === 'siteInfo' && panel.back !== undefined ? panel.back : panel;
+}
 
 /**
  * The picked section's tabs: its words and items, its simple look

@@ -16,7 +16,7 @@ import { MobileDock } from './builder/mobile-dock';
 import { PreviewDialog } from './builder/preview-dialog';
 import { SaveErrors, sectionIndexOfError } from './builder/save-errors';
 import { Sidebar } from './builder/sidebar';
-import type { Device, SidebarPanel } from './builder/types';
+import { type Device, panelUnder, type SidebarPanel } from './builder/types';
 import { useBuilder } from './builder/use-builder';
 import { useBuilderShortcuts } from './builder/use-builder-shortcuts';
 import { combineSaveStatus } from './builder/use-save-state';
@@ -26,7 +26,7 @@ import { useMediaQuery } from './editor/use-media-query';
 import { usePageState } from './editor/use-page-state';
 import { type Host, HostContext } from './lib/host';
 import { I18nContext, type Locale, useT } from './lib/i18n';
-import type { PageValue, SectionTemplate } from './types';
+import type { DynamicValueDefinition, PageValue, SectionTemplate } from './types';
 import { PortalContainerContext } from './ui/portal';
 import { TooltipProvider } from './ui/tooltip';
 
@@ -65,6 +65,10 @@ export function PageBuilderApp({
 }: PageBuilderAppProps) {
     const [portal, setPortal] = useState<HTMLElement | null>(null);
     const i18n = useMemo(() => ({ locale, strings }), [locale, strings]);
+    // The shop values change after the shop info is saved: the host reads
+    // them again, so chips and shop info rows show the new values.
+    const [dynamicValues, setDynamicValues] = useState(host.dynamicValues);
+    const liveHost = useMemo(() => ({ ...host, dynamicValues }), [host, dynamicValues]);
 
     return (
         <div
@@ -78,7 +82,7 @@ export function PageBuilderApp({
             }
         >
             <I18nContext value={i18n}>
-                <HostContext value={host}>
+                <HostContext value={liveHost}>
                     <PortalContainerContext value={portal}>
                         <TooltipProvider delayDuration={300}>
                             <Builder
@@ -86,6 +90,7 @@ export function PageBuilderApp({
                                 templates={templates}
                                 onValue={onValue}
                                 onChange={onChange}
+                                onDynamicValues={setDynamicValues}
                             />
                         </TooltipProvider>
                     </PortalContainerContext>
@@ -101,11 +106,14 @@ function Builder({
     templates,
     onValue,
     onChange,
+    onDynamicValues,
 }: {
     initialValue: PageValue;
     templates: SectionTemplate[];
     onValue: (value: PageValue) => void;
     onChange?: (value: PageValue) => void;
+    /** The host read the shop values again, after a shop info save. */
+    onDynamicValues: (values: DynamicValueDefinition[]) => void;
 }) {
     const t = useT();
     const form = usePageState(initialValue, (value) => {
@@ -115,7 +123,7 @@ function Builder({
     const library = useSectionLibrary(templates);
     const builder = useBuilder({ form, templates: library.templates });
     const kit = useKitState();
-    const siteInfo = useSiteInfoState();
+    const siteInfo = useSiteInfoState({ onDynamicValues });
     const [device, setDevice] = useState<Device>('desktop');
     const [isDockOpen, setIsDockOpen] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -279,9 +287,7 @@ function Builder({
                                 <aside
                                     aria-label={t('Editor panels')}
                                     className={
-                                        builder.panel.name === 'section' ||
-                                        builder.panel.name === 'item' ||
-                                        builder.panel.name === 'part'
+                                        ['section', 'item', 'part'].includes(panelUnder(builder.panel).name)
                                             ? 'bg-card w-[22rem] shrink-0 border-r transition-[width] duration-200 lg:w-[26rem] xl:w-[28rem]'
                                             : 'bg-card w-[19.5rem] shrink-0 border-r transition-[width] duration-200 lg:w-[21.5rem] xl:w-[23rem]'
                                     }

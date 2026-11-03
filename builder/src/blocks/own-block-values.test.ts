@@ -83,4 +83,16 @@ describe('an own block’s values', () => {
         ).toBe('Pens and pencils · 2');
         expect(summarizeValues(board, {})).toBe('Stationery');
     });
+
+    it('names the shop values in the card line, not their short codes', () => {
+        const labels: Record<string, string> = { 'site.phone': 'Shop phone' };
+
+        expect(
+            summarizeValues(
+                board,
+                { heading: 'Call {site.phone} or {site.gone}' },
+                (key) => labels[key] ?? null,
+            ),
+        ).toBe('Call Shop phone or site.gone');
+    });
 });

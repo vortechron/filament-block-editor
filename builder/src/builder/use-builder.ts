@@ -24,6 +24,7 @@ import {
     type ItemPlace,
     NOTHING_SELECTED,
     type PagePlace,
+    panelUnder,
     type SectionEditorHandle,
     type SectionTab,
     type Selection,
@@ -207,13 +208,15 @@ export function useBuilder({
 
     function clearSelection() {
         setSelection(NOTHING_SELECTED);
-        setPanel((current) =>
-            current.name === 'section' ||
-            current.name === 'item' ||
-            current.name === 'part'
+        setPanel((current) => {
+            const under = panelUnder(current);
+
+            return under.name === 'section' ||
+                under.name === 'item' ||
+                under.name === 'part'
                 ? { name: homePanel }
-                : current,
-        );
+                : current;
+        });
     }
 
     /** A tap on the header or footer: its panel, and no section picked. */

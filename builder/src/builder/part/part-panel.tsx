@@ -4,12 +4,12 @@ import { useT } from '@/lib/i18n';
 import { partLabel } from '@/lib/site-parts';
 import type { PartKey } from '@/types';
 import { EditElsewhereLink } from '../edit-elsewhere-link';
-import { SiteInfoForm } from './site-info-form';
+import { SiteInfoGroupRows } from './site-info-rows';
 
 /**
  * The header or footer, picked on the canvas. It is the same on every
- * page, so it is built on its own (its `editUrl`); the shop info it shows
- * can be changed right here.
+ * page, so it is built on its own (its `editUrl`). The shop info it shows
+ * is listed as short rows; a tap opens that group of the shop info form.
  */
 export function PartPanel({ part }: { part: PartKey }) {
     const t = useT();
@@ -43,7 +43,7 @@ export function PartPanel({ part }: { part: PartKey }) {
                 />
             )}
 
-            <SiteInfoForm />
+            <SiteInfoGroupRows back={{ name: 'part', part }} />
         </div>
     );
 }

@@ -237,6 +237,9 @@ A value that comes from the site, the page or an entry at draw time.
   rule with a leading `@`) is kept, resolved at draw time, then checked by `Urls::link()`.
 - **In pictures** (image/video block `url`, own block `image` fields): `@entry.photo` is kept, resolved, then
   checked by `Urls::media()`.
+- **In own block words** (`text` and `textarea` fields): a short code `{site.phone}` anywhere in the value (same
+  key rule, in braces). `Field::resolve()` fills it with `DynamicValues::fill()`: a text value's text, else `''`.
+  Braces around anything else stay as typed. Not `@key` in words (an email address would match).
 - Track A: `Content\DynamicValues` singleton:
   `register(string $key, string $label, Closure $resolve, string $type = 'text', string $group = 'Site')` where
   type is `text`, `link` or `image` and `$resolve` gets the `RenderContext`; `definitions(): array` for the
@@ -355,7 +358,7 @@ type PageBuilderAdapter = {
   saveKit?(kit: Kit): Promise<SaveResult>;
   saveSection?(section: RichSection, meta: { title: string; synced: boolean }):
     Promise<{ ok: true; id: number | string; template?: SectionTemplateInput } | { ok: false; errors: Record<string, string> }>;
-  saveSiteInfo?(values: Record<string, Record<string, unknown>>): Promise<SaveResult>;
+  saveSiteInfo?(values: Record<string, Record<string, unknown>>): Promise<SaveResult & { dynamicValues?: DynamicValueDefinition[] }>;  // see Deviations, "Short rows and short codes"
 };
 ```
 
@@ -719,3 +722,38 @@ Before this, the shop info form could only be reached by tapping the header or f
    pick "The shop email". A form never shows a second card at the end of its item panel.
 6. **Not done:** a synced (`ref`) section's panel shows no card; a `link` field's or chip's value with no
    `settings` group shows none either.
+
+### Short rows and short codes, 3 November 2026
+
+The whole shop info form in almost every panel was too big. Changes 4 and 5 of "Shop info everywhere":
+
+1. **Rows, not the form.** An item's Settings tab, a form's "After sending" part and the header and footer panel
+   show a "From shop info" ("Dari maklumat kedai") block of short read-only rows: a value's label, what it is
+   now (one line), or "not filled yet" ("belum diisi"). A tap opens the shop info panel with only that row's
+   group; Back returns to the item or part, still picked (the item panel stays open, hidden, under it). The
+   section panel shows no shop info. The top bar's button still opens the whole form.
+2. **Which rows.** `siteInfoUsesFor()` (`builder/src/lib/site-info-groups.ts`, which replaces
+   `siteInfoGroupsFor()`) returns value keys, each once, in page order: an own block's `showsValues`, chips,
+   `{key}` short codes in own block text fields, and `@key` links, pictures and form actions. Only keys with a
+   `settings` group count. An own block's `siteInfo` group is a row only when none of the item's values comes
+   from it. **The header and footer panel lists every shop info group** (with a short summary of its text
+   fields): the builder does not have their documents, so it can not tell which values they show.
+3. **`OwnBlock::showsValues(string ...$keys)`** names the values a view shows; `toArray()` adds `showsValues`
+   (left out when empty); a key that fails `DynamicValues::isKey()` throws. `usesSiteInfo()` is unchanged. The map
+   block declares `showsValues('site.address')` next to `usesSiteInfo('contact')`.
+4. **Fresh values after a save.** The previews in `dynamicValues` were read once, when the builder opened.
+   `saveSiteInfoFromPageBuilder()` now answers `['ok' => true, 'dynamicValues' => [...]]` (read again after the
+   host's save), and the builder replaces its dynamic values with them (`SaveSiteInfoResult`), so rows and chips
+   show the new value. Unsaved edits still show the saved value in rows and chips (the canvas shows the unsaved one).
+5. **Short codes.** Section 6 gains own block words. In `DynamicValues::fill()` a key given by the context or by
+   `drawWith()` (like `entry.title` or a host's `page.title`) counts as text unless it is registered as a link or
+   a picture; a registered value of another type and an unknown key give `''`.
+6. **The builder's text fields.** With text values on the site, an own block's `text` and `textarea` fields are a
+   small ProseMirror box (`builder/src/editor/short-code-field.tsx`, on `@tiptap/pm` 3.31.4, already bundled by
+   BlockNote, now a direct dependency): each `{key}` is an atomic chip with the rich text chip's look, an unknown
+   key shows "no longer exists" ("tiada lagi"), `text` stays on one line, paste is plain text, typing `{key}` by
+   hand turns it into a chip. "Shop value" ("Nilai kedai") opens a searchable picker of text values and puts the
+   chip at the cursor, or at the end. The shop info form's own fields stay plain boxes.
+7. **One searchable picker** (`DynamicValuePicker`: a search box and the values by `group`, each with its preview;
+   filters by label, key and preview; arrow keys, Enter, Escape; 44px rows) replaces the "Shop links" and "Shop
+   pictures" drop-down menus. Picked links and pictures are still stored as `@key` and shown as `DynamicRefChip`.

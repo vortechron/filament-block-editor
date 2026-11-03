@@ -235,8 +235,12 @@ trait PageBuilderHooks
     }
 
     /**
+     * Saves the shop info. A good save answers with the dynamic values read
+     * again (`dynamicValues`, as in the options), so the builder's chips and
+     * shop info rows show the new values at once.
+     *
      * @param  array<string, mixed>  $values
-     * @return array{ok: bool, errors?: array<string, string>}
+     * @return array{ok: bool, errors?: array<string, string>, dynamicValues?: list<array<string, mixed>>}
      */
     public function saveSiteInfoFromPageBuilder(array $values): array
     {
@@ -246,7 +250,9 @@ trait PageBuilderHooks
             return ['ok' => false, 'errors' => ['siteInfo' => __('filament-block-editor::builder.errors.site_info_not_available')]];
         }
 
-        return $this->refusingInvalid(fn () => $this->savePageBuilderSiteInfo(array_filter($values, is_array(...))));
+        $result = $this->refusingInvalid(fn () => $this->savePageBuilderSiteInfo(array_filter($values, is_array(...))));
+
+        return $result['ok'] ? [...$result, 'dynamicValues' => $this->pageBuilderDynamicValues()] : $result;
     }
 
     /**

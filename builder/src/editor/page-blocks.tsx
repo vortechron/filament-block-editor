@@ -251,7 +251,7 @@ function OwnBlockCard({
     values: string;
 }) {
     const t = useT();
-    const { ownBlocks, openItem } = useContext(PageBlocksContext);
+    const { ownBlocks, openItem, dynamicValues = [] } = useContext(PageBlocksContext);
     const definition = ownBlocks.get(kind);
 
     if (!definition) {
@@ -274,7 +274,11 @@ function OwnBlockCard({
     }
 
     const Icon = iconByName(definition.icon);
-    const summary = summarizeValues(definition, parseValues(values));
+    const summary = summarizeValues(
+        definition,
+        parseValues(values),
+        (key) => findDynamicValue(dynamicValues, key)?.label ?? null,
+    );
 
     return (
         <div

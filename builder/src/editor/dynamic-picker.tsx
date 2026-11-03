@@ -1,76 +1,11 @@
-import { ChevronDown, Store, X } from 'lucide-react';
-import {
-    dynamicRef,
-    dynamicRefKey,
-    dynamicValuesOfType,
-    findDynamicValue,
-} from '@/lib/dynamic-values';
+import { Store, X } from 'lucide-react';
+import { dynamicRefKey, findDynamicValue } from '@/lib/dynamic-values';
 import { useHost } from '@/lib/host';
-import { useT } from '@/lib/i18n';
-import type { DynamicValueDefinition } from '@/types';
-import {
-    DropdownMenu,
-    DropdownMenuContent,
-    DropdownMenuItem,
-    DropdownMenuTrigger,
-} from '@/ui/dropdown-menu';
-
-type PickerType = Extract<DynamicValueDefinition['type'], 'link' | 'image'>;
 
 /**
- * A small menu of the site's own links or pictures, like the shop's
- * WhatsApp or its logo. Picking one stores `@key`; the site fills in the
- * real value when the page is drawn. Nothing shows when the site has none.
+ * A link or a picture stored as one of the site's own values (`@key`, picked
+ * with DynamicValuePicker), shown by its label instead of as text.
  */
-export function DynamicPicker({
-    type,
-    onPick,
-}: {
-    type: PickerType;
-    onPick: (value: string) => void;
-}) {
-    const t = useT();
-    const { dynamicValues } = useHost();
-    const values = dynamicValuesOfType(dynamicValues, type);
-
-    if (values.length === 0) {
-        return null;
-    }
-
-    const label = type === 'link' ? t('Shop links') : t('Shop pictures');
-
-    return (
-        <DropdownMenu modal={false}>
-            <DropdownMenuTrigger asChild>
-                <button
-                    type="button"
-                    aria-label={label}
-                    className="text-muted-foreground hover:text-foreground hover:bg-muted inline-flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-xs font-medium"
-                >
-                    <Store className="size-3.5" />
-                    {label}
-                    <ChevronDown className="size-3" />
-                </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64">
-                {values.map((value) => (
-                    <DropdownMenuItem
-                        key={value.key}
-                        onSelect={() => onPick(dynamicRef(value.key))}
-                        className="grid gap-0.5"
-                    >
-                        <span className="text-sm">{value.label}</span>
-                        {value.preview && (
-                            <span className="text-muted-foreground truncate text-xs">
-                                {value.preview}
-                            </span>
-                        )}
-                    </DropdownMenuItem>
-                ))}
-            </DropdownMenuContent>
-        </DropdownMenu>
-    );
-}
 
 /** Is the value a stored `@key`? Then it shows as its label, not as text. */
 export function isDynamicRef(value: unknown): boolean {

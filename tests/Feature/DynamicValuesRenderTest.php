@@ -120,6 +120,64 @@ class DynamicValuesRenderTest extends TestCase
         $this->assertSame([], $this->select($bad, '.board a'));
     }
 
+    /**
+     * The "words" own block (text, textarea and a list of names), drawn with these values.
+     *
+     * @param  array<string, mixed>  $values
+     */
+    private function words(array $values, ?RenderContext $context = null): string
+    {
+        $this->app['view']->addNamespace('fixtures', __DIR__.'/../fixtures/views');
+        app(BlockRegistry::class)->register(OwnBlock::make('words')->fields([
+            Field::text('heading'),
+            Field::textarea('intro'),
+            Field::list('items')->fields([Field::text('name')]),
+        ])->view('fixtures::blocks.words'));
+
+        return $this->render([Blocks::ownBlock('words', $values)], $context);
+    }
+
+    public function test_a_short_code_in_an_own_block_text_field_is_drawn_as_the_value(): void
+    {
+        $html = $this->words([
+            'heading' => 'Hubungi {site.phone} hari ini',
+            'intro' => "E-mel: {site.email}.\nWhatsApp: {site.whatsapp}{site.unknown}",
+            'items' => [['name' => '{site.phone}'], ['name' => 'Pen']],
+        ]);
+
+        $this->assertSame('Hubungi 012 <b>345</b> hari ini', $this->first($html, '.words h2')->textContent);
+        $this->assertSame("E-mel: .\nWhatsApp: ", $this->first($html, '.words p')->textContent);
+        $this->assertSame(['012 <b>345</b>', 'Pen'], $this->texts($html, '.words li'));
+    }
+
+    public function test_braces_around_anything_but_a_key_stay_as_typed(): void
+    {
+        $html = $this->words(['heading' => 'Hai {nama}, {Site.Phone} { site.phone } {site.} {a.b.c.d.e} {} @site.phone']);
+
+        $this->assertSame('Hai {nama}, {Site.Phone} { site.phone } {site.} {a.b.c.d.e} {} @site.phone', $this->first($html, '.words h2')->textContent);
+    }
+
+    public function test_a_short_code_reads_the_values_of_the_draw_like_an_entry(): void
+    {
+        $context = (new RenderContext)->withValues(['entry.title' => 'Kopi', 'site.phone' => '999']);
+
+        $html = $this->words(['heading' => '{entry.title} · {site.phone}'], $context);
+        $drawn = app(DynamicValues::class)->drawWith(['page.title' => 'Laman Utama'], fn (): string => $this->words(['heading' => '{page.title}']));
+
+        $this->assertSame('Kopi · 999', $this->first($html, '.words h2')->textContent);
+        $this->assertSame('Laman Utama', $this->first($drawn, '.words h2')->textContent);
+    }
+
+    public function test_a_short_code_value_is_escaped_in_the_view(): void
+    {
+        app(DynamicValues::class)->register('site.name', 'Nama', fn (): string => '<script>alert(1)</script>Kedai');
+
+        $html = $this->words(['heading' => 'Selamat datang ke {site.name}']);
+
+        $this->assertStringContainsString('Selamat datang ke &lt;script&gt;alert(1)&lt;/script&gt;Kedai', $html);
+        $this->assertStringNotContainsString('<script', $html);
+    }
+
     public function test_a_dynamic_hero_photo_still_sits_beside_the_words(): void
     {
         $html = app(PageRenderer::class)->render([['id' => 'h', 'type' => 'rich', 'data' => ['layout' => 'hero', 'document' => [Blocks::heading(1, 'Hai'), Blocks::image('@site.logo')]]]], new RenderContext);

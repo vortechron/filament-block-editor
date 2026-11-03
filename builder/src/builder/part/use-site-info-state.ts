@@ -1,26 +1,39 @@
 import { useState } from 'react';
+import { normalizeDynamicValues } from '@/lib/dynamic-values';
 import { useHost } from '@/lib/host';
+import type { DynamicValueDefinition, SaveSiteInfoResult } from '@/types';
 import { useSaveState } from '../use-save-state';
 
 type Values = Record<string, Record<string, unknown>>;
 
 /**
- * The shop info being edited (in the top bar's panel, the header and
- * footer, or the card of an item or a section that shows it), and saving
- * it through `adapter.saveSiteInfo`. After a save `reloads` goes up, so
- * the canvas draws the page again: the header and footer show the new info.
+ * The shop info being edited (in the top bar's panel, or the group a shop
+ * info row opened), and saving it through `adapter.saveSiteInfo`. After a
+ * save `reloads` goes up, so the canvas draws the page again: the header
+ * and footer show the new info. When the host answers with the dynamic
+ * values read again, `onDynamicValues` gets them, for the chips and rows.
  */
-export function useSiteInfoState() {
+export function useSiteInfoState({
+    onDynamicValues,
+}: {
+    onDynamicValues?: (values: DynamicValueDefinition[]) => void;
+} = {}) {
     const { adapter, siteInfo } = useHost();
     const saveSiteInfo = adapter.saveSiteInfo;
     const canSave = siteInfo !== null && typeof saveSiteInfo === 'function';
     const [reloads, setReloads] = useState(0);
-    const state = useSaveState<Values>({
+    const state = useSaveState<Values, SaveSiteInfoResult>({
         initial: siteInfo?.values ?? {},
         save: canSave ? saveSiteInfo : null,
         errorKey: 'siteInfo',
         fallbackError: 'The shop info could not be saved.',
-        onSaved: () => setReloads((count) => count + 1),
+        onSaved: (result) => {
+            setReloads((count) => count + 1);
+
+            if (Array.isArray(result?.dynamicValues)) {
+                onDynamicValues?.(normalizeDynamicValues(result.dynamicValues));
+            }
+        },
     });
 
     return {

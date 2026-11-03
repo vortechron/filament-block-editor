@@ -258,11 +258,13 @@ final class Field
     /**
      * A cleaned value with its dynamic values resolved for drawing: an
      * `@key` link or picture becomes the value it points at (checked by
-     * the address rules, or null), in lists too.
+     * the address rules, or null), and each `{key}` short code in a text or
+     * textarea becomes its text (DynamicValues::fill()), in lists too.
      */
     public function resolve(mixed $value, RenderContext $context): mixed
     {
         return match ($this->type) {
+            'text', 'textarea' => is_string($value) ? app(DynamicValues::class)->fill($value, $context) : $value,
             'image' => app(DynamicValues::class)->media($value, $context),
             'link' => app(DynamicValues::class)->link($value, $context),
             'list' => is_array($value) ? array_map(fn (mixed $item): mixed => is_array($item) ? self::resolveFields($this->fields, $item, $context) : $item, $value) : $value,

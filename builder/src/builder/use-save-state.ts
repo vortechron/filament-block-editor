@@ -9,7 +9,7 @@ const SAVED_FOR_MS = 2000;
  * design kit, the shop info. The same shape as the page state
  * (use-page-state.ts), so the top bar treats all three alike.
  */
-export function useSaveState<T>({
+export function useSaveState<T, R extends SaveResult = SaveResult>({
     initial,
     save,
     errorKey,
@@ -18,12 +18,13 @@ export function useSaveState<T>({
 }: {
     initial: T;
     /** Null when the host can not save this value: then it is never dirty. */
-    save: ((value: T) => Promise<SaveResult>) | null;
+    save: ((value: T) => Promise<R>) | null;
     /** The error key for a save that throws. */
     errorKey: string;
     /** The error text for a save that throws without a message. */
     fallbackError: string;
-    onSaved?: () => void;
+    /** After a good save, with the host's answer. */
+    onSaved?: (result: Extract<R, { ok: true }>) => void;
 }) {
     const [value, setValue] = useState<T>(initial);
     const [saved, setSaved] = useState(() => JSON.stringify(initial));
@@ -63,7 +64,7 @@ export function useSaveState<T>({
         setErrors({});
         setSaved(JSON.stringify(current));
         setRecentlySuccessful(true);
-        onSaved?.();
+        onSaved?.(result as Extract<R, { ok: true }>);
         window.clearTimeout(savedTimer.current);
         savedTimer.current = window.setTimeout(
             () => setRecentlySuccessful(false),
@@ -86,12 +87,12 @@ export function useSaveState<T>({
 }
 
 /** The host's answer, or a refusal with the error a throwing save gave. */
-async function saveOrRefuse<T>(
-    save: (value: T) => Promise<SaveResult>,
+async function saveOrRefuse<T, R extends SaveResult>(
+    save: (value: T) => Promise<R>,
     value: T,
     errorKey: string,
     fallbackError: string,
-): Promise<SaveResult> {
+): Promise<R | SaveResult> {
     try {
         return await save(value);
     } catch (error) {

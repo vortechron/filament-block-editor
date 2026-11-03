@@ -78,6 +78,19 @@ class PageBuilderHooksTest extends FilamentTestCase
         $this->assertSame(['page.title' => 'Laman Utama', 'site.phone' => '019'], Livewire::test(FullDemoBuilder::class)->instance()->previewContextValues());
     }
 
+    public function test_the_preview_draws_the_short_codes_in_an_own_blocks_words(): void
+    {
+        $this->signIn();
+        $notice = ['type' => 'ownBlock', 'props' => ['kind' => 'notice', 'values' => json_encode(['title' => 'Selamat datang ke {page.title}', 'text' => 'Hubungi {site.phone}'])]];
+
+        $html = Livewire::test(FullDemoBuilder::class)
+            ->call('previewPageBuilder', ['version' => 2, 'sections' => [['id' => 'p1', 'type' => 'rich', 'data' => ['document' => [$notice]]]]])
+            ->effects['returns'][0];
+
+        $this->assertStringContainsString('<strong>Selamat datang ke Laman Utama</strong>', $html);
+        $this->assertStringContainsString('<p>Hubungi 019</p>', $html);
+    }
+
     public function test_a_refusal_is_in_the_language_of_the_panel(): void
     {
         $this->signIn();
@@ -185,11 +198,31 @@ class PageBuilderHooksTest extends FilamentTestCase
         $this->signIn();
         $component = Livewire::test(FullDemoBuilder::class);
 
-        $component->call('saveSiteInfoFromPageBuilder', ['contact' => ['phone' => '0123']])->assertReturned(['ok' => true]);
+        $saved = $component->call('saveSiteInfoFromPageBuilder', ['contact' => ['phone' => '0123']])->effects['returns'][0];
+        $this->assertTrue($saved['ok']);
         $this->assertSame(['contact' => ['phone' => '0123']], FullDemoBuilder::$calls['siteInfo']);
 
         $bad = $component->call('saveSiteInfoFromPageBuilder', ['contact' => ['phone' => 'bad']])->effects['returns'][0];
         $this->assertSame(['ok' => false, 'errors' => ['contact.phone' => 'Telefon tidak sah.']], $bad);
+    }
+
+    public function test_a_shop_info_save_answers_with_the_values_read_again_so_the_builder_shows_the_new_ones(): void
+    {
+        $this->signIn();
+        app(DynamicValues::class)->register('site.email', 'Emel', fn (): string => FullDemoBuilder::$calls['siteInfo']['contact']['email'] ?? 'lama@kedai.my', settings: 'contact');
+        $component = Livewire::test(FullDemoBuilder::class);
+
+        $this->assertSame('lama@kedai.my', $component->instance()->getPageBuilderOptions()['dynamicValues'][0]['preview']);
+
+        $saved = $component->call('saveSiteInfoFromPageBuilder', ['contact' => ['email' => 'baru@kedai.my']])->effects['returns'][0];
+
+        $this->assertTrue($saved['ok']);
+        $this->assertSame(['key' => 'site.email', 'label' => 'Emel', 'type' => 'text', 'group' => 'Site', 'preview' => 'baru@kedai.my', 'settings' => 'contact'], $saved['dynamicValues'][0]);
+        $this->assertSame(['page.title', 'site.phone'], array_column(array_slice($saved['dynamicValues'], 1), 'key'));
+
+        $refused = $component->call('saveSiteInfoFromPageBuilder', ['contact' => ['phone' => 'bad']])->effects['returns'][0];
+
+        $this->assertArrayNotHasKey('dynamicValues', $refused);
     }
 
     public function test_every_new_builder_call_checks_access_first(): void

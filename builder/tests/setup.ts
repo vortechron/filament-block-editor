@@ -37,6 +37,11 @@ if (!('ResizeObserver' in window)) {
 Element.prototype.scrollIntoView ??= () => {};
 window.scrollTo ??= () => {};
 
+// ProseMirror (the text fields with shop values) measures the cursor to
+// scroll to it. jsdom draws nothing, so every box is empty.
+Range.prototype.getClientRects ??= () => [] as unknown as DOMRectList;
+Range.prototype.getBoundingClientRect ??= () => new DOMRect();
+
 // jsdom has no CSS.escape. This is enough for the builder's ids and paths.
 const scope = globalThis as unknown as { CSS?: { escape?: (value: string) => string } };
 

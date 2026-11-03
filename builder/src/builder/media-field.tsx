@@ -1,9 +1,11 @@
 import { ImageUp, LoaderCircle } from 'lucide-react';
 import { type ChangeEvent, useId, useRef, useState } from 'react';
+import { dynamicRef } from '@/lib/dynamic-values';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
 import { Input } from '@/ui/input';
-import { DynamicPicker, DynamicRefChip, isDynamicRef } from '../editor/dynamic-picker';
+import { DynamicRefChip, isDynamicRef } from '../editor/dynamic-picker';
+import { DynamicValuePicker } from '../editor/dynamic-value-picker';
 
 /**
  * The photo of a photo item: pick one and it uploads through the host,
@@ -63,7 +65,11 @@ export function PhotoField({
     return (
         <div className="grid gap-2">
             <div className="flex justify-end empty:hidden">
-                <DynamicPicker type="image" onPick={onChange} />
+                <DynamicValuePicker
+                    type="image"
+                    label={t('Shop pictures')}
+                    onPick={(key) => onChange(dynamicRef(key))}
+                />
             </div>
             <input
                 ref={input}

@@ -1,10 +1,12 @@
 import { ImagePlus, LoaderCircle, Trash2 } from 'lucide-react';
 import { type ChangeEvent, useId, useRef, useState } from 'react';
+import { dynamicRef } from '@/lib/dynamic-values';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
 import { Button } from '@/ui/button';
 import { Label } from '@/ui/label';
-import { DynamicPicker, DynamicRefChip, isDynamicRef } from './dynamic-picker';
+import { DynamicRefChip, isDynamicRef } from './dynamic-picker';
+import { DynamicValuePicker } from './dynamic-value-picker';
 
 /**
  * Pick a photo, upload it through the host's adapter, and hand back its
@@ -77,7 +79,13 @@ export function ImageField({
         <div className="grid grid-cols-1 gap-1.5">
             <div className="flex min-h-7 items-center justify-between gap-2">
                 <Label htmlFor={inputId}>{label}</Label>
-                {allowShopPictures && <DynamicPicker type="image" onPick={onChange} />}
+                {allowShopPictures && (
+                    <DynamicValuePicker
+                        type="image"
+                        label={t('Shop pictures')}
+                        onPick={(key) => onChange(dynamicRef(key))}
+                    />
+                )}
             </div>
             <div className="flex items-center gap-3">
                 <div className="bg-secondary text-muted-foreground flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-md border">

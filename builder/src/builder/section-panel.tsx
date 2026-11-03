@@ -11,7 +11,6 @@ import {
 } from '../editor/rich-look-fields';
 import { useBuilderContext } from './builder-context';
 import { ItemGrid } from './catalog-tiles';
-import { SiteInfoCard } from './part/site-info-card';
 import { RefSectionPanel } from './ref-section-panel';
 import { SectionActions } from './section-actions';
 import { useSectionTitle } from './section-meta';
@@ -29,8 +28,7 @@ const TABS: { name: SectionTab; label: string; icon: typeof Type }[] = [
 ];
 
 /**
- * The picked section: type its words, change the shop info it shows, add
- * items to it, change its look (layout, background, space, presets), its
+ * The picked section: type its words, add items to it, change its look (layout, background, space, presets), its
  * open style per device and its advanced settings, or hide, copy, move
  * and delete it. The words stay open on the other tabs too, out of sight,
  * so the editor keeps the cursor.
@@ -69,12 +67,6 @@ function RichSectionPanel({ block, index }: { block: RichSection; index: number 
     const tab = tabs.some((entry) => entry.name === sectionTab)
         ? sectionTab
         : 'content';
-    // Under a picked item's panel the section stays open, out of sight;
-    // the item has its own card then.
-    const shopInfo =
-        tab === 'content' && builder.panel.name === 'section' ? (
-            <SiteInfoCard source={block} />
-        ) : null;
 
     /** Only the look changes here. The words come from the latest document. */
     function updateData(update: (data: SectionData) => SectionData) {
@@ -149,16 +141,10 @@ function RichSectionPanel({ block, index }: { block: RichSection; index: number 
                 </p>
             )}
 
-            {tab === 'content' && isContentLocked && (
-                <>
-                    <LockedNote />
-                    {shopInfo}
-                </>
-            )}
+            {tab === 'content' && isContentLocked && <LockedNote />}
             {!isContentLocked && (
                 <div hidden={tab !== 'content'} className="grid grid-cols-1 gap-4">
                     <SectionWords block={block} />
-                    {shopInfo}
                     <div className="grid gap-1">
                         <p className="text-foreground text-sm font-medium">
                             {t('Add to this section')}

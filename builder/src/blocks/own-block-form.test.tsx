@@ -1,9 +1,9 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { type ReactNode, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { HostContext, type Host } from '@/lib/host';
 import { I18nContext } from '@/lib/i18n';
-import type { OwnBlockDefinition } from '@/types';
+import type { DynamicValueDefinition, OwnBlockDefinition } from '@/types';
 import { OwnBlockForm } from './own-block-form';
 import { DEFAULT_KIT } from '@/lib/kit';
 
@@ -37,7 +37,7 @@ const board: OwnBlockDefinition = {
     ],
 };
 
-function wrap(upload: Host['upload'] = vi.fn(), developer = false) {
+function wrap(upload: Host['upload'] = vi.fn(), developer = false, dynamicValues: DynamicValueDefinition[] = []) {
     const host: Host = {
         adapter: {
             save: vi.fn(),
@@ -54,7 +54,7 @@ function wrap(upload: Host['upload'] = vi.fn(), developer = false) {
         fonts: [],
         kit: DEFAULT_KIT,
         kitDefaults: DEFAULT_KIT,
-        dynamicValues: [],
+        dynamicValues,
         syncedSections: [],
         parts: [],
         siteInfo: null,
@@ -261,5 +261,75 @@ describe('the form for an own block', () => {
         expect(JSON.parse(onChange.mock.calls.at(-1)?.[0]).photo).toBe(
             '/storage/photo.jpg',
         );
+    });
+});
+
+const SHOP_VALUES: DynamicValueDefinition[] = [
+    { key: 'site.phone', label: 'Phone', type: 'text', group: 'Contact', preview: '012-345 6789' },
+    { key: 'site.email', label: 'Email', type: 'text', group: 'Contact', preview: null },
+    { key: 'site.whatsapp', label: 'WhatsApp', type: 'link', group: 'Contact', preview: 'https://wa.me/6012' },
+];
+
+/** The board's form with shop values in its text fields, as the item panel shows it. */
+function renderWithShopValues(values: string, onChange = vi.fn()) {
+    render(<OwnBlockForm definition={board} values={values} onChange={onChange} allowShopValues />, {
+        wrapper: wrap(vi.fn(), false, SHOP_VALUES),
+    });
+
+    return onChange;
+}
+
+/** What the chips in a field show, in order. */
+const chipsIn = (field: HTMLElement) =>
+    [...field.querySelectorAll('[data-short-code]')].map((chip) => chip.textContent);
+
+const lastValues = (onChange: ReturnType<typeof vi.fn>) => JSON.parse(onChange.mock.calls.at(-1)?.[0]);
+
+describe('shop values in an own block’s text fields', () => {
+    it('show each {key} as a chip with its label and what it is now, and say when a value is gone', () => {
+        renderWithShopValues(JSON.stringify({ heading: 'Hubungi {site.phone} atau {site.gone}', intro: 'Baris 1\n{site.email}' }));
+
+        expect(chipsIn(screen.getByRole('textbox', { name: 'Heading' }))).toEqual([
+            'Phone· 012-345 6789',
+            'site.gone· no longer exists',
+        ]);
+        expect(screen.getByRole('textbox', { name: 'Intro' }).textContent).toBe('Baris 1Email');
+        expect(screen.getByRole('textbox', { name: 'Intro' }).getAttribute('aria-multiline')).toBe('true');
+    });
+
+    it('put a picked shop value at the end of the words, stored as {key}, and undo takes it out', () => {
+        const onChange = renderWithShopValues(JSON.stringify({ heading: 'Hubungi ' }));
+        const heading = screen.getByRole('group', { name: 'Heading' });
+
+        fireEvent.click(within(heading).getByRole('button', { name: 'Shop value' }));
+        // Only text values go in words.
+        expect(within(heading).queryByRole('option', { name: /WhatsApp/ })).toBeNull();
+        fireEvent.click(within(heading).getByRole('option', { name: /Phone/ }));
+
+        expect(lastValues(onChange).heading).toBe('Hubungi {site.phone}');
+        expect(chipsIn(screen.getByRole('textbox', { name: 'Heading' }))).toEqual(['Phone· 012-345 6789']);
+
+        fireEvent.keyDown(screen.getByRole('textbox', { name: 'Heading' }), { key: 'z', ctrlKey: true });
+
+        expect(lastValues(onChange).heading).toBe('Hubungi ');
+    });
+
+    it('keep a one-line field on one line, and give a textarea a new line on Enter', () => {
+        const onChange = renderWithShopValues(JSON.stringify({ heading: 'Satu', intro: 'Satu' }));
+
+        fireEvent.keyDown(screen.getByRole('textbox', { name: 'Heading' }), { key: 'Enter' });
+        expect(onChange).not.toHaveBeenCalled();
+
+        fireEvent.keyDown(screen.getByRole('textbox', { name: 'Intro' }), { key: 'Enter' });
+        expect(lastValues(onChange).intro.split('\n')).toHaveLength(2);
+    });
+
+    it('are plain boxes when the site has no text values', () => {
+        render(<OwnBlockForm definition={board} values="{}" onChange={vi.fn()} allowShopValues />, {
+            wrapper: wrap(),
+        });
+
+        expect(screen.getByLabelText('Heading')).toHaveProperty('value', 'Stationery');
+        expect(screen.queryByRole('button', { name: 'Shop value' })).toBeNull();
     });
 });

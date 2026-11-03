@@ -3,17 +3,19 @@ import type {
     DynamicValueDefinition,
     OwnBlockDefinition,
     OwnBlockField,
-    Section,
 } from '@/types';
-import { dynamicRefKey } from './dynamic-values';
+import { DYNAMIC_KEY, dynamicRefKey, findDynamicValue } from './dynamic-values';
 import { parseForm } from './form-definition';
+import { shortCodeKeys } from './short-codes';
 
 /**
- * Which groups of the shop info form (`siteInfo.groups`, by key) an item
- * or a section shows, so its panel can offer just those groups. A group
- * comes from an own block's `siteInfo`, or from a shop value it uses: a
- * chip in its words, or an `@key` in a link, a picture or a form action,
- * through that value's `settings` group.
+ * The shop info an item shows, so its panel can list it as short rows
+ * ("From shop info"). Mostly shop values, by key: the values an own block
+ * shows (`showsValues`), the chips in its words, the short codes in an own
+ * block's text fields, and the `@key` of a link, a picture or a form
+ * action. A value counts when it comes from a shop info group (its
+ * `settings`). A group an own block names (`siteInfo`) is only a fallback:
+ * it is left out when one of the item's values already comes from it.
  */
 
 /** A block as the editor or the page value holds it. Only what is read here. */
@@ -24,45 +26,41 @@ type BlockLike = {
     children?: unknown;
 };
 
-/** One thing an item uses: a group by name, or a shop value by key. */
-type Use = { group: string } | { key: string };
+/** One row: a shop value by key, or a whole shop info group. */
+export type SiteInfoUse = { key: string } | { group: string };
 
-/** The groups an item, or every item of a section, uses, each once, in page order. */
-export function siteInfoGroupsFor(
-    source: Section | BlockLike | null | undefined,
+/** What an item and the blocks inside it use, each once, in page order. */
+export function siteInfoUsesFor(
+    source: BlockLike | null | undefined,
     ownBlocks: readonly OwnBlockDefinition[],
     dynamicValues: readonly DynamicValueDefinition[],
-): string[] {
-    const groups = blocksOf(source)
-        .flatMap((block) => usesOf(block, ownBlocks))
-        .flatMap((use) => {
-            const group =
-                'group' in use
-                    ? use.group
-                    : dynamicValues.find((value) => value.key === use.key)?.settings;
-
-            return typeof group === 'string' && group !== '' ? [group] : [];
-        });
-
-    return [...new Set(groups)];
-}
-
-function blocksOf(source: Section | BlockLike | null | undefined): BlockLike[] {
-    if (!isObject(source) || source.type === 'ref') {
+): SiteInfoUse[] {
+    if (!isObject(source)) {
         return [];
     }
 
-    if (source.type === 'rich' && 'data' in source && isObject(source.data)) {
-        const document = source.data.document;
+    const groupOf = (key: string) => findDynamicValue(dynamicValues, key)?.settings;
+    const uses = usesOf(source, ownBlocks).filter(
+        (use) => !('key' in use) || groupOf(use.key) !== undefined,
+    );
+    const covered = new Set(uses.flatMap((use) => ('key' in use ? [groupOf(use.key)] : [])));
+    const seen = new Set<string>();
 
-        return Array.isArray(document) ? document.filter(isObject) : [];
-    }
+    return uses.filter((use) => {
+        const id = 'key' in use ? `key:${use.key}` : `group:${use.group}`;
 
-    return [source];
+        if (seen.has(id) || ('group' in use && covered.has(use.group))) {
+            return false;
+        }
+
+        seen.add(id);
+
+        return true;
+    });
 }
 
 /** One block, then its words, then the blocks inside it (columns, nested items). */
-function usesOf(block: BlockLike, ownBlocks: readonly OwnBlockDefinition[]): Use[] {
+function usesOf(block: BlockLike, ownBlocks: readonly OwnBlockDefinition[]): SiteInfoUse[] {
     const props = isObject(block.props) ? block.props : {};
     const children = Array.isArray(block.children) ? block.children : [];
 
@@ -77,13 +75,14 @@ function propUses(
     type: unknown,
     props: Record<string, unknown>,
     ownBlocks: readonly OwnBlockDefinition[],
-): Use[] {
+): SiteInfoUse[] {
     switch (type) {
         case 'ownBlock': {
             const definition = ownBlocks.find((entry) => entry.kind === props.kind);
 
             return definition
                 ? [
+                      ...asKeys(namedKeys(definition.showsValues)),
                       ...namedGroups(definition.siteInfo),
                       ...asKeys(fieldKeys(definition.fields, parseValues(props.values))),
                   ]
@@ -100,7 +99,13 @@ function propUses(
     }
 }
 
-function namedGroups(raw: unknown): Use[] {
+function namedKeys(raw: unknown): string[] {
+    return Array.isArray(raw)
+        ? raw.filter((key): key is string => typeof key === 'string' && DYNAMIC_KEY.test(key))
+        : [];
+}
+
+function namedGroups(raw: unknown): SiteInfoUse[] {
     return Array.isArray(raw)
         ? raw
               .filter((group): group is string => typeof group === 'string' && group !== '')
@@ -108,17 +113,24 @@ function namedGroups(raw: unknown): Use[] {
         : [];
 }
 
-function asKeys(keys: readonly string[]): Use[] {
+function asKeys(keys: readonly string[]): SiteInfoUse[] {
     return keys.map((key) => ({ key }));
 }
 
-/** Shop values in an own block's link and picture fields, rows of lists too. */
+/**
+ * Shop values in an own block's fields: `@key` in links and pictures,
+ * short codes in text and textareas, rows of lists too.
+ */
 function fieldKeys(fields: readonly OwnBlockField[], values: Record<string, unknown>): string[] {
     return fields.flatMap((field) => {
         const value = values[field.name];
 
         if (field.type === 'link' || field.type === 'image') {
             return refKeys([value]);
+        }
+
+        if ((field.type === 'text' || field.type === 'textarea') && typeof value === 'string') {
+            return shortCodeKeys(value);
         }
 
         if (field.type === 'list' && Array.isArray(value)) {

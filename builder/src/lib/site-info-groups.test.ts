@@ -1,25 +1,36 @@
 import { describe, expect, it } from 'vitest';
-import type { DynamicValueDefinition, OwnBlockDefinition, RichSection } from '@/types';
-import { siteInfoGroupsFor } from './site-info-groups';
+import type { DynamicValueDefinition, OwnBlockDefinition } from '@/types';
+import { siteInfoUsesFor } from './site-info-groups';
 
 const VALUES: DynamicValueDefinition[] = [
     { key: 'site.phone', label: 'Phone', type: 'text', settings: 'contact' },
     { key: 'site.hours', label: 'Hours', type: 'text', settings: 'hours' },
     { key: 'site.email', label: 'Email', type: 'text', settings: 'contact' },
+    { key: 'site.address', label: 'Address', type: 'text', settings: 'contact' },
     { key: 'site.whatsapp', label: 'WhatsApp', type: 'link', settings: 'contact' },
     { key: 'site.whatsapp_number', label: 'WhatsApp number', type: 'text', settings: 'contact' },
     { key: 'site.facebook', label: 'Facebook', type: 'link', settings: 'social' },
     { key: 'site.logo', label: 'Logo', type: 'image', settings: 'business' },
+    { key: 'site.name', label: 'Shop name', type: 'text', settings: 'business' },
     { key: 'page.title', label: 'Page title', type: 'text' },
 ];
 
 const OWN_BLOCKS: OwnBlockDefinition[] = [
     { kind: 'opening-hours', label: 'Opening hours', fields: [], siteInfo: ['hours', 'contact'] },
     {
+        kind: 'map',
+        label: 'Map',
+        fields: [{ name: 'address', type: 'text' }],
+        siteInfo: ['contact'],
+        showsValues: ['site.address'],
+    },
+    { kind: 'old-map', label: 'Old map', fields: [], siteInfo: ['contact'], showsValues: ['site.gone'] },
+    {
         kind: 'team',
         label: 'Team',
         fields: [
             { name: 'heading', type: 'text' },
+            { name: 'intro', type: 'textarea' },
             { name: 'link', type: 'link' },
             {
                 name: 'people',
@@ -33,52 +44,74 @@ const OWN_BLOCKS: OwnBlockDefinition[] = [
     },
 ];
 
-const groupsOf = (source: Parameters<typeof siteInfoGroupsFor>[0]) =>
-    siteInfoGroupsFor(source, OWN_BLOCKS, VALUES);
+const usesOf = (source: Parameters<typeof siteInfoUsesFor>[0]) =>
+    siteInfoUsesFor(source, OWN_BLOCKS, VALUES);
 
 const chip = (key: string) => ({ type: 'dynamic', props: { key } });
 
-describe('the shop info groups an item uses', () => {
-    it('are the groups an own block names', () => {
-        expect(groupsOf({ type: 'ownBlock', props: { kind: 'opening-hours', values: '{}' } })).toEqual([
-            'hours',
-            'contact',
+describe('the shop info an item uses', () => {
+    it('is the values an own block shows, before the groups it names', () => {
+        expect(usesOf({ type: 'ownBlock', props: { kind: 'map', values: '{}' } })).toEqual([
+            { key: 'site.address' },
         ]);
     });
 
-    it('come from the shop info chips in its words, by each value’s settings group', () => {
+    it('is the groups an own block names, when none of its values covers them', () => {
+        expect(usesOf({ type: 'ownBlock', props: { kind: 'opening-hours', values: '{}' } })).toEqual([
+            { group: 'hours' },
+            { group: 'contact' },
+        ]);
+        // The site has no such value, so the group shows instead.
+        expect(usesOf({ type: 'ownBlock', props: { kind: 'old-map', values: '{}' } })).toEqual([
+            { group: 'contact' },
+        ]);
+    });
+
+    it('is the shop info chips in its words, not values from elsewhere like the page title', () => {
         expect(
-            groupsOf({
+            usesOf({
                 type: 'paragraph',
                 props: {},
                 content: [{ type: 'text', text: 'Call ', styles: {} }, chip('site.phone'), chip('page.title')],
             }),
-        ).toEqual(['contact']);
+        ).toEqual([{ key: 'site.phone' }]);
     });
 
-    it('come from a shop link in a button, a photo or an inline link', () => {
-        expect(groupsOf({ type: 'button', props: { text: 'Chat', url: '@site.whatsapp' } })).toEqual(['contact']);
-        expect(groupsOf({ type: 'image', props: { url: '@site.logo' } })).toEqual(['business']);
+    it('is a shop link in a button, a photo or an inline link', () => {
+        expect(usesOf({ type: 'button', props: { text: 'Chat', url: '@site.whatsapp' } })).toEqual([
+            { key: 'site.whatsapp' },
+        ]);
+        expect(usesOf({ type: 'image', props: { url: '@site.logo' } })).toEqual([{ key: 'site.logo' }]);
         expect(
-            groupsOf({
+            usesOf({
                 type: 'paragraph',
                 content: [{ type: 'link', href: '@site.facebook', content: [{ type: 'text', text: 'Facebook' }] }],
             }),
-        ).toEqual(['social']);
-        expect(groupsOf({ type: 'button', props: { url: 'https://example.com' } })).toEqual([]);
+        ).toEqual([{ key: 'site.facebook' }]);
+        expect(usesOf({ type: 'button', props: { url: 'https://example.com' } })).toEqual([]);
     });
 
-    it('come from an own block’s link and picture fields, inside lists too, not its text fields', () => {
+    it('is an own block’s links, pictures and short codes, inside lists too, each once', () => {
         const values = JSON.stringify({
-            heading: '@site.phone',
+            heading: 'Call {site.phone} or {site.phone}. Not @site.email or {nama}',
+            intro: 'Open:\n{site.hours}{page.title}',
             link: '@site.facebook',
-            people: [{ name: 'Aminah', photo: '@site.logo' }],
+            people: [
+                { name: 'Aminah at {site.name}', photo: '@site.logo' },
+                { name: '{site.phone}', photo: '' },
+            ],
         });
 
-        expect(groupsOf({ type: 'ownBlock', props: { kind: 'team', values } })).toEqual(['social', 'business']);
+        expect(usesOf({ type: 'ownBlock', props: { kind: 'team', values } })).toEqual([
+            { key: 'site.phone' },
+            { key: 'site.hours' },
+            { key: 'site.facebook' },
+            { key: 'site.name' },
+            { key: 'site.logo' },
+        ]);
     });
 
-    it('come from a form’s email and WhatsApp actions', () => {
+    it('is a form’s email and WhatsApp actions', () => {
         const form = JSON.stringify({
             fields: [],
             actions: [
@@ -87,59 +120,48 @@ describe('the shop info groups an item uses', () => {
             ],
         });
 
-        expect(groupsOf({ type: 'form', props: { form } })).toEqual(['contact']);
+        expect(usesOf({ type: 'form', props: { form } })).toEqual([
+            { key: 'site.email' },
+            { key: 'site.whatsapp_number' },
+        ]);
         expect(
-            groupsOf({ type: 'form', props: { form: JSON.stringify({ actions: [{ type: 'email', to: 'me@kedai.my' }] }) } }),
+            usesOf({ type: 'form', props: { form: JSON.stringify({ actions: [{ type: 'email', to: 'me@kedai.my' }] }) } }),
         ).toEqual([]);
     });
 
-    it('are none for a broken item', () => {
-        expect(groupsOf({ type: 'ownBlock', props: { kind: 'gone', values: 'not json' } })).toEqual([]);
-        expect(groupsOf({ type: 'ownBlock', props: { kind: 'team', values: '[1' } })).toEqual([]);
-        expect(groupsOf({ type: 'form', props: { form: '{' } })).toEqual([]);
-        expect(groupsOf(null)).toEqual([]);
+    it('is everything inside it, like the items of a column, in page order', () => {
         expect(
-            siteInfoGroupsFor(
-                { type: 'ownBlock', props: { kind: 'odd' } },
-                [{ kind: 'odd', label: 'Odd', fields: [], siteInfo: [3, '', 'hours'] as unknown as string[] }],
-                VALUES,
-            ),
-        ).toEqual(['hours']);
+            usesOf({
+                type: 'column',
+                props: {},
+                children: [
+                    { type: 'button', props: { url: '@site.facebook' }, children: [] },
+                    { type: 'ownBlock', props: { kind: 'opening-hours' }, children: [] },
+                    { type: 'paragraph', props: {}, content: [chip('site.phone'), chip('site.facebook')], children: [] },
+                ],
+            }),
+        ).toEqual([{ key: 'site.facebook' }, { group: 'hours' }, { key: 'site.phone' }]);
     });
-});
 
-describe('the shop info groups a section uses', () => {
-    it('are every group used anywhere in it, once each, inside columns too', () => {
-        const section: RichSection = {
-            id: 'sec00001',
-            type: 'rich',
-            data: {
-                document: [
-                    { id: 'p1', type: 'paragraph', props: {}, content: [chip('site.phone')], children: [] },
+    it('is nothing for a broken item', () => {
+        expect(usesOf({ type: 'ownBlock', props: { kind: 'gone', values: 'not json' } })).toEqual([]);
+        expect(usesOf({ type: 'ownBlock', props: { kind: 'team', values: '[1' } })).toEqual([]);
+        expect(usesOf({ type: 'form', props: { form: '{' } })).toEqual([]);
+        expect(usesOf(null)).toEqual([]);
+        expect(
+            siteInfoUsesFor(
+                { type: 'ownBlock', props: { kind: 'odd' } },
+                [
                     {
-                        id: 'cols',
-                        type: 'columnList',
-                        props: {},
-                        children: [
-                            {
-                                id: 'col1',
-                                type: 'column',
-                                props: {},
-                                children: [
-                                    { id: 'b1', type: 'button', props: { url: '@site.facebook' }, children: [] },
-                                    { id: 'o1', type: 'ownBlock', props: { kind: 'opening-hours' }, children: [] },
-                                ],
-                            },
-                        ],
+                        kind: 'odd',
+                        label: 'Odd',
+                        fields: [],
+                        siteInfo: [3, '', 'hours'] as unknown as string[],
+                        showsValues: [4, '', 'Site.Phone', 'site.email'] as unknown as string[],
                     },
                 ],
-            } as unknown as RichSection['data'],
-        };
-
-        expect(groupsOf(section)).toEqual(['contact', 'social', 'hours']);
-    });
-
-    it('are none for a synced section, whose words live elsewhere', () => {
-        expect(groupsOf({ id: 'ref00001', type: 'ref', ref: 7 })).toEqual([]);
+                VALUES,
+            ),
+        ).toEqual([{ key: 'site.email' }, { group: 'hours' }]);
     });
 });

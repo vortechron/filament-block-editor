@@ -80,3 +80,35 @@ export function dynamicValuesOfType(
 ): DynamicValueDefinition[] {
     return values.filter((value) => value.type === type);
 }
+
+/**
+ * The values a search finds: every word typed is in the value's label, its
+ * key or what it is now (its preview), in any case. An empty search finds all.
+ */
+export function filterDynamicValues(
+    values: readonly DynamicValueDefinition[],
+    query: string,
+): DynamicValueDefinition[] {
+    const words = query.toLocaleLowerCase().split(/\s+/).filter((word) => word !== '');
+
+    return values.filter((value) => {
+        const haystack = [value.label, value.key, value.preview ?? ''].join(' ').toLocaleLowerCase();
+
+        return words.every((word) => haystack.includes(word));
+    });
+}
+
+/** The values by their `group`, in the order the site sent them. */
+export function groupDynamicValues(
+    values: readonly DynamicValueDefinition[],
+): { group: string; values: DynamicValueDefinition[] }[] {
+    const groups = new Map<string, DynamicValueDefinition[]>();
+
+    for (const value of values) {
+        const group = value.group ?? '';
+
+        groups.set(group, [...(groups.get(group) ?? []), value]);
+    }
+
+    return [...groups].map(([group, entries]) => ({ group, values: entries }));
+}

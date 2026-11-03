@@ -268,10 +268,20 @@ export type OwnBlockDefinition = {
     defaults?: Record<string, unknown>;
     /** The shop info groups the block's view reads, like `['contact', 'hours']`. */
     siteInfo?: string[];
+    /** The shop values the block's view shows, by key, like `['site.phone']`. */
+    showsValues?: string[];
 };
 
 export type SaveResult =
     | { ok: true }
+    | { ok: false; errors: Record<string, string> };
+
+/**
+ * What `saveSiteInfo` answers. After a good save the host may send the
+ * dynamic values read again, so chips and shop info rows show the new ones.
+ */
+export type SaveSiteInfoResult =
+    | { ok: true; dynamicValues?: DynamicValueDefinition[] }
     | { ok: false; errors: Record<string, string> };
 
 export type UploadKind = 'image' | 'video' | 'file';
@@ -309,7 +319,7 @@ export type PageBuilderAdapter = {
     ) => Promise<SaveSectionResult>;
     saveSiteInfo?: (
         values: Record<string, Record<string, unknown>>,
-    ) => Promise<SaveResult>;
+    ) => Promise<SaveSiteInfoResult>;
 };
 
 export type PageBuilderOptions = {

@@ -58,11 +58,34 @@ describe('the header and footer on the canvas', () => {
         expect(page.querySelector('[data-part="header"]')?.hasAttribute('data-builder-picked')).toBe(true);
     });
 
+    it('list the shop info as short rows, and a row opens its group, then Back returns to the part', async () => {
+        const adapter = adapterWithSiteInfo();
+
+        mountBuilder({ adapter, parts: PARTS, siteInfo: SITE_INFO });
+
+        const page = await clickHeader();
+        const rows = await screen.findByRole('region', { name: 'From shop info' });
+
+        expect(screen.queryByRole('region', { name: 'Shop info' })).toBeNull();
+        expect(within(rows).getByRole('button', { name: 'Contact 012-345 6789 · kedai@example.com' })).toBeTruthy();
+
+        fireEvent.click(within(rows).getByRole('button', { name: /Contact/ }));
+
+        expect(await screen.findByRole('region', { name: 'Shop info' })).toBeTruthy();
+        expect(page.querySelector('[data-part="header"]')?.hasAttribute('data-builder-picked')).toBe(true);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+
+        expect(await screen.findByText('This part is the same on every page.')).toBeTruthy();
+        expect(screen.queryByRole('region', { name: 'Shop info' })).toBeNull();
+    });
+
     it('save the shop info through saveSiteInfo, then draw the page again', async () => {
         const adapter = adapterWithSiteInfo();
 
         mountBuilder({ adapter, parts: PARTS, siteInfo: SITE_INFO });
         await clickHeader();
+        fireEvent.click(within(await screen.findByRole('region', { name: 'From shop info' })).getByRole('button'));
 
         const form = await screen.findByRole('region', { name: 'Shop info' });
 
@@ -92,6 +115,7 @@ describe('the header and footer on the canvas', () => {
 
         mountBuilder({ adapter, parts: PARTS, siteInfo: SITE_INFO });
         await clickHeader();
+        fireEvent.click(within(await screen.findByRole('region', { name: 'From shop info' })).getByRole('button'));
 
         const form = await screen.findByRole('region', { name: 'Shop info' });
 

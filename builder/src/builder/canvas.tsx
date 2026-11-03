@@ -18,6 +18,7 @@ import type { FrameMarks } from './frame-marks';
 import { type FramePick, PageFrame } from './page-frame';
 import { sectionKind } from './section-meta';
 import { TemplateMenu } from './template-menu';
+import { panelUnder, type SidebarPanel } from './types';
 
 /** How wide the page is drawn for each device. */
 const FRAME_WIDTH = {
@@ -75,7 +76,7 @@ export function Canvas({ notices }: { notices: ReactNode }) {
         pickedSectionId: selection.sectionId,
         pickedItemPath,
         partLabels: { header: partTitle('header'), footer: partTitle('footer') },
-        pickedPart: builder.panel.name === 'part' ? builder.panel.part : null,
+        pickedPart: pickedPart(builder.panel),
         hiddenLabel: t('Hidden'),
         scale,
     };
@@ -290,4 +291,11 @@ function EmptyPage() {
             </div>
         </div>
     );
+}
+
+/** The header or footer whose panel is open, also under its shop info. */
+function pickedPart(panel: SidebarPanel): PartKey | null {
+    const under = panelUnder(panel);
+
+    return under.name === 'part' ? under.part : null;
 }
