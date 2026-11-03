@@ -1,5 +1,11 @@
 import { createContext, useContext } from 'react';
-import type { OwnBlockDefinition, PageBuilderAdapter, UploadKind } from '@/types';
+import type {
+    FontChoice,
+    Kit,
+    OwnBlockDefinition,
+    PageBuilderAdapter,
+    UploadKind,
+} from '@/types';
 
 /**
  * What the host app gave the builder: how to save, preview and upload,
@@ -15,6 +21,15 @@ export type Host = {
     title: string;
     backUrl: string | null;
     viewUrl: string | null;
+    /** Sees locks, custom CSS and developer-only fields. */
+    developer: boolean;
+    /** The host's fonts, besides the theme's own. */
+    fonts: FontChoice[];
+    /**
+     * The design kit the page starts with. Null when the host sent none or
+     * cannot save one: then there is no design panel.
+     */
+    kit: Kit | null;
 };
 
 export const HostContext = createContext<Host | null>(null);

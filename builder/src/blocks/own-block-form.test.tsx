@@ -36,7 +36,7 @@ const board: OwnBlockDefinition = {
     ],
 };
 
-function wrap(upload: Host['upload'] = vi.fn()) {
+function wrap(upload: Host['upload'] = vi.fn(), developer = false) {
     const host: Host = {
         adapter: {
             save: vi.fn(),
@@ -49,6 +49,9 @@ function wrap(upload: Host['upload'] = vi.fn()) {
         title: '',
         backUrl: null,
         viewUrl: null,
+        developer,
+        fonts: [],
+        kit: null,
     };
 
     return ({ children }: { children: ReactNode }) => (
@@ -75,6 +78,48 @@ function Harness({ onChange }: { onChange: (values: string) => void }) {
         />
     );
 }
+
+describe('developer-only fields of an own block', () => {
+    const tracked: OwnBlockDefinition = {
+        kind: 'tracked',
+        label: 'Tracked',
+        fields: [
+            { name: 'title', type: 'text', label: 'Title' },
+            { name: 'pixel', type: 'text', label: 'Pixel id', developerOnly: true },
+        ],
+    };
+
+    it('are hidden from others, and keep their value when the rest changes', () => {
+        const onChange = vi.fn();
+
+        render(
+            <OwnBlockForm
+                definition={tracked}
+                values='{"title":"A","pixel":"px-1"}'
+                onChange={onChange}
+            />,
+            { wrapper: wrap() },
+        );
+
+        expect(screen.queryByLabelText('Pixel id')).toBeNull();
+
+        fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'B' } });
+
+        expect(JSON.parse(onChange.mock.calls.at(-1)?.[0])).toEqual({
+            title: 'B',
+            pixel: 'px-1',
+        });
+    });
+
+    it('show for a developer', () => {
+        render(
+            <OwnBlockForm definition={tracked} values="{}" onChange={() => {}} />,
+            { wrapper: wrap(vi.fn(), true) },
+        );
+
+        expect(screen.getByLabelText('Pixel id')).toBeTruthy();
+    });
+});
 
 describe('the form for an own block', () => {
     it('shows the values, with the definition’s defaults for empty fields', () => {

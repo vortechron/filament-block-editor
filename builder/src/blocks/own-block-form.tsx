@@ -3,6 +3,7 @@ import { type ReactNode, useId } from 'react';
 import { Field, SwitchRow } from '@/editor/fields';
 import { ImageField } from '@/editor/image-field';
 import { SegmentedChoice } from '@/editor/segmented-choice';
+import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
 import type { OwnBlockDefinition, OwnBlockField } from '@/types';
 import { Input } from '@/ui/input';
@@ -54,9 +55,15 @@ function FieldList({
     values: OwnValues;
     onChange: (values: OwnValues) => void;
 }) {
+    const { developer } = useHost();
+    // Developer-only fields are left out of the form; their values stay.
+    const shown = developer
+        ? fields
+        : fields.filter((field) => field.developerOnly !== true);
+
     return (
         <div className="grid grid-cols-1 gap-4">
-            {fields.map((field) => (
+            {shown.map((field) => (
                 <OwnField
                     key={field.name}
                     field={field}

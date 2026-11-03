@@ -4,6 +4,7 @@ import { PageBuilderApp } from './app';
 import { DEFAULT_TEMPLATES } from './lib/default-templates';
 import type { Host } from './lib/host';
 import { isLocale } from './lib/i18n';
+import { normalizeKit } from './lib/kit';
 import { normalizeTemplates, normalizeValue } from './lib/page-value';
 import { uploadWith } from './lib/upload';
 import { translate } from './lib/i18n';
@@ -73,6 +74,19 @@ export function mountPageBuilder(
         title: typeof options.title === 'string' ? options.title : '',
         backUrl: options.backUrl || null,
         viewUrl: options.viewUrl || null,
+        developer: options.developer === true,
+        fonts: Array.isArray(options.fonts)
+            ? options.fonts.filter(
+                  (font) =>
+                      typeof font?.value === 'string' &&
+                      font.value !== '' &&
+                      typeof font.label === 'string',
+              )
+            : [],
+        kit:
+            options.kit && typeof adapter.saveKit === 'function'
+                ? normalizeKit(options.kit)
+                : null,
     };
     let value: PageValue = initialValue;
     const root = createRoot(element);
