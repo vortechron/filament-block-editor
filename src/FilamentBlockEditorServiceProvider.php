@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Blade;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Vortechron\FilamentBlockEditor\Blocks\BlockRegistry;
+use Vortechron\FilamentBlockEditor\Content\NullSectionResolver;
+use Vortechron\FilamentBlockEditor\Content\SectionResolver;
 use Vortechron\FilamentBlockEditor\Design\DefaultKitSource;
 use Vortechron\FilamentBlockEditor\Design\KitSource;
 
@@ -58,6 +60,9 @@ class FilamentBlockEditorServiceProvider extends PackageServiceProvider
 
         // A host binds its own source (a stored kit); the override lasts one request.
         $this->app->scopedIf(KitSource::class, DefaultKitSource::class);
+
+        // Hosts that store synced sections bind their own.
+        $this->app->bindIf(SectionResolver::class, NullSectionResolver::class);
     }
 
     public function packageBooted(): void

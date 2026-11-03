@@ -4,6 +4,7 @@ namespace Vortechron\FilamentBlockEditor\Rendering;
 
 use Vortechron\FilamentBlockEditor\Content\PageContent;
 use Vortechron\FilamentBlockEditor\Content\PageValue;
+use Vortechron\FilamentBlockEditor\Content\SectionResolver;
 use Vortechron\FilamentBlockEditor\Enums\SectionLayout;
 use Vortechron\FilamentBlockEditor\Styling\StyleSheet;
 
@@ -24,12 +25,23 @@ use Vortechron\FilamentBlockEditor\Styling\StyleSheet;
  * `fbe-s-{id}`, and the page one `<style data-fbe-style>` before the
  * sections with their rules (Styling\StyleSheet).
  *
+ * A synced section (`type: ref`) draws the section the bound
+ * Content\SectionResolver finds, with the ref section's id as its wrapper
+ * id; a preview also marks the wrapper `data-ref="{ref}"`. Only one level:
+ * while a synced section is drawn, refs inside it are not followed. A
+ * missing one draws nothing for visitors and a placeholder in the builder.
+ *
  * Draw the result inside an element with the `sf-page` class (the
  * `<x-filament-block-editor::page>` component does), because the stylesheet
  * reads its colours and fonts from there.
  */
 final class PageRenderer
 {
+    /**
+     * Whether a synced section is being drawn right now, anywhere.
+     */
+    private static bool $inSyncedSection = false;
+
     public function __construct(private readonly SectionLayoutRenderer $layouts) {}
 
     /**
@@ -43,11 +55,9 @@ final class PageRenderer
             $html = '';
 
             foreach ($context->forBuilder ? $sections : PageContent::visible($sections) as $section) {
-                if ($section['type'] !== PageContent::TYPE) {
-                    continue;
-                }
-
-                $html .= $this->wrapper($section, $context).$this->section($section['id'], $section['data'], $context).'</div>';
+                $html .= $section['type'] === PageContent::REF
+                    ? $this->synced($section, $context)
+                    : $this->wrapper($section, $context).$this->section($section['id'], $section['data'], $context).'</div>';
             }
 
             return $html;
@@ -55,13 +65,38 @@ final class PageRenderer
     }
 
     /**
+     * @param  array<string, mixed>  $ref  a ref section
+     */
+    private function synced(array $ref, RenderContext $context): string
+    {
+        $resolved = self::$inSyncedSection ? null : app(SectionResolver::class)->resolve($ref['ref']);
+        $section = is_array($resolved) ? (PageContent::normalize([$resolved])[0] ?? null) : null;
+        $marks = $context->isPreview ? ' data-ref="'.e((string) $ref['ref']).'"' : '';
+
+        if (($section['type'] ?? null) !== PageContent::TYPE) {
+            return $context->forBuilder
+                ? $this->wrapper($ref, $context, $marks).'<figure class="bn-media-empty" data-empty-media="section"><span>'
+                    .e(__('filament-block-editor::preview.missing_section')).'</span></figure></div>'
+                : '';
+        }
+
+        self::$inSyncedSection = true;
+
+        try {
+            return $this->wrapper($ref, $context, $marks).$this->section($ref['id'], $section['data'], $context).'</div>';
+        } finally {
+            self::$inSyncedSection = false;
+        }
+    }
+
+    /**
      * The opening tag every section is drawn in.
      *
      * @param  array<string, mixed>  $section
      */
-    private function wrapper(array $section, RenderContext $context): string
+    private function wrapper(array $section, RenderContext $context, string $marks = ''): string
     {
-        return '<div data-block-id="'.e($section['id']).'"'
+        return '<div data-block-id="'.e($section['id']).'"'.$marks
             .(($section['hidden'] ?? false) === true ? ' data-hidden' : '')
             .($context->isPreview ? ' data-empty-label="'.e(__('filament-block-editor::preview.empty_section')).'"' : '')
             .'>';

@@ -64,6 +64,17 @@
     content: '🧩';
 }
 
+/* A synced section that cannot be found (Content\SectionResolver). */
+.bn-media-empty[data-empty-media='section'] {
+    min-height: 6rem;
+    aspect-ratio: auto;
+    margin: 1rem 0;
+}
+
+.bn-media-empty[data-empty-media='section']::before {
+    content: '🔗';
+}
+
 :is(.sf-hero-media, .sf-product-media) .bn-media-empty {
     aspect-ratio: 4 / 5;
 }
