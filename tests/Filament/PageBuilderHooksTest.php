@@ -52,14 +52,14 @@ class PageBuilderHooksTest extends FilamentTestCase
         $this->signIn();
         app(DynamicValues::class)
             ->register('site.phone', 'Telefon', fn (): string => '012')
-            ->register('site.email', 'Emel', fn (): string => 'a@b.c');
+            ->register('site.email', 'Emel', fn (): string => 'a@b.c', settings: 'contact');
 
         $values = Livewire::test(FullDemoBuilder::class)->instance()->getPageBuilderOptions()['dynamicValues'];
 
         $this->assertSame([
-            ['key' => 'site.email', 'label' => 'Emel', 'type' => 'text', 'group' => 'Site', 'preview' => 'a@b.c'],
+            ['key' => 'site.email', 'label' => 'Emel', 'type' => 'text', 'group' => 'Site', 'preview' => 'a@b.c', 'settings' => 'contact'],
             ['key' => 'page.title', 'label' => 'Tajuk halaman', 'type' => 'text', 'group' => 'Halaman', 'preview' => 'Laman Utama'],
-            ['key' => 'site.phone', 'label' => 'Nombor kedai', 'type' => 'text', 'group' => 'Site', 'preview' => '019'],
+            ['key' => 'site.phone', 'label' => 'Nombor kedai', 'type' => 'text', 'group' => 'Site', 'preview' => '019', 'settings' => 'contact'],
         ], $values);
     }
 

@@ -110,7 +110,9 @@ trait PageBuilderHooks
     /**
      * Dynamic values for this builder only, on top of the registered ones
      * (Content\DynamicValues): `[['key' => 'page.title', 'label' => ...,
-     * 'type' => 'text'|'link'|'image', 'group' => ?string, 'preview' => ?string]]`.
+     * 'type' => 'text'|'link'|'image', 'group' => ?string, 'preview' => ?string,
+     * 'settings' => ?string]]`, where `settings` is the shop info group the
+     * value comes from.
      * One with the key of a registered value wins over it. With no
      * `preview`, the builder shows its render value (getPageBuilderRenderValues()).
      *
@@ -251,7 +253,7 @@ trait PageBuilderHooks
      * (getPageBuilderDynamicValues()), which win on the same key. Each
      * preview is read with the render values.
      *
-     * @return list<array{key: string, label: string, type: string, group: string, preview: string|null}>
+     * @return list<array{key: string, label: string, type: string, group: string, preview: string|null, settings?: string}>
      */
     protected function pageBuilderDynamicValues(): array
     {
@@ -273,6 +275,7 @@ trait PageBuilderHooks
                 'type' => $type,
                 'group' => is_string($entry['group'] ?? null) && $entry['group'] !== '' ? $entry['group'] : 'Site',
                 'preview' => is_string($entry['preview'] ?? null) ? $entry['preview'] : $values->preview($key, $context),
+                ...(is_string($entry['settings'] ?? null) && $entry['settings'] !== '' ? ['settings' => $entry['settings']] : []),
             ];
         }
 

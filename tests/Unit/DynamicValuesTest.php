@@ -38,6 +38,18 @@ class DynamicValuesTest extends TestCase
         ], $this->values()->definitions());
     }
 
+    public function test_a_value_can_name_the_settings_group_it_comes_from(): void
+    {
+        $this->values()
+            ->register('site.phone', 'Telefon', fn (): string => '012', settings: 'contact')
+            ->register('page.title', 'Tajuk', fn (): string => 'Utama');
+
+        $this->assertSame([
+            ['key' => 'site.phone', 'label' => 'Telefon', 'type' => 'text', 'group' => 'Site', 'preview' => '012', 'settings' => 'contact'],
+            ['key' => 'page.title', 'label' => 'Tajuk', 'type' => 'text', 'group' => 'Site', 'preview' => 'Utama'],
+        ], $this->values()->definitions());
+    }
+
     public function test_a_bad_key_or_type_is_refused_when_registered(): void
     {
         $this->expectException(InvalidArgumentException::class);

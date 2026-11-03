@@ -20,7 +20,11 @@ use Vortechron\FilamentBlockEditor\Support\Urls;
  * - in pictures (image and video `url`, own block `image` fields):
  *   `@entry.photo`, resolved, then checked by Urls::media().
  *
- *     app(DynamicValues::class)->register('site.phone', 'Telefon', fn (RenderContext $context) => $settings->phone);
+ *     app(DynamicValues::class)->register('site.phone', 'Telefon', fn (RenderContext $context) => $settings->phone, settings: 'contact');
+ *
+ * `settings` names the settings group the value comes from (the key of a
+ * shop info group, such as `contact`), so the builder can show that group
+ * of the shop info form wherever the value is used.
  *
  * Values in the RenderContext win over the registry (entries put
  * `entry.*` there). drawWith() adds values for one draw, under the
@@ -36,7 +40,7 @@ final class DynamicValues
     public const TYPES = ['text', 'link', 'image'];
 
     /**
-     * @var array<string, array{label: string, resolve: Closure, type: string, group: string}>
+     * @var array<string, array{label: string, resolve: Closure, type: string, group: string, settings: string|null}>
      */
     private array $values = [];
 
@@ -50,8 +54,9 @@ final class DynamicValues
     /**
      * @param  Closure(RenderContext): mixed  $resolve  gets the RenderContext; returns the value (text) or null
      * @param  'text'|'link'|'image'  $type
+     * @param  string|null  $settings  the shop info group the value comes from, such as `contact`
      */
-    public function register(string $key, string $label, Closure $resolve, string $type = 'text', string $group = 'Site'): self
+    public function register(string $key, string $label, Closure $resolve, string $type = 'text', string $group = 'Site', ?string $settings = null): self
     {
         if (! self::isKey($key)) {
             throw new InvalidArgumentException("A dynamic value key is a lowercase name and one to three dotted parts, such as site.phone. Got [{$key}].");
@@ -61,7 +66,7 @@ final class DynamicValues
             throw new InvalidArgumentException("A dynamic value type is text, link or image. Got [{$type}].");
         }
 
-        $this->values[$key] = ['label' => $label, 'resolve' => $resolve, 'type' => $type, 'group' => $group];
+        $this->values[$key] = ['label' => $label, 'resolve' => $resolve, 'type' => $type, 'group' => $group, 'settings' => $settings === '' ? null : $settings];
 
         return $this;
     }
@@ -85,17 +90,21 @@ final class DynamicValues
 
     /**
      * What the builder gets: each value with its current value as `preview`
-     * (null when it is empty or cannot be read now). `$context` gives the
-     * values of the page being built, such as `page.title`.
+     * (null when it is empty or cannot be read now), and its `settings`
+     * group when it has one. `$context` gives the values of the page being
+     * built, such as `page.title`.
      *
-     * @return list<array{key: string, label: string, type: string, group: string, preview: string|null}>
+     * @return list<array{key: string, label: string, type: string, group: string, preview: string|null, settings?: string}>
      */
     public function definitions(?RenderContext $context = null): array
     {
         $definitions = [];
 
         foreach ($this->values as $key => $value) {
-            $definitions[] = ['key' => $key, 'label' => $value['label'], 'type' => $value['type'], 'group' => $value['group'], 'preview' => $this->preview($key, $context)];
+            $definitions[] = [
+                'key' => $key, 'label' => $value['label'], 'type' => $value['type'], 'group' => $value['group'], 'preview' => $this->preview($key, $context),
+                ...($value['settings'] === null ? [] : ['settings' => $value['settings']]),
+            ];
         }
 
         return $definitions;

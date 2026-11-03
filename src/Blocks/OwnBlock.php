@@ -34,6 +34,11 @@ final class OwnBlock
 
     private ?string $view = null;
 
+    /**
+     * @var list<string>
+     */
+    private array $siteInfo = [];
+
     private function __construct(public readonly string $kind)
     {
         if (preg_match('/^[A-Za-z0-9_-]{1,60}$/', $kind) !== 1) {
@@ -94,6 +99,19 @@ final class OwnBlock
         return $this;
     }
 
+    /**
+     * The shop info groups the view reads, by settings group key (such as
+     * `'contact'` or `'hours'`). The builder then shows those groups of the
+     * shop info form in the block's panel, so the owner can change the
+     * phone or the hours where the block shows them.
+     */
+    public function usesSiteInfo(string ...$groups): self
+    {
+        $this->siteInfo = array_values(array_unique(array_filter($groups, fn (string $group): bool => $group !== '')));
+
+        return $this;
+    }
+
     public function getLabel(): string
     {
         return $this->label;
@@ -123,6 +141,14 @@ final class OwnBlock
     }
 
     /**
+     * @return list<string>
+     */
+    public function getSiteInfo(): array
+    {
+        return $this->siteInfo;
+    }
+
+    /**
      * The definition the builder gets, as JSON.
      *
      * @return array<string, mixed>
@@ -136,6 +162,7 @@ final class OwnBlock
             'description' => $this->description,
             'fields' => array_map(fn (Field $field): array => $field->toArray(), $this->fields),
             'defaults' => $this->defaults(),
+            ...($this->siteInfo === [] ? [] : ['siteInfo' => $this->siteInfo]),
         ];
     }
 

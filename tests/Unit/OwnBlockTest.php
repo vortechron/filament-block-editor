@@ -55,6 +55,15 @@ class OwnBlockTest extends TestCase
         $this->assertJson(json_encode($definition, JSON_THROW_ON_ERROR));
     }
 
+    public function test_it_names_the_shop_info_groups_its_view_reads(): void
+    {
+        $definition = OwnBlock::make('opening-hours')->usesSiteInfo('contact', 'hours', 'contact')->toArray();
+
+        $this->assertSame(['contact', 'hours'], $definition['siteInfo']);
+        $this->assertArrayNotHasKey('siteInfo', $this->board()->toArray());
+        $this->assertArrayNotHasKey('siteInfo', OwnBlock::make('x')->usesSiteInfo()->toArray());
+    }
+
     public function test_the_field_types_are_the_ones_the_builder_knows(): void
     {
         $types = array_column($this->board()->toArray()['fields'], 'type');

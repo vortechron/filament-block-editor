@@ -113,7 +113,7 @@ class FullDemoBuilder extends PageBuilderPage
     {
         return [
             ['key' => 'page.title', 'label' => 'Tajuk halaman', 'type' => 'text', 'group' => 'Halaman'],
-            ['key' => 'site.phone', 'label' => 'Nombor kedai', 'type' => 'text'],
+            ['key' => 'site.phone', 'label' => 'Nombor kedai', 'type' => 'text', 'settings' => 'contact'],
             ['key' => 'Not A Key', 'label' => 'Rosak', 'type' => 'text'],
             ['key' => 'page.url', 'label' => 'Pautan', 'type' => 'video'],
         ];
