@@ -138,10 +138,11 @@ export function BuilderTopBar({
                         size={isDesktop ? 'sm' : 'icon'}
                         onClick={onDesign}
                         aria-label={t('Design')}
+                        title={t('Design')}
                     >
                         <Palette />
                         {isDesktop && (
-                            <span className="hidden lg:inline">{t('Design')}</span>
+                            <span className="hidden 2xl:inline">{t('Design')}</span>
                         )}
                     </Button>
                 )}
@@ -153,10 +154,11 @@ export function BuilderTopBar({
                         size={isDesktop ? 'sm' : 'icon'}
                         onClick={onSiteInfo}
                         aria-label={t('Shop info')}
+                        title={t('Shop info')}
                     >
                         <Store />
                         {isDesktop && (
-                            <span className="hidden lg:inline">{t('Shop info')}</span>
+                            <span className="hidden 2xl:inline">{t('Shop info')}</span>
                         )}
                     </Button>
                 )}
@@ -167,10 +169,11 @@ export function BuilderTopBar({
                     size={isDesktop ? 'sm' : 'icon'}
                     onClick={onPreview}
                     aria-label={t('Preview')}
+                        title={t('Preview')}
                 >
                     <Eye />
                     {isDesktop && (
-                        <span className="hidden lg:inline">{t('Preview')}</span>
+                        <span className="hidden 2xl:inline">{t('Preview')}</span>
                     )}
                 </Button>
 
@@ -180,11 +183,12 @@ export function BuilderTopBar({
                         variant="ghost"
                         size={isDesktop ? 'sm' : 'icon'}
                         aria-label={t('View page')}
+                        title={t('View page')}
                     >
                         <a href={viewUrl} target="_blank" rel="noopener noreferrer">
                             <ExternalLink />
                             {isDesktop && (
-                                <span className="hidden lg:inline">
+                                <span className="hidden 2xl:inline">
                                     {t('View page')}
                                 </span>
                             )}
