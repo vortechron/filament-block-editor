@@ -2,6 +2,8 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CATEGORY_LABELS } from '@/builder/add-panel';
+import { ACTION_LABELS } from '@/builder/form/form-actions';
+import { FIELD_TYPE_LABELS } from '@/builder/form/form-field-editor';
 import { GROUP_LABELS } from '@/builder/item-catalog';
 import { LAYOUT_LABELS } from '@/builder/section-thumbs';
 import ms from '@/lang/ms';
@@ -77,7 +79,13 @@ function sourceTexts(): string[] {
     }
 
     // Label maps the builder passes through t().
-    for (const map of [CATEGORY_LABELS, GROUP_LABELS, LAYOUT_LABELS]) {
+    for (const map of [
+        CATEGORY_LABELS,
+        GROUP_LABELS,
+        LAYOUT_LABELS,
+        ACTION_LABELS,
+        FIELD_TYPE_LABELS,
+    ]) {
         Object.values(map).forEach((text) => texts.add(text));
     }
 

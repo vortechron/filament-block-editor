@@ -36,9 +36,15 @@ const untranslated = (text: string) => text;
  * change goes through BlockNote, so the section's onChange saves it like
  * typing does.
  */
+/**
+ * What a new item starts with: the button's words, and the starter form's
+ * JSON, in the builder's language.
+ */
+export type NewItemLabels = { button: string; form: string };
+
 export function createSectionEditorHandle(
     editor: AnyEditor,
-    labels: { button: string } = { button: 'Read more' },
+    labels: NewItemLabels = { button: 'Read more', form: '' },
 ): SectionEditorHandle {
     return {
         insertItem: (key, place, layout) =>
@@ -112,7 +118,7 @@ function insertItem(
     key: ItemKey,
     place: ItemPlace,
     layout: SectionLayout,
-    labels: { button: string },
+    labels: NewItemLabels,
 ): string | null {
     const line = emptyLineAt(editor, place);
 
@@ -139,7 +145,7 @@ function runInsert(
     editor: AnyEditor,
     key: ItemKey,
     layout: SectionLayout,
-    labels: { button: string },
+    labels: NewItemLabels,
 ): string | null {
     const slash = (type: string, props?: Record<string, unknown>) =>
         insertOrUpdateBlockForSlashMenu(editor, { type, props } as never).id;
@@ -180,6 +186,8 @@ function runInsert(
             return slash('gallery');
         case 'button':
             return slash('button', { text: labels.button, url: '', variant: 'solid' });
+        case 'form':
+            return slash('form', { form: labels.form });
         case 'twoColumns':
         case 'threeColumns':
             columnSlashMenuItems(editor)[

@@ -1,4 +1,6 @@
 import { useEffect, useEffectEvent, useState } from 'react';
+import { serializeForm } from '@/lib/form-definition';
+import { starterForm } from '@/lib/form-starter';
 import { useT } from '@/lib/i18n';
 import type { RichDocument, SectionData } from '@/types';
 import type { PageBlocksInfo } from '../editor/page-blocks';
@@ -51,6 +53,7 @@ export default function SectionTextEditor({
                 setHandle(
                     createSectionEditorHandle(editor, {
                         button: t('Read more'),
+                        form: serializeForm(starterForm(t)),
                     }),
                 )
             }

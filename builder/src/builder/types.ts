@@ -53,6 +53,7 @@ export type ItemKey =
     | 'spacer'
     | 'divider'
     | 'button'
+    | 'form'
     | 'layoutItem';
 
 /** Where a new item goes in a section: next to a block, or at the end. */
