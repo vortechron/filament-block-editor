@@ -2,6 +2,8 @@
 
 namespace Vortechron\FilamentBlockEditor\Content;
 
+use Vortechron\FilamentBlockEditor\BlockNote\BlockNoteDocument;
+
 /**
  * What a person who is not a developer may change, enforced on save
  * (PageValue::guard()). By section and block id it:
@@ -13,7 +15,8 @@ namespace Vortechron\FilamentBlockEditor\Content;
  *    position, or the end), and keeps its stored hidden state;
  * 3. puts a section locked `move` back at its stored position;
  * 4. keeps the stored document of a section locked `content`, and the
- *    stored look fields, `style` and `advanced` of one locked `style`;
+ *    stored look fields, `style` and `advanced` of one locked `style`,
+ *    and the stored `look` of every block in it (a new block gets none);
  * 5. keeps the type of a section with any lock: a locked rich section
  *    cannot become a synced one.
  *
@@ -68,7 +71,7 @@ final class PageGuard
         }
 
         if (isset($lock['style'])) {
-            $data = ['document' => $data['document'], ...array_diff_key($oldRich['data'], ['document' => true])];
+            $data = ['document' => self::storedLooks($data['document'], $blocks), ...array_diff_key($oldRich['data'], ['document' => true])];
         }
 
         $data['document'] = DeveloperData::document($data['document'] ?? [], $blocks);
@@ -80,6 +83,36 @@ final class PageGuard
         }
 
         return [...$section, 'data' => $data, ...($lock === [] ? [] : ['lock' => $lock])];
+    }
+
+    /**
+     * The document with each block's stored look (by id, through columns
+     * and children), and no look on a block that is new.
+     *
+     * @param  array<mixed>  $document
+     * @param  array<string, array<string, mixed>>  $stored  from DeveloperData::storedBlocks()
+     * @return array<mixed>
+     */
+    private static function storedLooks(array $document, array $stored): array
+    {
+        return array_map(function (mixed $block) use ($stored): mixed {
+            if (! is_array($block)) {
+                return $block;
+            }
+
+            $id = BlockNoteDocument::blockId($block['id'] ?? null);
+            $look = $id === null ? '' : ($stored[$id]['props']['look'] ?? '');
+
+            if (is_array($block['props'] ?? null) || $look !== '') {
+                $block['props'] = [...(is_array($block['props'] ?? null) ? $block['props'] : []), 'look' => $look];
+            }
+
+            if (is_array($block['children'] ?? null)) {
+                $block['children'] = self::storedLooks($block['children'], $stored);
+            }
+
+            return $block;
+        }, $document);
     }
 
     /**

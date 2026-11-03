@@ -303,6 +303,38 @@ class PageGuardTest extends TestCase
         $this->assertSame(['class' => 'brand'], $look['data']['advanced']);
     }
 
+    public function test_a_style_lock_keeps_the_stored_look_of_every_block_in_the_section_and_new_blocks_get_none(): void
+    {
+        $red = ['style' => ['desktop' => ['color' => '#ff0000']]];
+        $stored = $this->page([
+            $this->section('look', ['document' => [$this->paragraph('p1', $red), $this->columns('cols', [$this->paragraph('p2', $red)])]], ['lock' => ['style' => true]]),
+            $this->section('free', ['document' => [$this->paragraph('p3', $red)]]),
+        ]);
+        $blue = ['style' => ['desktop' => ['color' => '#0000ff']], 'advanced' => ['class' => 'brand']];
+        $new = $this->page([
+            $this->section('look', ['document' => [$this->paragraph('p1', $blue), $this->columns('cols', [$this->paragraph('p2', []), $this->paragraph('p4', $blue)])]]),
+            $this->section('free', ['document' => [$this->paragraph('p3', $blue)]]),
+        ]);
+
+        $guarded = PageValue::guard($new, $stored);
+
+        $this->assertSame($red, $this->lookOf($guarded, 'p1'));
+        $this->assertSame($red, $this->lookOf($guarded, 'p2'));
+        $this->assertSame([], $this->lookOf($guarded, 'p4'));
+        // A section with no style lock keeps the new look.
+        $this->assertSame($blue, $this->lookOf($guarded, 'p3'));
+    }
+
+    public function test_a_hidden_section_locked_against_removal_comes_back_hidden(): void
+    {
+        $stored = $this->page([$this->section('a'), $this->section('gone', [], ['hidden' => true, 'lock' => ['remove' => true]])]);
+
+        $guarded = PageValue::guard($this->page([$this->section('a')]), $stored);
+
+        $this->assertSame(['a', 'gone'], $this->ids($guarded));
+        $this->assertTrue($guarded['sections'][1]['hidden']);
+    }
+
     public function test_guarding_twice_changes_nothing(): void
     {
         $stored = $this->page([

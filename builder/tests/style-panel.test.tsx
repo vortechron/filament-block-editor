@@ -213,6 +213,31 @@ describe('the style panel of a picked item', () => {
         expect(buttonLook(builder)).toBe('');
     });
 
+    it('has no Style and Advanced tabs in a style-locked section, for everyone but developers', async () => {
+        const locked = {
+            ...withButton,
+            sections: [{ ...withButton.sections[0], lock: { style: true } }],
+        };
+
+        mountBuilder({ value: locked });
+        await openButtonSettings();
+
+        expect(await screen.findByRole('tab', { name: 'Settings' })).toBeTruthy();
+        expect(screen.queryByRole('tab', { name: 'Style' })).toBeNull();
+        expect(screen.queryByRole('tab', { name: 'Advanced' })).toBeNull();
+    });
+
+    it('keeps the Style and Advanced tabs of a style-locked section for developers', async () => {
+        mountBuilder({
+            developer: true,
+            value: { ...withButton, sections: [{ ...withButton.sections[0], lock: { style: true } }] },
+        });
+        await openButtonSettings();
+
+        expect(await screen.findByRole('tab', { name: 'Style' })).toBeTruthy();
+        expect(screen.getByRole('tab', { name: 'Advanced' })).toBeTruthy();
+    });
+
     it('writes advanced settings into the look prop too', async () => {
         const { builder } = mountBuilder({ value: withButton });
 

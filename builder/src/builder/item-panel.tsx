@@ -2,6 +2,7 @@ import { ArrowDown, ArrowUp, CopyPlus, PencilLine, Trash2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
+import { isLocked } from '@/lib/locks';
 import { ActionButton } from './action-button';
 import { useBuilderContext } from './builder-context';
 import { describeBlock } from './item-catalog';
@@ -26,7 +27,7 @@ function readItem(
 export function ItemPanel() {
     const t = useT();
     const { builder } = useBuilderContext();
-    const { ownBlocks } = useHost();
+    const { ownBlocks, developer } = useHost();
     const { sectionId, itemId } = builder.selection;
     const handle = builder.handleFor(sectionId);
     const [version, setVersion] = useState(0);
@@ -122,6 +123,11 @@ export function ItemPanel() {
             <ItemTabs
                 key={item.id}
                 look={item.props.look}
+                isLookLocked={isLocked(
+                    builder.blocks.find((block) => block.id === sectionId),
+                    'style',
+                    developer,
+                )}
                 onLookChange={(look) => update({ look })}
             >
                 <ItemSettings item={item} handle={handle} onChange={update} />

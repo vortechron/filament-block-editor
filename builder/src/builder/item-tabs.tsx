@@ -16,21 +16,28 @@ const TABS: { name: ItemTab; label: string; icon: typeof Settings2 }[] = [
 
 /**
  * The picked item's tabs: its own settings, then its style per device and
- * its advanced settings, both kept in the block's `look` prop.
+ * its advanced settings, both kept in the block's `look` prop. In a
+ * section with a `style` lock, only developers get Style and Advanced
+ * (the server keeps the stored look of every block in it).
  */
 export function ItemTabs({
     look,
     onLookChange,
+    isLookLocked = false,
     children,
 }: {
     /** The block's `look` prop. */
     look: unknown;
     onLookChange: (look: string) => void;
+    /** The section's style lock stops this user. */
+    isLookLocked?: boolean;
     /** The item's own settings. */
     children: ReactNode;
 }) {
     const t = useT();
-    const [tab, setTab] = useState<ItemTab>('settings');
+    const [picked, setTab] = useState<ItemTab>('settings');
+    const tabs = isLookLocked ? TABS.filter(({ name }) => name === 'settings') : TABS;
+    const tab = isLookLocked ? 'settings' : picked;
     const current = parseLook(look);
 
     return (
@@ -38,9 +45,9 @@ export function ItemTabs({
             <div
                 role="tablist"
                 aria-label={t('Item settings')}
-                className="grid grid-cols-3 border-b"
+                className={cn('grid border-b', isLookLocked ? 'grid-cols-1' : 'grid-cols-3')}
             >
-                {TABS.map(({ name, label, icon: Icon }) => (
+                {tabs.map(({ name, label, icon: Icon }) => (
                     <button
                         key={name}
                         type="button"
