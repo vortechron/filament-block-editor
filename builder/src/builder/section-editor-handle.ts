@@ -257,6 +257,8 @@ function snapshot(editor: AnyEditor, blockId: string): ItemSnapshot | null {
         type: block.type,
         props: { ...(block.props as Record<string, unknown>) },
         text: inlineText(block.content),
+        content: block.content,
+        children: block.children,
         isFirst: editor.getPrevBlock(block) === undefined,
         isLast: editor.getNextBlock(block) === undefined,
     };

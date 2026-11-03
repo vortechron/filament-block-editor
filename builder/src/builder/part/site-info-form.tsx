@@ -1,17 +1,30 @@
-import { LoaderCircle } from 'lucide-react';
+import { LoaderCircle, Store } from 'lucide-react';
 import { OwnBlockForm } from '@/blocks/own-block-form';
 import { parseValues } from '@/blocks/own-block-values';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 import { Button } from '@/ui/button';
 import { useBuilderContext } from '../builder-context';
 
 /**
- * The shop info shown with the header and footer, like the phone and the
- * opening hours: one group per settings group the host sent, made with the
- * own block form. It is the same on every page, so it saves on its own.
+ * The shop info, like the phone and the opening hours: one group per
+ * settings group the host sent, made with the own block form. It is the
+ * same on every page, so it saves on its own (the top bar Save saves it
+ * too), and the canvas shows each change before it is saved.
+ *
+ * With `groups`, it is a card with only those groups, for the panel of an
+ * item or a section that shows them. Without, it shows every group.
  */
-export function SiteInfoForm() {
+export function SiteInfoForm({
+    groups,
+    description,
+}: {
+    /** The keys of the groups to show. Left out, every group shows. */
+    groups?: readonly string[];
+    /** Already translated. Left out, it says where the shop info shows. */
+    description?: string;
+}) {
     const t = useT();
     const { siteInfo } = useHost();
     const { siteInfo: state } = useBuilderContext();
@@ -20,16 +33,37 @@ export function SiteInfoForm() {
         return null;
     }
 
+    const shown =
+        groups === undefined
+            ? siteInfo.groups
+            : siteInfo.groups.filter((group) => groups.includes(group.key));
+
+    if (shown.length === 0) {
+        return null;
+    }
+
+    const isCard = groups !== undefined;
+
     return (
-        <section aria-label={t('Shop info')} className="grid grid-cols-1 gap-5">
+        <section
+            aria-label={t('Shop info')}
+            className={cn('grid grid-cols-1 gap-5', isCard && 'bg-muted/40 gap-4 rounded-xl border p-3')}
+        >
             <div className="grid gap-0.5">
-                <h3 className="text-foreground text-sm font-semibold">{t('Shop info')}</h3>
+                <div className="flex items-center gap-2">
+                    <Store className="text-muted-foreground size-4 shrink-0" />
+                    <h3 className="text-foreground text-sm font-semibold">{t('Shop info')}</h3>
+                    <span className="rounded-md bg-[var(--builder-select)]/10 px-1.5 py-0.5 text-[11px] font-semibold text-[var(--builder-select)]">
+                        {t('Shared')}
+                    </span>
+                </div>
                 <p className="text-muted-foreground text-xs">
-                    {t('The header and footer show these. So do the shop info chips in your words.')}
+                    {description ??
+                        t('The header and footer show these. So do the shop info chips in your words.')}
                 </p>
             </div>
 
-            {siteInfo.groups.map((group) => (
+            {shown.map((group) => (
                 <div key={group.key} className="bg-card grid gap-3 rounded-xl border p-3">
                     <p className="text-foreground text-sm font-medium">{group.label}</p>
                     <OwnBlockForm

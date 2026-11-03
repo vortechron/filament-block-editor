@@ -45,6 +45,9 @@ export function normalizeDynamicValues(raw: unknown): DynamicValueDefinition[] {
                 ? { group: entry.group }
                 : {}),
             preview: typeof entry.preview === 'string' ? entry.preview : null,
+            ...(typeof entry.settings === 'string' && entry.settings !== ''
+                ? { settings: entry.settings }
+                : {}),
         }));
 }
 

@@ -17,6 +17,7 @@ import { describeBlock } from './item-catalog';
 import { ItemPanel } from './item-panel';
 import { LayersPanel } from './layers-panel';
 import { PartPanel } from './part/part-panel';
+import { SiteInfoForm } from './part/site-info-form';
 import { useSectionTitle } from './section-meta';
 import { SectionPanel } from './section-panel';
 import type { HomePanelName } from './types';
@@ -63,6 +64,7 @@ export function Sidebar({
                 {panel.name === 'add' && <AddPanel onAdded={onDone} />}
                 {panel.name === 'layers' && <LayersPanel onPicked={onDone} />}
                 {panel.name === 'design' && <DesignPanel />}
+                {panel.name === 'siteInfo' && <SiteInfoForm />}
                 {panel.name === 'part' && <PartPanel part={panel.part} />}
                 {isSection && (
                     // The section's words stay open under an item's
@@ -124,12 +126,13 @@ function SidebarHeader() {
     const sectionIndex = blocks.findIndex(
         (block) => block.id === selection.sectionId,
     );
+    const isTopBarPanel = panel.name === 'design' || panel.name === 'siteInfo';
     const section =
-        sectionIndex === -1 || panel.name === 'design' || panel.name === 'part'
+        sectionIndex === -1 || isTopBarPanel || panel.name === 'part'
             ? null
             : blocks[sectionIndex];
     const goHome = () =>
-        panel.name === 'design'
+        isTopBarPanel
             ? builder.openPanel({ name: builder.homePanel })
             : builder.clearSelection();
     const itemLabel = (sectionId: string, itemId: string): string => {
@@ -145,9 +148,11 @@ function SidebarHeader() {
     const panelCrumbs: Crumb[] =
         panel.name === 'design'
             ? [{ label: t('Design') }]
-            : panel.name === 'part'
-              ? [{ label: partLabel(panel.part, t) }]
-              : [];
+            : panel.name === 'siteInfo'
+              ? [{ label: t('Shop info') }]
+              : panel.name === 'part'
+                ? [{ label: partLabel(panel.part, t) }]
+                : [];
     const isItem = panel.name === 'item';
     const sectionCrumbs: Crumb[] = section
         ? [

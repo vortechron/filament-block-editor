@@ -20,6 +20,8 @@ export type SidebarPanel =
     | { name: 'section' }
     | { name: 'item' }
     | { name: 'design' }
+    /** The whole shop info form, from the top bar. */
+    | { name: 'siteInfo' }
     /** The header or footer, picked on the canvas. */
     | { name: 'part'; part: PartKey };
 
@@ -76,6 +78,10 @@ export type ItemSnapshot = {
     props: Record<string, unknown>;
     /** The block's words, for the sidebar title. */
     text: string;
+    /** The block's words as BlockNote holds them, with any shop info chips. */
+    content?: unknown;
+    /** The blocks inside it, like a column's items. */
+    children?: unknown;
     isFirst: boolean;
     isLast: boolean;
 };

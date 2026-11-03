@@ -39,7 +39,10 @@ export function makeAdapter(
     return {
         save: vi.fn((_value: PageValue) => save()),
         preview: vi.fn(
-            async (_value: PageValue, _extra?: { kit?: Kit }) =>
+            async (
+                _value: PageValue,
+                _extra?: { kit?: Kit; siteInfo?: Record<string, Record<string, unknown>> },
+            ) =>
                 '<!doctype html><html><body></body></html>',
         ),
         upload: vi.fn(async (_file: File, _kind: string) => ({

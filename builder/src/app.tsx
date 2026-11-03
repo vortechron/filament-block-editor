@@ -267,6 +267,11 @@ function Builder({
                                     ? () => revealPanel({ name: 'design' })
                                     : undefined
                             }
+                            onSiteInfo={
+                                siteInfo.canSave
+                                    ? () => revealPanel({ name: 'siteInfo' })
+                                    : undefined
+                            }
                             onSave={saveEverything}
                         />
                         <div className="flex min-h-0 flex-1">

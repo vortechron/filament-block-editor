@@ -7,6 +7,7 @@ import {
     Monitor,
     Palette,
     Smartphone,
+    Store,
     Tablet,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -22,8 +23,8 @@ import type { Device } from './types';
  * The bar across the top of the page builder: back to the host's list
  * (when it gave a back link), the page title (with "Header" or "Footer"
  * when the builder edits one), laptop, tablet or phone view, then
- * Design (when the host has a design kit), Preview, View page (when it
- * gave a page link) and Save.
+ * Design (when the host has a design kit), Shop info (when it has a shop
+ * info form), Preview, View page (when it gave a page link) and Save.
  */
 export function BuilderTopBar({
     device,
@@ -34,6 +35,7 @@ export function BuilderTopBar({
     isSaving,
     onPreview,
     onDesign,
+    onSiteInfo,
     onSave,
 }: {
     device: Device;
@@ -45,6 +47,8 @@ export function BuilderTopBar({
     onPreview: () => void;
     /** Opens the design panel. Left out, there is no design button. */
     onDesign?: () => void;
+    /** Opens the whole shop info form. Left out, there is no such button. */
+    onSiteInfo?: () => void;
     onSave: () => void;
 }) {
     const t = useT();
@@ -138,6 +142,21 @@ export function BuilderTopBar({
                         <Palette />
                         {isDesktop && (
                             <span className="hidden lg:inline">{t('Design')}</span>
+                        )}
+                    </Button>
+                )}
+
+                {onSiteInfo && (
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size={isDesktop ? 'sm' : 'icon'}
+                        onClick={onSiteInfo}
+                        aria-label={t('Shop info')}
+                    >
+                        <Store />
+                        {isDesktop && (
+                            <span className="hidden lg:inline">{t('Shop info')}</span>
                         )}
                     </Button>
                 )}

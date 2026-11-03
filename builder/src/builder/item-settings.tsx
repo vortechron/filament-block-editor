@@ -7,6 +7,7 @@ import { FormEditor } from './form/form-editor';
 import { Group, InfoCard, propText, TextField } from './item-fields';
 import { TextItemSettings } from './item-text-settings';
 import { PhotoField, VideoField } from './media-field';
+import { SiteInfoCard } from './part/site-info-card';
 import type { ItemSnapshot, SectionEditorHandle } from './types';
 
 /** Twelfths of the text column, then past the padding to the edge. */
@@ -44,7 +45,8 @@ const FULL_COLUMNS = 12;
 /**
  * The picked item's own settings, on the item panel's Settings tab: the
  * button's words and link, an own block's fields, the form, a photo, the
- * kind of text, and the width and space every item has.
+ * shop info the item shows, the kind of text, and the width and space
+ * every item has. A form shows its shop info with its actions instead.
  */
 export function ItemSettings({
     item,
@@ -54,6 +56,7 @@ export function ItemSettings({
     return (
         <div className="grid grid-cols-1 gap-5">
             <KindSettings item={item} onChange={onChange} />
+            {item.type !== 'form' && <SiteInfoCard source={item} />}
             <TextItemSettings item={item} handle={handle} onChange={onChange} />
             <PlacementSettings item={item} onChange={onChange} />
         </div>

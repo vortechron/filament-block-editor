@@ -181,6 +181,8 @@ export type DynamicValueDefinition = {
     type: 'text' | 'link' | 'image';
     group?: string;
     preview?: string | null;
+    /** The shop info group the value comes from, like `contact`. */
+    settings?: string;
 };
 
 /** A synced section the host offers, with the section it holds. */
@@ -264,6 +266,8 @@ export type OwnBlockDefinition = {
     description?: string | null;
     fields: OwnBlockField[];
     defaults?: Record<string, unknown>;
+    /** The shop info groups the block's view reads, like `['contact', 'hours']`. */
+    siteInfo?: string[];
 };
 
 export type SaveResult =

@@ -12,12 +12,14 @@ import {
 import { useT } from '@/lib/i18n';
 import { Input } from '@/ui/input';
 import { Textarea } from '@/ui/textarea';
+import { SiteInfoCard } from '../part/site-info-card';
 import { FormActions } from './form-actions';
 import { FormFields } from './form-fields';
 
 /**
  * The form block's settings: its name, its fields, the button, the message
- * after sending, and what happens then. Every change is cleaned
+ * after sending, and what happens then, with the shop info an action sends
+ * to (like the shop email) right under it. Every change is cleaned
  * (lib/form-definition.ts) and written into the block's `form` prop.
  *
  * The form is read once, when the panel opens for the block (it is keyed
@@ -134,6 +136,7 @@ export function FormEditor({
                     fields={current.fields}
                     onChange={(actions) => change((form) => ({ ...form, actions }))}
                 />
+                <SiteInfoCard source={{ type: 'form', props: { form: JSON.stringify(current) } }} />
             </Part>
         </div>
     );
