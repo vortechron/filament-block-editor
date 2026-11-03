@@ -194,6 +194,25 @@ describe('mounting the page builder', () => {
         expect(screen.getByRole('button', { name: 'Terbitkan' })).toBeTruthy();
     });
 
+    it('shows the page on a laptop, a tablet or a phone', () => {
+        mount();
+
+        const devices = screen.getByRole('radiogroup', {
+            name: 'View the page on',
+        });
+        const tablet = screen.getByRole('radio', { name: 'Tablet' });
+
+        expect(devices.querySelectorAll('[role="radio"]')).toHaveLength(3);
+
+        fireEvent.click(tablet);
+
+        expect(tablet.getAttribute('aria-checked')).toBe('true');
+        expect(
+            (document.querySelector('[data-canvas-frame]') as HTMLElement)
+                .style.maxWidth,
+        ).toBe('51.25rem');
+    });
+
     it('refuses an adapter without save, preview and upload', () => {
         expect(() =>
             mountPageBuilder(document.createElement('div'), {

@@ -1,4 +1,4 @@
-import { ArrowLeft, Monitor, Smartphone } from 'lucide-react';
+import { ArrowLeft, Monitor, Smartphone, Tablet } from 'lucide-react';
 import { Dialog as DialogPrimitive } from 'radix-ui';
 import { useState } from 'react';
 import { Button } from '@/ui/button';
@@ -74,6 +74,7 @@ export function PreviewDialog({
                                 {(
                                     [
                                         ['desktop', Monitor, t('Laptop')],
+                                        ['tablet', Tablet, t('Tablet')],
                                         ['phone', Smartphone, t('Phone')],
                                     ] as const
                                 ).map(([value, Icon, label]) => (
@@ -104,7 +105,11 @@ export function PreviewDialog({
                         <div
                             className={cn(
                                 'mx-auto h-full transition-[max-width] duration-300',
-                                isPhone ? 'max-w-[24.375rem]' : 'max-w-[80rem]',
+                                isPhone
+                                    ? 'max-w-[24.375rem]'
+                                    : device === 'tablet'
+                                      ? 'max-w-[51.25rem]'
+                                      : 'max-w-[80rem]',
                             )}
                         >
                             {open && (

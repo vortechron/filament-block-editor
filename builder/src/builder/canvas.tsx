@@ -17,13 +17,18 @@ import { sectionKind } from './section-meta';
 import { TemplateMenu } from './template-menu';
 
 /** How wide the page is drawn for each device. */
-const FRAME_WIDTH = { desktop: '80rem', phone: '24.375rem' } as const;
+const FRAME_WIDTH = {
+    desktop: '80rem',
+    tablet: '51.25rem',
+    phone: '24.375rem',
+} as const;
 
 /**
- * A laptop screen. A narrower canvas draws the page this wide and shrinks
- * it, so it shows the laptop layout visitors get, not the tablet one.
+ * A laptop screen and a tablet, in pixels. A narrower canvas draws the
+ * page this wide and shrinks it, so it shows the layout visitors get on
+ * that device, not a smaller one.
  */
-const LAPTOP_WIDTH = 1280;
+const DRAWN_WIDTH = { desktop: 1280, tablet: 820 } as const;
 
 /**
  * The page as visitors will see it, on the right of the sidebar: the real
@@ -42,8 +47,8 @@ export function Canvas({ notices }: { notices: ReactNode }) {
     const pageBox = useRef<HTMLDivElement>(null);
     const pageWidth = useWidth(pageBox);
     const scale =
-        showsFrame && device === 'desktop' && pageWidth > 0
-            ? Math.min(1, pageWidth / LAPTOP_WIDTH)
+        showsFrame && device !== 'phone' && pageWidth > 0
+            ? Math.min(1, pageWidth / DRAWN_WIDTH[device])
             : 1;
     const picked = blocks.find((block) => block.id === selection.sectionId);
     const pickedItemPath =
@@ -101,6 +106,7 @@ export function Canvas({ notices }: { notices: ReactNode }) {
 
             <div
                 data-canvas-backdrop
+                data-canvas-frame={device}
                 className="mx-auto flex min-h-0 w-full flex-1 flex-col transition-[max-width] duration-300 ease-out"
                 style={{
                     maxWidth: showsFrame ? FRAME_WIDTH[device] : undefined,

@@ -6,6 +6,7 @@ import {
     LoaderCircle,
     Monitor,
     Smartphone,
+    Tablet,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useHost } from '@/lib/host';
@@ -17,7 +18,7 @@ import type { Device } from './types';
 
 /**
  * The bar across the top of the page builder: back to the host's list
- * (when it gave a back link), the page title, laptop or phone view, then
+ * (when it gave a back link), the page title, laptop, tablet or phone view, then
  * Preview, View page (when it gave a page link) and Save.
  */
 export function BuilderTopBar({
@@ -86,6 +87,13 @@ export function BuilderTopBar({
                             onClick={() => onDeviceChange('desktop')}
                         >
                             <Monitor />
+                        </DeviceButton>
+                        <DeviceButton
+                            label={t('Tablet')}
+                            isActive={device === 'tablet'}
+                            onClick={() => onDeviceChange('tablet')}
+                        >
+                            <Tablet />
                         </DeviceButton>
                         <DeviceButton
                             label={t('Phone')}

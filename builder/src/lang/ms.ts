@@ -235,6 +235,7 @@ export default {
     'Structure': 'Struktur',
     'Style': 'Gaya',
     'Synced': 'Segerak',
+    'Tablet': 'Tablet',
     'Tall': 'Tinggi',
     'Tap to add at the end, or drag to any place.': 'Ketik untuk tambah di hujung, atau seret ke mana-mana tempat.',
     'Tap to add under the picked item, or drag to any place.': 'Ketik untuk tambah di bawah item yang dipilih, atau seret ke mana-mana tempat.',

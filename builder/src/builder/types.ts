@@ -23,8 +23,8 @@ export type SidebarPanel =
 /** The picked section's tabs: its words and items, or its look. */
 export type SectionTab = 'content' | 'style';
 
-/** How wide the canvas is: a laptop screen or a phone. */
-export type Device = 'desktop' | 'phone';
+/** How wide the canvas is: a laptop screen, a tablet or a phone. */
+export type Device = 'desktop' | 'tablet' | 'phone';
 
 /**
  * Something that can be added inside a section. Each one is a block the
