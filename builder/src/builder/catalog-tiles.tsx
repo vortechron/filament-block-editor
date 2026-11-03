@@ -3,9 +3,14 @@ import type { CSSProperties } from 'react';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-import type { SectionLayout, SectionTemplate } from '@/types';
+import type {
+    SectionData,
+    SectionLayout,
+    SectionTemplate,
+    SyncedSectionOption,
+} from '@/types';
 import { useBuilderContext } from './builder-context';
-import { useCatalogDrag, wasJustDragged } from './drag-and-drop';
+import { type DragData, useCatalogDrag, wasJustDragged } from './drag-and-drop';
 import {
     type CatalogGroup,
     type CatalogItem,
@@ -147,12 +152,10 @@ function ItemTile({
     );
 }
 
-/** The template's own background and words, for its drawing. */
-function thumbColors(template: SectionTemplate): CSSProperties | undefined {
+/** The section's own background and words, for its drawing. */
+function thumbColors(data: SectionData): CSSProperties | undefined {
     const background =
-        template.data.background === 'color'
-            ? template.data.background_color
-            : null;
+        data.background === 'color' ? data.background_color : null;
 
     if (background === null) {
         return undefined;
@@ -165,8 +168,7 @@ function thumbColors(template: SectionTemplate): CSSProperties | undefined {
 
     return {
         '--thumb-bg': background,
-        '--thumb-ink':
-            template.data.text_color ?? (isDark ? '#ffffff' : '#0f172a'),
+        '--thumb-ink': data.text_color ?? (isDark ? '#ffffff' : '#0f172a'),
     } as CSSProperties;
 }
 
@@ -178,17 +180,68 @@ export function TemplateTile({
     template: SectionTemplate;
     onPick: () => void;
 }) {
+    return (
+        <SectionTile
+            dragId={`template:${template.key}`}
+            drag={{
+                kind: 'template',
+                templateKey: template.key,
+                label: template.label,
+                icon: LAYOUT_ICONS[template.data.layout],
+            }}
+            data={template.data}
+            description={template.description}
+            onPick={onPick}
+        />
+    );
+}
+
+/**
+ * A synced section the page can use: tapped or dropped, the page gets a
+ * ref to it, not a copy.
+ */
+export function SyncedTile({
+    synced,
+    onPick,
+}: {
+    synced: SyncedSectionOption;
+    onPick: () => void;
+}) {
+    const t = useT();
+    const label = synced.title || `#${String(synced.id)}`;
+
+    return (
+        <SectionTile
+            dragId={`synced:${String(synced.id)}`}
+            drag={{
+                kind: 'synced',
+                ref: synced.id,
+                label,
+                icon: LAYOUT_ICONS[synced.section.data.layout],
+            }}
+            data={synced.section.data}
+            description={t('The same on every page that uses it.')}
+            onPick={onPick}
+        />
+    );
+}
+
+function SectionTile({
+    dragId,
+    drag,
+    data,
+    description,
+    onPick,
+}: {
+    dragId: string;
+    drag: DragData;
+    data: SectionData;
+    description: string;
+    onPick: () => void;
+}) {
     const t = useT();
     const { isDesktop } = useBuilderContext();
-    const { ref, isDragging, dragProps } = useCatalogDrag(
-        `template:${template.key}`,
-        {
-            kind: 'template',
-            templateKey: template.key,
-            label: template.label,
-            icon: LAYOUT_ICONS[template.data.layout],
-        },
-    );
+    const { ref, isDragging, dragProps } = useCatalogDrag(dragId, drag);
 
     return (
         <button
@@ -212,9 +265,9 @@ export function TemplateTile({
             <span className="bg-muted relative block overflow-hidden rounded-lg p-1.5">
                 <span
                     className="ring-foreground/5 block overflow-hidden rounded-md shadow-sm ring-1"
-                    style={thumbColors(template)}
+                    style={thumbColors(data)}
                 >
-                    <SectionThumb layout={template.data.layout} />
+                    <SectionThumb layout={data.layout} />
                 </span>
                 {isDesktop && (
                     <GripVertical className="text-muted-foreground/70 absolute top-1.5 right-1 size-3.5 opacity-0 transition-opacity group-hover/tile:opacity-100" />
@@ -222,10 +275,10 @@ export function TemplateTile({
             </span>
             <span className="grid gap-0.5 px-0.5">
                 <span className="text-foreground text-[13px] leading-tight font-semibold">
-                    {template.label}
+                    {drag.label}
                 </span>
                 <span className="text-muted-foreground line-clamp-2 text-[11.5px] leading-snug">
-                    {template.description}
+                    {description}
                 </span>
             </span>
         </button>

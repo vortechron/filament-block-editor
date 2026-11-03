@@ -1,11 +1,17 @@
 import { MousePointerClick, Search, X } from 'lucide-react';
-import { useState } from 'react';
+import { type ReactNode, useState } from 'react';
+import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { lastRich } from '@/lib/page-value';
 import type { SectionTemplate } from '@/types';
 import { useBuilderContext } from './builder-context';
-import { ItemGrid, matchesSearch, TemplateTile } from './catalog-tiles';
+import {
+    ItemGrid,
+    matchesSearch,
+    SyncedTile,
+    TemplateTile,
+} from './catalog-tiles';
 import { useSectionTitle } from './section-meta';
 
 type AddTab = 'sections' | 'items';
@@ -76,7 +82,8 @@ function categoryName(
  */
 export function AddPanel({ onAdded }: { onAdded?: () => void }) {
     const t = useT();
-    const { builder, templates, isDesktop } = useBuilderContext();
+    const { builder, templates, library, isDesktop } = useBuilderContext();
+    const { kind } = useHost();
     const titleOf = useSectionTitle();
     const { selection, blocks } = builder;
     const [tab, setTab] = useState<AddTab>(
@@ -90,6 +97,14 @@ export function AddPanel({ onAdded }: { onAdded?: () => void }) {
     const shownTemplates = templates.filter((template) =>
         matchesSearch(query, template.label, template.description),
     );
+    // A synced section's own builder can not hold a ref: only one level
+    // is followed (docs/v2-plan.md, section 5).
+    const shownSynced =
+        kind === 'section'
+            ? []
+            : library.synced.filter((entry) =>
+                  matchesSearch(query, entry.title),
+              );
 
     return (
         <div className="grid grid-cols-1 gap-4">
@@ -145,7 +160,7 @@ export function AddPanel({ onAdded }: { onAdded?: () => void }) {
             />
 
             {tab === 'sections' ? (
-                shownTemplates.length === 0 ? (
+                shownTemplates.length === 0 && shownSynced.length === 0 ? (
                     <p className="text-muted-foreground py-6 text-center text-sm">
                         {t('Nothing matches your search.')}
                     </p>
@@ -158,31 +173,43 @@ export function AddPanel({ onAdded }: { onAdded?: () => void }) {
                             );
 
                             return (
-                                <section
+                                <TileGroup
                                     key={category.key}
-                                    className="grid gap-2"
+                                    label={categoryName(category, t)}
                                 >
-                                    <h3 className="text-muted-foreground px-0.5 text-[11px] font-semibold tracking-wider uppercase">
-                                        {categoryName(category, t)}
-                                    </h3>
-                                    <div className="grid grid-cols-2 gap-2.5">
-                                        {inGroup.map((template) => (
-                                            <TemplateTile
-                                                key={template.key}
-                                                template={template}
-                                                onPick={() => {
-                                                    builder.addSection(
-                                                        template,
-                                                        builder.sectionInsertIndex(),
-                                                    );
-                                                    onAdded?.();
-                                                }}
-                                            />
-                                        ))}
-                                    </div>
-                                </section>
+                                    {inGroup.map((template) => (
+                                        <TemplateTile
+                                            key={template.key}
+                                            template={template}
+                                            onPick={() => {
+                                                builder.addSection(
+                                                    template,
+                                                    builder.sectionInsertIndex(),
+                                                );
+                                                onAdded?.();
+                                            }}
+                                        />
+                                    ))}
+                                </TileGroup>
                             );
                         })}
+                        {shownSynced.length > 0 && (
+                            <TileGroup label={t('Synced sections')}>
+                                {shownSynced.map((entry) => (
+                                    <SyncedTile
+                                        key={String(entry.id)}
+                                        synced={entry}
+                                        onPick={() => {
+                                            builder.addSyncedSection(
+                                                entry.id,
+                                                builder.sectionInsertIndex(),
+                                            );
+                                            onAdded?.();
+                                        }}
+                                    />
+                                ))}
+                            </TileGroup>
+                        )}
                     </div>
                 )
             ) : (
@@ -208,6 +235,18 @@ export function AddPanel({ onAdded }: { onAdded?: () => void }) {
                 </p>
             )}
         </div>
+    );
+}
+
+/** One category of section tiles under its name. */
+function TileGroup({ label, children }: { label: string; children: ReactNode }) {
+    return (
+        <section className="grid gap-2">
+            <h3 className="text-muted-foreground px-0.5 text-[11px] font-semibold tracking-wider uppercase">
+                {label}
+            </h3>
+            <div className="grid grid-cols-2 gap-2.5">{children}</div>
+        </section>
     );
 }
 

@@ -79,6 +79,15 @@ describe('saving a section', () => {
         expect(adapter.saveSection.mock.calls[0][1]).toEqual({ title: 'Hero kedai', synced: true });
         expect(builder.getValue().sections).toEqual([{ id: 'hero0001', type: 'ref', ref: 12 }]);
         expect(await screen.findByText('Synced: Hero kedai')).toBeTruthy();
+
+        // Other pages can use it now, and so can this one, from the Add panel.
+        fireEvent.click(screen.getByRole('button', { name: 'Back' }));
+        fireEvent.click(await screen.findByRole('tab', { name: 'Add' }));
+        fireEvent.click(await screen.findByRole('tab', { name: 'Sections' }));
+
+        const synced = screen.getByText('Synced sections').closest('section') as HTMLElement;
+
+        expect(within(synced).getByRole('button', { name: /Hero kedai/ })).toBeTruthy();
     });
 
     it('keeps the section and shows what the host refused', async () => {

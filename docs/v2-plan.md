@@ -681,3 +681,8 @@ type PageBuilderAdapter = {
    hover frame, picked frame or hidden badge, and the builder never uses them for drop places, scrolling or
    swapping one section (`PAGE_SECTION` in `builder/src/builder/frame-dom.ts`). A change inside a part draws the
    whole page again. Only `header` and `footer` parts get the hover frame.
+2. **Adding a synced section that exists.** The Add panel's Sections tab has a "Synced sections" ("Seksyen segerak")
+   group after the templates, one tile per entry in `syncedSections` (plus the ones made synced while building). A
+   tap adds `{ id: <new id>, type: "ref", ref }` after the picked section, like a template; dragging it onto the
+   page works like a template too. The group is hidden when there are none, follows the search box (by title),
+   and is never offered when `kind` is `section` (only one level of `ref` is followed, section 5).

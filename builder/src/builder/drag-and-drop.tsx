@@ -26,7 +26,16 @@ export type DragData =
           templateKey: string;
           label: string;
           icon: LucideIcon;
+      }
+    | {
+          kind: 'synced';
+          ref: number | string;
+          label: string;
+          icon: LucideIcon;
       };
+
+/** A whole section being dragged: a template or a synced section. */
+type SectionDrag = Exclude<DragData, { kind: 'item' }>;
 
 type Line = { top: number; left: number; width: number };
 
@@ -137,26 +146,35 @@ export function BuilderDragAndDrop({ children }: { children: ReactNode }) {
         setTarget(findTarget(at, active));
     }
 
+    /** Adds a dragged template or synced section in front of a section. */
+    function dropSection(data: SectionDrag, beforeSectionId: string | null) {
+        const before =
+            beforeSectionId === null
+                ? -1
+                : builder.blocks.findIndex(
+                      (block) => block.id === beforeSectionId,
+                  );
+        const index = before === -1 ? builder.blocks.length : before;
+
+        if (data.kind === 'synced') {
+            builder.addSyncedSection(data.ref, index);
+
+            return;
+        }
+
+        const template = templates.find(
+            (entry) => entry.key === data.templateKey,
+        );
+
+        if (template) {
+            builder.addSection(template, index);
+        }
+    }
+
     function finish(shouldDrop: boolean) {
         if (shouldDrop && target !== null && active !== null) {
-            if (target.kind === 'section' && active.kind === 'template') {
-                const template = templates.find(
-                    (entry) => entry.key === active.templateKey,
-                );
-
-                const index =
-                    target.beforeSectionId === null
-                        ? -1
-                        : builder.blocks.findIndex(
-                              (block) => block.id === target.beforeSectionId,
-                          );
-
-                if (template) {
-                    builder.addSection(
-                        template,
-                        index === -1 ? builder.blocks.length : index,
-                    );
-                }
+            if (target.kind === 'section' && active.kind !== 'item') {
+                dropSection(active, target.beforeSectionId);
             }
 
             if (target.kind === 'item' && active.kind === 'item') {
@@ -288,7 +306,7 @@ function findTarget(at: Point, data: DragData): DropTarget | null {
     if (empty) {
         const rect = empty.getBoundingClientRect();
 
-        return data.kind === 'template'
+        return data.kind !== 'item'
             ? {
                   kind: 'section',
                   beforeSectionId: null,
@@ -311,9 +329,9 @@ function findTarget(at: Point, data: DragData): DropTarget | null {
         rect: toWindow(section.getBoundingClientRect()),
     }));
 
-    return data.kind === 'template'
-        ? sectionTarget(at, boxes)
-        : pageItemTarget(at, boxes, toWindow);
+    return data.kind === 'item'
+        ? pageItemTarget(at, boxes, toWindow)
+        : sectionTarget(at, boxes);
 }
 
 type SectionBox = { section: HTMLElement; rect: DOMRect };

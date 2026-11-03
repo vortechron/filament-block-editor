@@ -66,3 +66,31 @@ describe('dragging a ready-made section onto the page', () => {
         expect(sections[1].id).toBe('hero0001');
     });
 });
+
+const SYNCED = [
+    {
+        id: 12,
+        title: 'Footer CTA',
+        editUrl: '/admin/sections/12/build',
+        section: { id: 'orig0001', type: 'rich' as const, data: { layout: 'banner' as const, document: [] } },
+    },
+];
+
+describe('dragging a synced section onto the page', () => {
+    it('puts a ref to it where it is let go', async () => {
+        const adapter = makeAdapter();
+
+        adapter.preview.mockImplementation(async () => PAGE_UNDER_BUILT_HEADER);
+
+        const { builder } = mountBuilder({ adapter, syncedSections: SYNCED as never });
+        const page = await loadCanvasPage();
+
+        layOut(page, { head0001: 100, hero0001: 600 });
+        await dragTo(screen.getByRole('button', { name: /^Footer CTA/ }), { x: 400, y: 150 });
+
+        const [added, hero] = builder.getValue().sections;
+
+        expect(added).toEqual({ id: added.id, type: 'ref', ref: 12 });
+        expect(hero.id).toBe('hero0001');
+    });
+});

@@ -1,5 +1,10 @@
 import { useRef, useState } from 'react';
-import { lastRich, MAX_SECTIONS, sectionFromTemplate } from '@/lib/page-value';
+import {
+    lastRich,
+    MAX_SECTIONS,
+    newSectionId,
+    sectionFromTemplate,
+} from '@/lib/page-value';
 import { useHost } from '@/lib/host';
 import { isLocked, withoutDeveloperData } from '@/lib/locks';
 import type { LockKey, PartKey, Section, SectionTemplate } from '@/types';
@@ -279,16 +284,28 @@ export function useBuilder({
         });
     }
 
-    /** Adds a section at `index` (the end when left out) and picks it. */
+    /** Adds a section from a template at `index` (the end when left out). */
     function addSection(
         template: SectionTemplate,
         index?: number,
     ): string | null {
+        return insertSection(sectionFromTemplate(template), index);
+    }
+
+    /** Adds a synced section, as a ref to it, at `index` and picks it. */
+    function addSyncedSection(
+        ref: number | string,
+        index?: number,
+    ): string | null {
+        return insertSection({ id: newSectionId(), type: 'ref', ref }, index);
+    }
+
+    /** Puts a new section at `index` (the end when left out) and picks it. */
+    function insertSection(block: Section, index?: number): string | null {
         if (blocks.length >= MAX_SECTIONS) {
             return null;
         }
 
-        const block = sectionFromTemplate(template);
         const at = index === undefined ? blocks.length : index;
 
         updateBlocks((current) => [
@@ -485,6 +502,7 @@ export function useBuilder({
         selectPart,
         registerHandle,
         addSection,
+        addSyncedSection,
         sectionInsertIndex,
         defaultItemTarget,
         addItem,
