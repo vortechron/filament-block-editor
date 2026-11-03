@@ -54,7 +54,7 @@ export function documentText(document: RichDocument): string {
         .join('\n');
 }
 
-function inlineText(content: unknown): string {
+export function inlineText(content: unknown): string {
     if (typeof content === 'string') {
         return content;
     }

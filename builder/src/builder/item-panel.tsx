@@ -8,6 +8,7 @@ import { useBuilderContext } from './builder-context';
 import { describeBlock } from './item-catalog';
 import { ItemSettings } from './item-settings';
 import { ItemTabs } from './item-tabs';
+import { Skeleton } from '@/ui/skeleton';
 import type { ItemSnapshot, SectionEditorHandle } from './types';
 
 /** The item's props again after every change, for the fields below. */
@@ -38,6 +39,11 @@ export function ItemPanel() {
     );
 
     const item = itemId ? readItem(handle, itemId, version) : null;
+
+    // The section's editor opens a moment after the section is picked.
+    if (sectionId && itemId && !handle) {
+        return <Skeleton className="h-16 w-full rounded-xl" />;
+    }
 
     if (!handle || !item || !sectionId) {
         return (
