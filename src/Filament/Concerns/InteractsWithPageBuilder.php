@@ -7,8 +7,11 @@ use Illuminate\Support\Facades\Validator;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Vortechron\FilamentBlockEditor\Blocks\BlockRegistry;
+use Vortechron\FilamentBlockEditor\Content\DynamicValues;
 use Vortechron\FilamentBlockEditor\Content\PageContent;
 use Vortechron\FilamentBlockEditor\Content\PageValue;
+use Vortechron\FilamentBlockEditor\Design\Kit;
+use Vortechron\FilamentBlockEditor\Design\KitSource;
 use Vortechron\FilamentBlockEditor\Support\Assets;
 use Vortechron\FilamentBlockEditor\Templates\SectionTemplates;
 
@@ -23,9 +26,13 @@ use Vortechron\FilamentBlockEditor\Templates\SectionTemplates;
  *     protected function getPageBuilderValue(): array          // a page value of any format
  *     protected function savePageBuilderValue(array $value): void  // ['version' => 2, 'sections' => [...]]
  *     protected function renderPageBuilderPreview(array $sections): string  // a full HTML document
+ *
+ * The optional parts (design kit, saved and synced sections, shop info,
+ * header and footer) are hooks with safe defaults: see PageBuilderHooks.
  */
 trait InteractsWithPageBuilder
 {
+    use PageBuilderHooks;
     use WithFileUploads;
 
     /**
@@ -114,7 +121,7 @@ trait InteractsWithPageBuilder
         $locale = $this->getPageBuilderLocale();
 
         return array_filter([
-            'value' => ['sections' => PageContent::normalize((array) ($this->getPageBuilderValue()['sections'] ?? []))],
+            'value' => PageValue::normalize($this->getPageBuilderValue()),
             'blocks' => app(BlockRegistry::class)->definitions(),
             'templates' => SectionTemplates::all($locale),
             'locale' => $locale,
@@ -122,6 +129,9 @@ trait InteractsWithPageBuilder
             'backUrl' => $this->getPageBuilderBackUrl(),
             'viewUrl' => $this->getPageBuilderViewUrl(),
             'accent' => $this->getPageBuilderAccent(),
+            'fonts' => array_map(fn (string $key, array $font): array => ['value' => $key, ...$font], array_keys(Kit::fonts()), Kit::fonts()),
+            'dynamicValues' => app(DynamicValues::class)->definitions(),
+            ...$this->getPageBuilderHookOptions(),
         ], fn (mixed $value): bool => $value !== null);
     }
 
@@ -167,13 +177,30 @@ trait InteractsWithPageBuilder
     }
 
     /**
-     * @param  array<string, mixed>  $value
+     * The page drawn with unsaved sections, and with an unsaved design kit
+     * when one is given (KitSource::override(), for this draw only).
+     *
+     * @param  array<string, mixed>  $value  a page value of any format
+     * @param  array<string, mixed>|null  $kit
      */
-    public function previewPageBuilder(array $value): string
+    public function previewPageBuilder(array $value, ?array $kit = null): string
     {
         $this->authorizePageBuilder();
 
-        return $this->renderPageBuilderPreview(PageContent::normalize((array) ($value['sections'] ?? [])));
+        $sections = PageValue::normalize($value)['sections'];
+
+        if ($kit === null) {
+            return $this->renderPageBuilderPreview($sections);
+        }
+
+        $source = app(KitSource::class);
+        $source->override($kit);
+
+        try {
+            return $this->renderPageBuilderPreview($sections);
+        } finally {
+            $source->override(null);
+        }
     }
 
     /**

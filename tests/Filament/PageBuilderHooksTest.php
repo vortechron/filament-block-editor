@@ -1,0 +1,190 @@
+<?php
+
+namespace Vortechron\FilamentBlockEditor\Tests\Filament;
+
+use Livewire\Livewire;
+use Vortechron\FilamentBlockEditor\Content\DynamicValues;
+use Vortechron\FilamentBlockEditor\Design\Kit;
+use Vortechron\FilamentBlockEditor\Design\KitSource;
+use Workbench\App\Filament\Pages\DemoBuilder;
+use Workbench\App\Filament\Pages\FullDemoBuilder;
+
+class PageBuilderHooksTest extends FilamentTestCase
+{
+    public function test_a_host_that_overrides_no_hook_gets_safe_defaults(): void
+    {
+        $this->signIn();
+        app(DynamicValues::class)->register('site.phone', 'Telefon', fn (): string => '012');
+
+        $page = Livewire::test(DemoBuilder::class)->instance();
+        $options = $page->getPageBuilderOptions();
+
+        $this->assertSame(2, $options['value']['version']);
+        $this->assertFalse($options['developer']);
+        $this->assertArrayNotHasKey('kit', $options);
+        $this->assertArrayNotHasKey('siteInfo', $options);
+        $this->assertSame([], $options['syncedSections']);
+        $this->assertSame([], $options['parts']);
+        $this->assertSame('page', $options['kind']);
+        $this->assertContains('serif', array_column($options['fonts'], 'value'));
+        $this->assertSame(['key' => 'site.phone', 'label' => 'Telefon', 'type' => 'text', 'group' => 'Site', 'preview' => '012'], $options['dynamicValues'][0]);
+        $this->assertSame(['saveKit' => false, 'saveSection' => false, 'saveSiteInfo' => false], $page->getPageBuilderSupports());
+    }
+
+    public function test_a_hook_the_host_did_not_override_is_refused(): void
+    {
+        $this->signIn();
+        $component = Livewire::test(DemoBuilder::class);
+
+        foreach ([['saveKitFromPageBuilder', [Kit::defaults()]], ['saveSectionFromPageBuilder', [['type' => 'rich', 'data' => []], 'Hero', false]], ['saveSiteInfoFromPageBuilder', [[]]]] as [$method, $arguments]) {
+            $result = $component->call($method, ...$arguments)->effects['returns'][0];
+
+            $this->assertFalse($result['ok'], $method);
+            $this->assertNotEmpty($result['errors'], $method);
+        }
+    }
+
+    public function test_a_host_that_overrides_the_hooks_passes_everything_to_the_builder(): void
+    {
+        $this->signIn();
+        FullDemoBuilder::$developer = true;
+
+        $page = Livewire::test(FullDemoBuilder::class)->instance();
+        $options = $page->getPageBuilderOptions();
+
+        $this->assertSame(['version' => 2, 'sections' => [['id' => 'one', 'type' => 'rich', 'data' => $options['value']['sections'][0]['data']]]], $options['value']);
+        $this->assertTrue($options['developer']);
+        $this->assertSame('#c59d6e', $options['kit']['colors']['primary']);
+        $this->assertSame('#475569', $options['kit']['colors']['text']);
+        $this->assertSame('header', $options['kind']);
+        $this->assertSame([['key' => 'header', 'title' => 'Header', 'editUrl' => '/admin/parts/header']], $options['parts']);
+        $this->assertCount(1, $options['syncedSections']);
+        $this->assertSame(7, $options['syncedSections'][0]['id']);
+        $this->assertSame('md', $options['syncedSections'][0]['section']['data']['padding']);
+        $this->assertSame([['name' => 'phone', 'label' => 'Telefon', 'type' => 'text', 'default' => ''], ['name' => 'email', 'type' => 'text']], $options['siteInfo']['groups'][0]['fields']);
+        $this->assertSame(['contact' => ['phone' => '012', 'email' => 'a@b.c']], $options['siteInfo']['values']);
+        $this->assertSame(['saveKit' => true, 'saveSection' => true, 'saveSiteInfo' => true], $page->getPageBuilderSupports());
+    }
+
+    public function test_the_kit_is_saved_cleaned(): void
+    {
+        $this->signIn();
+
+        Livewire::test(FullDemoBuilder::class)
+            ->call('saveKitFromPageBuilder', ['colors' => ['primary' => '#000000', 'text' => '</style>']])
+            ->assertReturned(['ok' => true]);
+
+        $this->assertSame('#000000', FullDemoBuilder::$calls['kit']['colors']['primary']);
+        $this->assertSame(Kit::defaults()['colors']['text'], FullDemoBuilder::$calls['kit']['colors']['text']);
+    }
+
+    public function test_a_kit_that_is_not_a_kit_is_refused(): void
+    {
+        $this->signIn();
+
+        $result = Livewire::test(FullDemoBuilder::class)->call('saveKitFromPageBuilder', ['colors' => 'red'])->effects['returns'][0];
+
+        $this->assertFalse($result['ok']);
+        $this->assertArrayNotHasKey('kit', FullDemoBuilder::$calls);
+    }
+
+    public function test_a_saved_section_is_cleaned_and_loses_developer_data_from_a_non_developer(): void
+    {
+        $this->signIn();
+
+        $result = Livewire::test(FullDemoBuilder::class)->call('saveSectionFromPageBuilder', [
+            'id' => 's1', 'type' => 'rich', 'lock' => ['move' => true],
+            'data' => ['padding' => 'huge', 'advanced' => ['css' => 'selector { color: red; }', 'class' => 'brand']],
+        ], '  Kepala  ', false)->effects['returns'][0];
+
+        [$section, $title, $synced] = FullDemoBuilder::$calls['section'];
+
+        $this->assertSame(['ok' => true, 'id' => 41, 'template' => ['key' => 'saved-41', 'label' => 'Kepala', 'category' => 'saved', 'section' => $section]], $result);
+        $this->assertSame('Kepala', $title);
+        $this->assertFalse($synced);
+        $this->assertSame('md', $section['data']['padding']);
+        $this->assertArrayNotHasKey('lock', $section);
+        $this->assertSame(['class' => 'brand'], $section['data']['advanced']);
+    }
+
+    public function test_a_section_save_needs_a_title_and_a_rich_section(): void
+    {
+        $this->signIn();
+        $component = Livewire::test(FullDemoBuilder::class);
+
+        $this->assertFalse($component->call('saveSectionFromPageBuilder', ['type' => 'rich', 'data' => []], '   ', true)->effects['returns'][0]['ok']);
+        $this->assertFalse($component->call('saveSectionFromPageBuilder', ['type' => 'ref', 'ref' => 3], 'Ref', true)->effects['returns'][0]['ok']);
+        $this->assertArrayNotHasKey('section', FullDemoBuilder::$calls);
+    }
+
+    public function test_site_info_is_saved_and_its_validation_errors_come_back(): void
+    {
+        $this->signIn();
+        $component = Livewire::test(FullDemoBuilder::class);
+
+        $component->call('saveSiteInfoFromPageBuilder', ['contact' => ['phone' => '0123']])->assertReturned(['ok' => true]);
+        $this->assertSame(['contact' => ['phone' => '0123']], FullDemoBuilder::$calls['siteInfo']);
+
+        $bad = $component->call('saveSiteInfoFromPageBuilder', ['contact' => ['phone' => 'bad']])->effects['returns'][0];
+        $this->assertSame(['ok' => false, 'errors' => ['contact.phone' => 'Telefon tidak sah.']], $bad);
+    }
+
+    public function test_every_new_builder_call_checks_access_first(): void
+    {
+        $this->signIn();
+
+        foreach ([
+            'saveKitFromPageBuilder' => [Kit::defaults()],
+            'saveSectionFromPageBuilder' => [['type' => 'rich', 'data' => []], 'Hero', false],
+            'saveSiteInfoFromPageBuilder' => [[]],
+            'previewPageBuilder' => [['sections' => []], ['colors' => ['primary' => '#000000']]],
+        ] as $method => $arguments) {
+            // A refused call leaves the test component unusable, so each gets its own.
+            FullDemoBuilder::$denied = false;
+            $component = Livewire::test(FullDemoBuilder::class);
+            FullDemoBuilder::$denied = true;
+
+            $component->call($method, ...$arguments)->assertForbidden();
+        }
+
+        $this->assertSame([], FullDemoBuilder::$calls);
+        $this->assertSame(Kit::defaults(), app(KitSource::class)->current());
+    }
+
+    public function test_the_preview_draws_with_an_unsaved_kit_and_then_forgets_it(): void
+    {
+        $this->signIn();
+
+        $html = Livewire::test(FullDemoBuilder::class)
+            ->call('previewPageBuilder', ['version' => 2, 'sections' => [['id' => 'p1', 'type' => 'rich', 'data' => ['document' => []]]]], ['colors' => ['primary' => '#14532d']])
+            ->effects['returns'][0];
+
+        $this->assertStringContainsString('--kit-color-primary:#14532d', $html);
+        $this->assertStringContainsString('data-block-id="p1"', $html);
+        $this->assertSame(Kit::defaults(), app(KitSource::class)->current());
+    }
+
+    public function test_the_value_saved_from_an_old_host_is_format_two(): void
+    {
+        $this->signIn();
+
+        Livewire::test(FullDemoBuilder::class)->call('savePageBuilder', ['sections' => [['id' => 'one', 'type' => 'rich', 'data' => []]]])->assertReturned(['ok' => true]);
+
+        $this->assertSame(2, FullDemoBuilder::$calls['value']['version']);
+        $this->assertSame(['one'], array_column(FullDemoBuilder::$calls['value']['sections'], 'id'));
+    }
+
+    public function test_the_view_wires_only_the_supported_adapter_calls(): void
+    {
+        $this->signIn();
+
+        $plain = $this->get(DemoBuilder::getUrl())->assertOk()->getContent();
+        $full = $this->get(FullDemoBuilder::getUrl())->assertOk()->getContent();
+
+        $this->assertStringContainsString('saveKitFromPageBuilder', $full);
+        $this->assertStringContainsString('saveSectionFromPageBuilder', $full);
+        $this->assertStringContainsString('saveSiteInfoFromPageBuilder', $full);
+        $this->assertStringContainsString('\\u0022saveKit\\u0022:false', $plain);
+        $this->assertStringContainsString('\\u0022saveKit\\u0022:true', $full);
+    }
+}
