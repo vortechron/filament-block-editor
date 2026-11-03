@@ -23,7 +23,8 @@ use Vortechron\FilamentBlockEditor\Support\Urls;
  *     app(DynamicValues::class)->register('site.phone', 'Telefon', fn (RenderContext $context) => $settings->phone);
  *
  * Values in the RenderContext win over the registry (entries put
- * `entry.*` there).
+ * `entry.*` there). drawWith() adds values for one draw, under the
+ * context's: the builder's preview uses it for the host's render values.
  */
 final class DynamicValues
 {
@@ -38,6 +39,13 @@ final class DynamicValues
      * @var array<string, array{label: string, resolve: Closure, type: string, group: string}>
      */
     private array $values = [];
+
+    /**
+     * Values for the draw that is running now (drawWith()), by key.
+     *
+     * @var array<string, mixed>
+     */
+    private array $drawValues = [];
 
     /**
      * @param  Closure(RenderContext): mixed  $resolve  gets the RenderContext; returns the value (text) or null
@@ -77,25 +85,55 @@ final class DynamicValues
 
     /**
      * What the builder gets: each value with its current value as `preview`
-     * (null when it is empty or cannot be read now).
+     * (null when it is empty or cannot be read now). `$context` gives the
+     * values of the page being built, such as `page.title`.
      *
      * @return list<array{key: string, label: string, type: string, group: string, preview: string|null}>
      */
-    public function definitions(): array
+    public function definitions(?RenderContext $context = null): array
     {
         $definitions = [];
 
         foreach ($this->values as $key => $value) {
-            try {
-                $preview = $this->resolve($key, new RenderContext(forBuilder: true));
-            } catch (Throwable) {
-                $preview = null;
-            }
-
-            $definitions[] = ['key' => $key, 'label' => $value['label'], 'type' => $value['type'], 'group' => $value['group'], 'preview' => $preview];
+            $definitions[] = ['key' => $key, 'label' => $value['label'], 'type' => $value['type'], 'group' => $value['group'], 'preview' => $this->preview($key, $context)];
         }
 
         return $definitions;
+    }
+
+    /**
+     * A value as the builder shows it: resolved for the builder, or null
+     * when it is empty or cannot be read now.
+     */
+    public function preview(string $key, ?RenderContext $context = null): ?string
+    {
+        try {
+            return $this->resolve($key, $context ?? new RenderContext(forBuilder: true));
+        } catch (Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Runs `$draw` with these values added for it (under the context's own
+     * values, over the registry), then forgets them.
+     *
+     * @template T
+     *
+     * @param  array<string, mixed>  $values
+     * @param  Closure(): T  $draw
+     * @return T
+     */
+    public function drawWith(array $values, Closure $draw): mixed
+    {
+        $before = $this->drawValues;
+        $this->drawValues = [...$before, ...$values];
+
+        try {
+            return $draw();
+        } finally {
+            $this->drawValues = $before;
+        }
     }
 
     /**
@@ -105,6 +143,10 @@ final class DynamicValues
     {
         if (array_key_exists($key, $context->values)) {
             return self::text($context->values[$key]);
+        }
+
+        if (array_key_exists($key, $this->drawValues)) {
+            return self::text($this->drawValues[$key]);
         }
 
         return isset($this->values[$key]) ? self::text(($this->values[$key]['resolve'])($context)) : null;

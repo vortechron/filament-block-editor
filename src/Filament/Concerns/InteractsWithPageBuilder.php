@@ -56,7 +56,8 @@ trait InteractsWithPageBuilder
 
     /**
      * The page drawn with these unsaved sections, as a full HTML document.
-     * Draw the sections with RenderContext(forBuilder: true, isPreview: true).
+     * Draw the sections with $this->getPageBuilderPreviewContext() (or your
+     * own RenderContext(forBuilder: true, isPreview: true)).
      *
      * @param  list<array<string, mixed>>  $sections
      */
@@ -130,7 +131,7 @@ trait InteractsWithPageBuilder
             'viewUrl' => $this->getPageBuilderViewUrl(),
             'accent' => $this->getPageBuilderAccent(),
             'fonts' => array_map(fn (string $key, array $font): array => ['value' => $key, ...$font], array_keys(Kit::fonts()), Kit::fonts()),
-            'dynamicValues' => app(DynamicValues::class)->definitions(),
+            'dynamicValues' => $this->pageBuilderDynamicValues(),
             ...$this->getPageBuilderHookOptions(),
         ], fn (mixed $value): bool => $value !== null);
     }
@@ -178,7 +179,8 @@ trait InteractsWithPageBuilder
 
     /**
      * The page drawn with unsaved sections, and with an unsaved design kit
-     * when one is given (KitSource::override(), for this draw only).
+     * when one is given (KitSource::override(), for this draw only). The
+     * host's render values apply to this draw too (DynamicValues::drawWith()).
      *
      * @param  array<string, mixed>  $value  a page value of any format
      * @param  array<string, mixed>|null  $kit
@@ -188,16 +190,17 @@ trait InteractsWithPageBuilder
         $this->authorizePageBuilder();
 
         $sections = PageValue::normalize($value)['sections'];
+        $draw = fn (): string => app(DynamicValues::class)->drawWith($this->getPageBuilderRenderValues(), fn (): string => $this->renderPageBuilderPreview($sections));
 
         if ($kit === null) {
-            return $this->renderPageBuilderPreview($sections);
+            return $draw();
         }
 
         $source = app(KitSource::class);
         $source->override($kit);
 
         try {
-            return $this->renderPageBuilderPreview($sections);
+            return $draw();
         } finally {
             $source->override(null);
         }

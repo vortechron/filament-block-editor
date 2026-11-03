@@ -6,6 +6,7 @@ use Livewire\Livewire;
 use Vortechron\FilamentBlockEditor\Content\DynamicValues;
 use Vortechron\FilamentBlockEditor\Design\Kit;
 use Vortechron\FilamentBlockEditor\Design\KitSource;
+use Vortechron\FilamentBlockEditor\Rendering\RenderContext;
 use Workbench\App\Filament\Pages\DemoBuilder;
 use Workbench\App\Filament\Pages\FullDemoBuilder;
 
@@ -44,6 +45,37 @@ class PageBuilderHooksTest extends FilamentTestCase
         $this->assertSame('8px', $options['kitDefaults']['radius']);
         $this->assertSame('#475569', $options['kitDefaults']['colors']['text']);
         $this->assertSame($options['kitDefaults'], $options['kit']);
+    }
+
+    public function test_the_hosts_own_dynamic_values_join_the_registered_ones_and_win_on_the_same_key(): void
+    {
+        $this->signIn();
+        app(DynamicValues::class)
+            ->register('site.phone', 'Telefon', fn (): string => '012')
+            ->register('site.email', 'Emel', fn (): string => 'a@b.c');
+
+        $values = Livewire::test(FullDemoBuilder::class)->instance()->getPageBuilderOptions()['dynamicValues'];
+
+        $this->assertSame([
+            ['key' => 'site.email', 'label' => 'Emel', 'type' => 'text', 'group' => 'Site', 'preview' => 'a@b.c'],
+            ['key' => 'page.title', 'label' => 'Tajuk halaman', 'type' => 'text', 'group' => 'Halaman', 'preview' => 'Laman Utama'],
+            ['key' => 'site.phone', 'label' => 'Nombor kedai', 'type' => 'text', 'group' => 'Site', 'preview' => '019'],
+        ], $values);
+    }
+
+    public function test_the_preview_draws_with_the_hosts_render_values_and_then_forgets_them(): void
+    {
+        $this->signIn();
+        app(DynamicValues::class)->register('page.title', 'Tajuk', fn (): ?string => null);
+        $document = [['type' => 'paragraph', 'content' => [['type' => 'dynamic', 'props' => ['key' => 'page.title']]]]];
+
+        $html = Livewire::test(FullDemoBuilder::class)
+            ->call('previewPageBuilder', ['version' => 2, 'sections' => [['id' => 'p1', 'type' => 'rich', 'data' => ['document' => $document]]]])
+            ->effects['returns'][0];
+
+        $this->assertStringContainsString('Laman Utama', $html);
+        $this->assertNull(app(DynamicValues::class)->resolve('page.title', new RenderContext));
+        $this->assertSame(['page.title' => 'Laman Utama', 'site.phone' => '019'], Livewire::test(FullDemoBuilder::class)->instance()->previewContextValues());
     }
 
     public function test_a_hook_the_host_did_not_override_is_refused(): void

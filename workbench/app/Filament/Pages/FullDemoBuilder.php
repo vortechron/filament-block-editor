@@ -108,4 +108,29 @@ class FullDemoBuilder extends PageBuilderPage
     {
         return 'header';
     }
+
+    protected function getPageBuilderDynamicValues(): array
+    {
+        return [
+            ['key' => 'page.title', 'label' => 'Tajuk halaman', 'type' => 'text', 'group' => 'Halaman'],
+            ['key' => 'site.phone', 'label' => 'Nombor kedai', 'type' => 'text'],
+            ['key' => 'Not A Key', 'label' => 'Rosak', 'type' => 'text'],
+            ['key' => 'page.url', 'label' => 'Pautan', 'type' => 'video'],
+        ];
+    }
+
+    /**
+     * What getPageBuilderPreviewContext() holds, for the tests.
+     *
+     * @return array<string, mixed>
+     */
+    public function previewContextValues(): array
+    {
+        return $this->getPageBuilderPreviewContext()->values;
+    }
+
+    protected function getPageBuilderRenderValues(): array
+    {
+        return ['page.title' => 'Laman Utama', 'site.phone' => '019'];
+    }
 }

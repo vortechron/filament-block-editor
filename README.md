@@ -90,7 +90,7 @@ class BuildPage extends Page
         return view('pages.show', [
             'page' => $this->record,
             'sections' => $sections,
-            'context' => new RenderContext(forBuilder: true, isPreview: true),
+            'context' => $this->getPageBuilderPreviewContext(),   // forBuilder, isPreview, your render values
         ])->render();
     }
 
@@ -114,15 +114,20 @@ builder only offers what you override:
 
 ```php
 protected function isPageBuilderDeveloper(): bool { return auth()->user()->is_developer; }  // locks, custom CSS
-protected function getPageBuilderKit(): ?array { return Kit::normalize(setting('kit')); }    // the design panel
-protected function savePageBuilderKit(array $kit): void { setting(['kit' => $kit]); }
+protected function getPageBuilderKit(): ?array { return Kit::normalize(setting('kit')); }    // null: KitSource's current kit
+protected function savePageBuilderKit(array $kit): void { setting(['kit' => $kit]); }        // the design panel
 protected function savePageBuilderSection(array $section, string $title, bool $synced): array { /* ... */ return ['ok' => true, 'id' => $id, 'template' => null]; }
 protected function getPageBuilderSiteInfo(): ?array { /* groups of Fields and their values */ }
 protected function savePageBuilderSiteInfo(array $values): void { /* validate and save */ }
 protected function getPageBuilderSyncedSections(): array { return []; }   // [['id', 'title', 'editUrl', 'section']]
 protected function getPageBuilderParts(): array { return []; }            // [['key' => 'header', 'title', 'editUrl']]
-protected function getPageBuilderKind(): string { return 'page'; }        // page header footer section card single
+protected function getPageBuilderKind(): string { return 'page'; }        // an Enums\DocumentKind value
+protected function getPageBuilderDynamicValues(): array { return []; }   // more values for this builder only
+protected function getPageBuilderRenderValues(): array { return []; }    // ['page.title' => 'Laman Utama'] for the preview
 ```
+
+The builder always gets the current kit (`kit`) and `Kit::defaults()` (`kitDefaults`, with your config),
+for its colour and font pickers; the design panel shows only when you override `savePageBuilderKit()`.
 
 Register the route like any resource page (`'build' => BuildPage::route('/{record}/build')`) and add
 `FilamentBlockEditorPlugin::make()` to the panel. Uploads go to `config('filament-block-editor.disk')`

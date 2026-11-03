@@ -388,6 +388,30 @@ app(DynamicValues::class)->resolve('site.phone', new RenderContext);
   then checked by `Urls::link()`. In pictures (image and video `url`, own block `image` fields):
   `@entry.photo`, resolved, then checked by `Urls::media()`.
 - Values in the RenderContext win: `(new RenderContext)->withValues(['entry.title' => 'Kopi'])`.
+- `definitions(?RenderContext $context)` reads each `preview` with that context's values.
+  `drawWith(array $values, Closure $draw)` adds values for one draw only, under the context's own.
+
+In the Filament builder (`InteractsWithPageBuilder`), two hooks add values for one builder:
+
+```php
+// More definitions for this builder only, after the registered ones. Same key: this one wins.
+// With no `preview`, the builder shows the render value below.
+protected function getPageBuilderDynamicValues(): array
+{
+    return [['key' => 'page.title', 'label' => 'Tajuk halaman', 'type' => 'text', 'group' => 'Halaman']];
+}
+
+// The values of the page being built, by key. They are in the preview's context, so the preview
+// and the chips in the builder show real values.
+protected function getPageBuilderRenderValues(): array
+{
+    return ['page.title' => $this->record->title, 'page.url' => $this->record->url()];
+}
+```
+
+Draw `renderPageBuilderPreview()` with `$this->getPageBuilderPreviewContext()`: a
+`RenderContext(forBuilder: true, isPreview: true)` with the render values in it. A host that makes its own
+context still gets them in the preview (`previewPageBuilder()` draws inside `DynamicValues::drawWith()`).
 
 ## Forms
 

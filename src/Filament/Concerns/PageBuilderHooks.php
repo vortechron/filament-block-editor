@@ -7,11 +7,13 @@ use Illuminate\Validation\ValidationException;
 use ReflectionClass;
 use ReflectionMethod;
 use Vortechron\FilamentBlockEditor\Blocks\Field;
+use Vortechron\FilamentBlockEditor\Content\DynamicValues;
 use Vortechron\FilamentBlockEditor\Content\PageContent;
 use Vortechron\FilamentBlockEditor\Content\PageValue;
 use Vortechron\FilamentBlockEditor\Design\Kit;
 use Vortechron\FilamentBlockEditor\Design\KitSource;
 use Vortechron\FilamentBlockEditor\Enums\DocumentKind;
+use Vortechron\FilamentBlockEditor\Rendering\RenderContext;
 
 /**
  * The page builder's optional parts: the design kit, saved and synced
@@ -103,6 +105,43 @@ trait PageBuilderHooks
     protected function getPageBuilderKind(): string
     {
         return 'page';
+    }
+
+    /**
+     * Dynamic values for this builder only, on top of the registered ones
+     * (Content\DynamicValues): `[['key' => 'page.title', 'label' => ...,
+     * 'type' => 'text'|'link'|'image', 'group' => ?string, 'preview' => ?string]]`.
+     * One with the key of a registered value wins over it. With no
+     * `preview`, the builder shows its render value (getPageBuilderRenderValues()).
+     *
+     * @return list<array<string, mixed>>
+     */
+    protected function getPageBuilderDynamicValues(): array
+    {
+        return [];
+    }
+
+    /**
+     * Values of the page being built, by dynamic value key (such as
+     * `['page.title' => 'Laman Utama', 'entry.photo' => '/a.jpg']`). They
+     * are in the context the builder's preview is drawn with, so its chips
+     * and the preview show real values.
+     *
+     * @return array<string, mixed>
+     */
+    protected function getPageBuilderRenderValues(): array
+    {
+        return [];
+    }
+
+    /**
+     * The context to draw renderPageBuilderPreview() with: for the
+     * builder, a preview, and the render values. A host that makes its own
+     * context still gets the render values for the preview draw.
+     */
+    protected function getPageBuilderPreviewContext(): RenderContext
+    {
+        return (new RenderContext(forBuilder: true, isPreview: true))->withValues($this->getPageBuilderRenderValues());
     }
 
     /**
@@ -205,6 +244,41 @@ trait PageBuilderHooks
             'siteInfo' => $siteInfo === null ? null : self::siteInfo($siteInfo),
             'kind' => (DocumentKind::tryFrom($this->getPageBuilderKind()) ?? DocumentKind::Page)->value,
         ], fn (mixed $value): bool => $value !== null);
+    }
+
+    /**
+     * The registered dynamic values, then the host's own
+     * (getPageBuilderDynamicValues()), which win on the same key. Each
+     * preview is read with the render values.
+     *
+     * @return list<array{key: string, label: string, type: string, group: string, preview: string|null}>
+     */
+    protected function pageBuilderDynamicValues(): array
+    {
+        $values = app(DynamicValues::class);
+        $context = (new RenderContext(forBuilder: true))->withValues($this->getPageBuilderRenderValues());
+        $own = [];
+
+        foreach ($this->getPageBuilderDynamicValues() as $entry) {
+            $key = is_array($entry) ? ($entry['key'] ?? null) : null;
+            $type = $entry['type'] ?? 'text';
+
+            if (! DynamicValues::isKey($key) || ! in_array($type, DynamicValues::TYPES, true) || ! is_string($entry['label'] ?? null)) {
+                continue;
+            }
+
+            $own[$key] = [
+                'key' => $key,
+                'label' => $entry['label'],
+                'type' => $type,
+                'group' => is_string($entry['group'] ?? null) && $entry['group'] !== '' ? $entry['group'] : 'Site',
+                'preview' => is_string($entry['preview'] ?? null) ? $entry['preview'] : $values->preview($key, $context),
+            ];
+        }
+
+        $registered = array_filter($values->definitions($context), fn (array $definition): bool => ! isset($own[$definition['key']]));
+
+        return [...array_values($registered), ...array_values($own)];
     }
 
     /**
