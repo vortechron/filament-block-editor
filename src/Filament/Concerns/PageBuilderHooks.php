@@ -191,7 +191,7 @@ trait PageBuilderHooks
             return ['ok' => false, 'errors' => ['section' => __('filament-block-editor::builder.errors.section_not_available')]];
         }
 
-        $title = mb_substr(trim($title), 0, 120);
+        $title = mb_substr(trim($title), 0, PageContent::MAX_TITLE_LENGTH);
         $clean = PageContent::normalize([$section])[0] ?? null;
 
         if ($title === '' || ($clean['type'] ?? null) !== PageContent::TYPE) {

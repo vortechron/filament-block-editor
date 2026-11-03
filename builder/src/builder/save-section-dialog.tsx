@@ -3,7 +3,8 @@ import { type FormEvent, useId, useState } from 'react';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
 import { normalizeValue } from '@/lib/page-value';
-import type { RichSection, SaveSectionResult } from '@/types';
+import RULES from '@/generated/rules.json';
+import type { RichSection, SaveSectionResult, SectionTemplateInput } from '@/types';
 import { Button } from '@/ui/button';
 import {
     Dialog,
@@ -18,7 +19,25 @@ import { useBuilderContext } from './builder-context';
 
 export type SaveSectionMode = 'template' | 'synced';
 
-const NAME_LENGTH = 100;
+/** The longest a saved section's name may be (PageContent::MAX_TITLE_LENGTH). */
+const NAME_LENGTH = RULES.page.max_title_length;
+
+/** The host's answer, or a refusal with the error a throwing save gave. */
+async function saveOrRefuse(
+    save: () => Promise<SaveSectionResult>,
+    fallback: string,
+): Promise<SaveSectionResult> {
+    try {
+        const result = await save();
+
+        return result ?? { ok: false, errors: { section: fallback } };
+    } catch (error) {
+        return {
+            ok: false,
+            errors: { section: error instanceof Error && error.message !== '' ? error.message : fallback },
+        };
+    }
+}
 
 /**
  * Asks for a name, then saves the section through `adapter.saveSection`:
@@ -54,8 +73,9 @@ export function SaveSectionDialog({
         event.preventDefault();
 
         const name = title.trim();
+        const saveSection = adapter.saveSection;
 
-        if (name === '' || !adapter.saveSection || mode === null) {
+        if (name === '' || !saveSection || mode === null) {
             return;
         }
 
@@ -63,35 +83,35 @@ export function SaveSectionDialog({
 
         setIsSaving(true);
 
-        let result: SaveSectionResult;
-
-        try {
-            result = await adapter.saveSection(copy, { title: name, synced: isSynced });
-        } catch (error) {
-            result = {
-                ok: false,
-                errors: {
-                    section:
-                        error instanceof Error && error.message !== ''
-                            ? error.message
-                            : t('The section could not be saved.'),
-                },
-            };
-        }
+        const result = await saveOrRefuse(
+            () => saveSection(copy, { title: name, synced: isSynced }),
+            t('The section could not be saved.'),
+        );
 
         setIsSaving(false);
 
-        if (!result || result.ok === false) {
-            setErrors(Object.values(result?.errors ?? {}));
+        if (result.ok === false) {
+            setErrors(Object.values(result.errors ?? {}));
 
             return;
         }
 
-        if (result.template) {
-            library.addTemplate(result.template);
+        keepSaved(result.id, result.template, name, copy);
+        close();
+    }
+
+    /** Adds the saved section where the builder shows it at once. */
+    function keepSaved(
+        id: number | string,
+        template: SectionTemplateInput | undefined,
+        name: string,
+        copy: RichSection,
+    ) {
+        if (template) {
+            library.addTemplate(template);
         } else if (!isSynced) {
             library.addTemplate({
-                key: `saved-${String(result.id)}`,
+                key: `saved-${String(id)}`,
                 label: name,
                 category: 'saved',
                 section: { data: copy.data },
@@ -99,18 +119,14 @@ export function SaveSectionDialog({
         }
 
         if (isSynced) {
-            const ref = result.id;
-
-            library.addSynced({ id: ref, title: name, editUrl: null, section: copy });
+            library.addSynced({ id, title: name, editUrl: null, section: copy });
             builder.updateSection(section.id, (current) => ({
                 id: current.id,
                 type: 'ref',
-                ref,
+                ref: id,
                 ...(current.hidden ? { hidden: true as const } : {}),
             }));
         }
-
-        close();
     }
 
     return (

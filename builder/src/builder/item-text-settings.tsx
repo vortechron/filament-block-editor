@@ -60,6 +60,14 @@ const HIGHLIGHTS = {
     pink: '#fce7f3',
 } as const;
 
+type TextProps = {
+    item: ItemSnapshot;
+    onChange: (props: Record<string, unknown>) => void;
+};
+
+/** A heading's sizes, H1 to H4. */
+const HEADING_LEVELS = [1, 2, 3, 4] as const;
+
 /**
  * A text item's settings: what kind of text it is, a heading's size, its
  * alignment and its colours.
@@ -68,68 +76,23 @@ export function TextItemSettings({
     item,
     handle,
     onChange,
-}: {
-    item: ItemSnapshot;
-    handle: SectionEditorHandle;
-    onChange: (props: Record<string, unknown>) => void;
-}) {
+}: TextProps & { handle: SectionEditorHandle }) {
     const t = useT();
     const isText = TEXT_BLOCKS.has(item.type);
 
     return (
         <>
-            {isText && (
-                <Group label={t('Kind of text')}>
-                    <div className="grid grid-cols-3 gap-1.5">
-                        {TEXT_TYPES.map((option) => {
-                            const level = Number(item.props.level);
-                            const isChosen =
-                                option.type === item.type &&
-                                (option.level === null ||
-                                    level === option.level ||
-                                    (option.level === 2 && level <= 2) ||
-                                    (option.level === 3 && level >= 3));
-
-                            return (
-                                <button
-                                    key={option.value}
-                                    type="button"
-                                    aria-pressed={isChosen}
-                                    onClick={() =>
-                                        handle.changeItemType(
-                                            item.id,
-                                            option.type,
-                                            option.level === null
-                                                ? {}
-                                                : { level: option.level },
-                                        )
-                                    }
-                                    className={cn(
-                                        'h-9 rounded-lg border px-1 text-xs font-medium transition-colors',
-                                        isChosen
-                                            ? 'border-foreground bg-secondary text-foreground'
-                                            : 'text-muted-foreground hover:bg-secondary/60 bg-card',
-                                    )}
-                                >
-                                    {t(option.label)}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </Group>
-            )}
+            {isText && <TextKindChoice item={item} handle={handle} />}
 
             {item.type === 'heading' && (
                 <Group
                     label={t('Heading size')}
-                    hint={t(
-                        'In a Cards section, every small heading starts a new card.',
-                    )}
+                    hint={t('In a Cards section, every small heading starts a new card.')}
                 >
                     <SegmentedChoice
                         label={t('Heading size')}
                         value={propText(item.props.level, '2')}
-                        options={[1, 2, 3, 4].map((level) => ({
+                        options={HEADING_LEVELS.map((level) => ({
                             value: String(level),
                             label: `H${level}`,
                         }))}
@@ -138,41 +101,7 @@ export function TextItemSettings({
                 </Group>
             )}
 
-            {'textAlignment' in item.props && (
-                <Group label={t('Alignment')}>
-                    <div className="grid grid-cols-3 gap-1.5">
-                        {(
-                            [
-                                ['left', TextAlignStart, t('Left')],
-                                ['center', TextAlignCenter, t('Centre')],
-                                ['right', TextAlignEnd, t('Right')],
-                            ] as const
-                        ).map(([value, AlignIcon, alignLabel]) => {
-                            const isChosen =
-                                (item.props.textAlignment ?? 'left') === value;
-
-                            return (
-                                <button
-                                    key={value}
-                                    type="button"
-                                    aria-pressed={isChosen}
-                                    aria-label={alignLabel}
-                                    title={alignLabel}
-                                    onClick={() => onChange({ textAlignment: value })}
-                                    className={cn(
-                                        'grid h-9 place-items-center rounded-lg border transition-colors',
-                                        isChosen
-                                            ? 'border-foreground bg-secondary text-foreground'
-                                            : 'text-muted-foreground hover:bg-secondary/60 bg-card',
-                                    )}
-                                >
-                                    <AlignIcon className="size-4" />
-                                </button>
-                            );
-                        })}
-                    </div>
-                </Group>
-            )}
+            {'textAlignment' in item.props && <AlignmentChoice item={item} onChange={onChange} />}
 
             {isText && 'textColor' in item.props && (
                 <Group label={t('Text colour')}>
@@ -196,6 +125,88 @@ export function TextItemSettings({
                 </Group>
             )}
         </>
+    );
+}
+
+/** Text, heading, quote or list: the words stay when the kind changes. */
+function TextKindChoice({ item, handle }: { item: ItemSnapshot; handle: SectionEditorHandle }) {
+    const t = useT();
+    const level = Number(item.props.level);
+
+    return (
+        <Group label={t('Kind of text')}>
+            <div className="grid grid-cols-3 gap-1.5">
+                {TEXT_TYPES.map((option) => {
+                    const isChosen =
+                        option.type === item.type &&
+                        (option.level === null ||
+                            level === option.level ||
+                            (option.level === 2 && level <= 2) ||
+                            (option.level === 3 && level >= 3));
+
+                    return (
+                        <button
+                            key={option.value}
+                            type="button"
+                            aria-pressed={isChosen}
+                            onClick={() =>
+                                handle.changeItemType(
+                                    item.id,
+                                    option.type,
+                                    option.level === null ? {} : { level: option.level },
+                                )
+                            }
+                            className={cn(
+                                'h-9 rounded-lg border px-1 text-xs font-medium transition-colors',
+                                isChosen
+                                    ? 'border-foreground bg-secondary text-foreground'
+                                    : 'text-muted-foreground hover:bg-secondary/60 bg-card',
+                            )}
+                        >
+                            {t(option.label)}
+                        </button>
+                    );
+                })}
+            </div>
+        </Group>
+    );
+}
+
+function AlignmentChoice({ item, onChange }: TextProps) {
+    const t = useT();
+    const alignments = [
+        ['left', TextAlignStart, t('Left')],
+        ['center', TextAlignCenter, t('Centre')],
+        ['right', TextAlignEnd, t('Right')],
+    ] as const;
+
+    return (
+        <Group label={t('Alignment')}>
+            <div className="grid grid-cols-3 gap-1.5">
+                {alignments.map(([value, AlignIcon, alignLabel]) => {
+                    const isChosen = (item.props.textAlignment ?? 'left') === value;
+
+                    return (
+                        <button
+                            key={value}
+                            type="button"
+                            aria-pressed={isChosen}
+                            aria-label={alignLabel}
+                            title={alignLabel}
+                            onClick={() => onChange({ textAlignment: value })}
+                            className={cn(
+                                'grid h-9 place-items-center rounded-lg border transition-colors',
+                                isChosen
+                                    ? 'border-foreground bg-secondary text-foreground'
+                                    : 'text-muted-foreground hover:bg-secondary/60 bg-card',
+                            )}
+                        >
+                            <AlignIcon className="size-4" />
+                        </button>
+                    );
+                })}
+            </div>
+        </Group>
     );
 }
 

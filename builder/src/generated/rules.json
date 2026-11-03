@@ -2,7 +2,8 @@
     "page": {
         "version": 2,
         "max_sections": 30,
-        "max_name_length": 40
+        "max_name_length": 40,
+        "max_title_length": 120
     },
     "style": {
         "variants": [

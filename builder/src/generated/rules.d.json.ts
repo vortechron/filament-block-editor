@@ -4,6 +4,7 @@ declare const rules: {
         readonly "version": 2;
         readonly "max_sections": 30;
         readonly "max_name_length": 40;
+        readonly "max_title_length": 120;
     };
     readonly "style": {
         readonly "variants": readonly ["desktop", "tablet", "phone", "hover"];

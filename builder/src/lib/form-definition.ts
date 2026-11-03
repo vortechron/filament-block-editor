@@ -80,7 +80,7 @@ export const SUBJECT_LENGTH = FORM.subject_length;
 export const MESSAGE_LENGTH = FORM.message_length;
 export const MIN_ROWS = FORM.rows.min;
 export const MAX_ROWS = FORM.rows.max;
-const DEFAULT_ROWS = FORM.rows.default;
+export const DEFAULT_ROWS = FORM.rows.default;
 const EMAIL_LENGTH = FORM.email_length;
 
 /** The shop's own address and number, filled in by the site. */

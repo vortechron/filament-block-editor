@@ -53,6 +53,11 @@ final class PageContent
     public const MAX_NAME_LENGTH = 40;
 
     /**
+     * The longest the title of a saved or synced section may be.
+     */
+    public const MAX_TITLE_LENGTH = 120;
+
+    /**
      * Field specs of a section. "enum:a,b" allows listed values (the first is
      * the default). `layout` is a Enums\SectionLayout and `font` an
      * Enums\SectionFont. `image` is the background picture: a web address or

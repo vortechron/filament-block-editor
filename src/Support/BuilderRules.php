@@ -37,6 +37,7 @@ final class BuilderRules
                 'version' => PageValue::VERSION,
                 'max_sections' => PageContent::MAX_SECTIONS,
                 'max_name_length' => PageContent::MAX_NAME_LENGTH,
+                'max_title_length' => PageContent::MAX_TITLE_LENGTH,
             ],
             'style' => [
                 'variants' => StyleBag::VARIANTS,

@@ -3,6 +3,7 @@ import { SwitchRow } from '@/editor/fields';
 import { SegmentedChoice } from '@/editor/segmented-choice';
 import {
     CHOICE_TYPES,
+    DEFAULT_ROWS,
     FORM_FIELD_TYPES,
     type FormField,
     type FormFieldType,
@@ -32,6 +33,13 @@ export const FIELD_TYPE_LABELS: Record<FormFieldType, string> = {
     consent: 'Agree box',
 };
 
+type FieldProps = {
+    field: FormField;
+    /** Its place in the form, from 1, for the labels. */
+    number: number;
+    set: (patch: Partial<FormField>) => void;
+};
+
 /**
  * One field of the form, opened: its type, label, name, hint, whether it
  * must be filled in, its width, and its choices or rows.
@@ -47,141 +55,17 @@ export function FormFieldEditor({
     onChange: (field: FormField) => void;
 }) {
     const t = useT();
-    const id = useId();
-    const ids = {
-        type: `${id}-type`,
-        label: `${id}-label`,
-        name: `${id}-name`,
-        hint: `${id}-hint`,
-        choices: `${id}-choices`,
-        rows: `${id}-rows`,
-    };
     const set = (patch: Partial<FormField>) => onChange({ ...field, ...patch });
-    const name = useDraft({
-        value: field.name,
-        format: (value) => value,
-        parse: (text) => {
-            const typed = typeFieldName(text);
-
-            return typed === '' ? null : typed;
-        },
-        commit: (value) => set({ name: value }),
-    });
-    const choices = useDraft({
-        value: field.options ?? [],
-        format: (options) => options.join('\n'),
-        parse: (text) =>
-            text
-                .split('\n')
-                .map((line) => line.trim())
-                .filter((line) => line !== ''),
-        commit: (options) => set({ options }),
-    });
+    const props = { field, number, set };
 
     return (
         <div className="grid grid-cols-1 gap-3">
-            <Row label={t('Type')} htmlFor={ids.type}>
-                <select
-                    id={ids.type}
-                    aria-label={t('Type of field :number', { number })}
-                    value={field.type}
-                    onChange={(event) =>
-                        set({ type: event.target.value as FormFieldType })
-                    }
-                    className="border-input bg-card focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border px-3 text-sm outline-none focus-visible:ring-[3px]"
-                >
-                    {FORM_FIELD_TYPES.map((type) => (
-                        <option key={type} value={type}>
-                            {t(FIELD_TYPE_LABELS[type])}
-                        </option>
-                    ))}
-                </select>
-            </Row>
-
-            <Row label={t('Label')} htmlFor={ids.label}>
-                {field.type === 'consent' ? (
-                    <Textarea
-                        id={ids.label}
-                        aria-label={t('Label of field :number', { number })}
-                        value={field.label}
-                        maxLength={LABEL_LENGTH}
-                        rows={2}
-                        className="bg-card"
-                        onChange={(event) => set({ label: event.target.value })}
-                    />
-                ) : (
-                    <Input
-                        id={ids.label}
-                        aria-label={t('Label of field :number', { number })}
-                        value={field.label}
-                        maxLength={LABEL_LENGTH}
-                        className="bg-card"
-                        onChange={(event) => set({ label: event.target.value })}
-                    />
-                )}
-            </Row>
-
-            <Row
-                label={t('Name')}
-                htmlFor={ids.name}
-                hint={t('Made from the label. A WhatsApp message shows the answer with {:name}.', {
-                    name: field.name,
-                })}
-            >
-                <Input
-                    id={ids.name}
-                    aria-label={t('Name of field :number', { number })}
-                    value={name.text}
-                    className="bg-card font-mono text-xs"
-                    onChange={(event) => name.setText(event.target.value)}
-                />
-            </Row>
-
-            {PLACEHOLDER_TYPES.includes(field.type) && (
-                <Row label={t('Hint inside the box')} htmlFor={ids.hint}>
-                    <Input
-                        id={ids.hint}
-                        value={field.placeholder ?? ''}
-                        maxLength={PLACEHOLDER_LENGTH}
-                        className="bg-card"
-                        onChange={(event) => set({ placeholder: event.target.value })}
-                    />
-                </Row>
-            )}
-
-            {CHOICE_TYPES.includes(field.type) && (
-                <Row label={t('Choices')} htmlFor={ids.choices} hint={t('One choice on each line.')}>
-                    <Textarea
-                        id={ids.choices}
-                        aria-label={t('Choices of field :number', { number })}
-                        value={choices.text}
-                        rows={4}
-                        className="bg-card"
-                        onChange={(event) => choices.setText(event.target.value)}
-                    />
-                </Row>
-            )}
-
-            {field.type === 'textarea' && (
-                <Row label={t('Lines')} htmlFor={ids.rows}>
-                    <Input
-                        id={ids.rows}
-                        type="number"
-                        inputMode="numeric"
-                        min={MIN_ROWS}
-                        max={MAX_ROWS}
-                        value={String(field.rows ?? 4)}
-                        className="bg-card"
-                        onChange={(event) => {
-                            const rows = Number(event.target.value);
-
-                            if (Number.isFinite(rows) && event.target.value !== '') {
-                                set({ rows });
-                            }
-                        }}
-                    />
-                </Row>
-            )}
+            <TypeRow {...props} />
+            <LabelRow {...props} />
+            <NameRow {...props} />
+            {PLACEHOLDER_TYPES.includes(field.type) && <HintRow {...props} />}
+            {CHOICE_TYPES.includes(field.type) && <ChoicesRow {...props} />}
+            {field.type === 'textarea' && <RowsRow {...props} />}
 
             <SwitchRow
                 label={t('Must be filled in')}
@@ -202,6 +86,156 @@ export function FormFieldEditor({
                 />
             </div>
         </div>
+    );
+}
+
+function TypeRow({ field, number, set }: FieldProps) {
+    const t = useT();
+    const id = useId();
+
+    return (
+        <Row label={t('Type')} htmlFor={id}>
+            <select
+                id={id}
+                aria-label={t('Type of field :number', { number })}
+                value={field.type}
+                onChange={(event) => set({ type: event.target.value as FormFieldType })}
+                className="border-input bg-card focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border px-3 text-sm outline-none focus-visible:ring-[3px]"
+            >
+                {FORM_FIELD_TYPES.map((type) => (
+                    <option key={type} value={type}>
+                        {t(FIELD_TYPE_LABELS[type])}
+                    </option>
+                ))}
+            </select>
+        </Row>
+    );
+}
+
+/** A consent field's label is a sentence, so it gets a bigger box. */
+function LabelRow({ field, number, set }: FieldProps) {
+    const t = useT();
+    const id = useId();
+    const shared = {
+        id,
+        'aria-label': t('Label of field :number', { number }),
+        value: field.label,
+        maxLength: LABEL_LENGTH,
+        className: 'bg-card',
+    };
+
+    return (
+        <Row label={t('Label')} htmlFor={id}>
+            {field.type === 'consent' ? (
+                <Textarea {...shared} rows={2} onChange={(event) => set({ label: event.target.value })} />
+            ) : (
+                <Input {...shared} onChange={(event) => set({ label: event.target.value })} />
+            )}
+        </Row>
+    );
+}
+
+function NameRow({ field, number, set }: FieldProps) {
+    const t = useT();
+    const id = useId();
+    const name = useDraft({
+        value: field.name,
+        format: (value) => value,
+        parse: (text) => {
+            const typed = typeFieldName(text);
+
+            return typed === '' ? null : typed;
+        },
+        commit: (value) => set({ name: value }),
+    });
+
+    return (
+        <Row
+            label={t('Name')}
+            htmlFor={id}
+            hint={t('Made from the label. A WhatsApp message shows the answer with {:name}.', {
+                name: field.name,
+            })}
+        >
+            <Input
+                id={id}
+                aria-label={t('Name of field :number', { number })}
+                value={name.text}
+                className="bg-card font-mono text-xs"
+                onChange={(event) => name.setText(event.target.value)}
+            />
+        </Row>
+    );
+}
+
+function HintRow({ field, set }: FieldProps) {
+    const t = useT();
+    const id = useId();
+
+    return (
+        <Row label={t('Hint inside the box')} htmlFor={id}>
+            <Input
+                id={id}
+                value={field.placeholder ?? ''}
+                maxLength={PLACEHOLDER_LENGTH}
+                className="bg-card"
+                onChange={(event) => set({ placeholder: event.target.value })}
+            />
+        </Row>
+    );
+}
+
+function ChoicesRow({ field, number, set }: FieldProps) {
+    const t = useT();
+    const id = useId();
+    const choices = useDraft({
+        value: field.options ?? [],
+        format: (options) => options.join('\n'),
+        parse: (text) =>
+            text
+                .split('\n')
+                .map((line) => line.trim())
+                .filter((line) => line !== ''),
+        commit: (options) => set({ options }),
+    });
+
+    return (
+        <Row label={t('Choices')} htmlFor={id} hint={t('One choice on each line.')}>
+            <Textarea
+                id={id}
+                aria-label={t('Choices of field :number', { number })}
+                value={choices.text}
+                rows={4}
+                className="bg-card"
+                onChange={(event) => choices.setText(event.target.value)}
+            />
+        </Row>
+    );
+}
+
+function RowsRow({ field, set }: FieldProps) {
+    const t = useT();
+    const id = useId();
+
+    return (
+        <Row label={t('Lines')} htmlFor={id}>
+            <Input
+                id={id}
+                type="number"
+                inputMode="numeric"
+                min={MIN_ROWS}
+                max={MAX_ROWS}
+                value={String(field.rows ?? DEFAULT_ROWS)}
+                className="bg-card"
+                onChange={(event) => {
+                    const rows = Number(event.target.value);
+
+                    if (Number.isFinite(rows) && event.target.value !== '') {
+                        set({ rows });
+                    }
+                }}
+            />
+        </Row>
     );
 }
 
