@@ -13,7 +13,9 @@ namespace Vortechron\FilamentBlockEditor\Content;
  *    position, or the end), and keeps its stored hidden state;
  * 3. puts a section locked `move` back at its stored position;
  * 4. keeps the stored document of a section locked `content`, and the
- *    stored look fields, `style` and `advanced` of one locked `style`.
+ *    stored look fields, `style` and `advanced` of one locked `style`;
+ * 5. keeps the type of a section with any lock: a locked rich section
+ *    cannot become a synced one.
  *
  * Who is a developer is the caller's decision. Both values must be
  * normalized sections; PageValue::guard() cleans the result again.
@@ -47,8 +49,15 @@ final class PageGuard
         $lock = $oldRich['lock'] ?? [];
 
         if ($section['type'] !== PageContent::TYPE) {
+            if ($lock === []) {
+                return $section;
+            }
+
             // A locked section cannot be swapped for a synced one.
-            return isset($lock['content']) || isset($lock['style']) ? $oldRich : $section;
+            unset($oldRich['hidden']);
+            $hidden = isset($lock['remove']) ? isset($old['hidden']) : isset($section['hidden']);
+
+            return [...$oldRich, ...($hidden ? ['hidden' => true] : [])];
         }
 
         unset($section['lock']);
@@ -99,7 +108,10 @@ final class PageGuard
     private static function restoreRemoved(array $sections, array $stored): array
     {
         foreach ($stored as $position => $section) {
-            if (! isset($section['lock']['remove']) || in_array($section['id'], array_column($sections, 'id'), true)) {
+            // Only a section of the same type counts as the stored one.
+            $present = array_filter($sections, fn (array $new): bool => $new['id'] === $section['id'] && $new['type'] === $section['type']);
+
+            if (! isset($section['lock']['remove']) || $present !== []) {
                 continue;
             }
 

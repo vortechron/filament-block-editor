@@ -185,4 +185,26 @@ class OwnBlockTest extends TestCase
         $this->assertTrue(Field::text('x')->developerOnly()->isDeveloperOnly());
         $this->assertFalse(Field::text('x')->isDeveloperOnly());
     }
+
+    public function test_a_developer_only_field_inside_a_list_is_refused_when_the_list_is_built(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+        $this->expectExceptionMessage('developerOnly');
+
+        Field::list('items')->fields([Field::text('name'), Field::text('secret')->developerOnly()]);
+    }
+
+    public function test_a_developer_only_field_inside_a_nested_list_is_refused_too(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        Field::list('rows')->fields([Field::list('cells')->developerOnly()->fields([Field::text('x')])]);
+    }
+
+    public function test_a_whole_list_may_be_developer_only(): void
+    {
+        $field = Field::list('items')->developerOnly()->fields([Field::text('name')]);
+
+        $this->assertTrue($field->toArray()['developerOnly']);
+    }
 }

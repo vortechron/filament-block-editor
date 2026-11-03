@@ -134,12 +134,22 @@ final class Field
     }
 
     /**
-     * The fields of each item of a list.
+     * The fields of each item of a list. A field inside a list may not be
+     * developerOnly(): the guard keeps developer-only values by block, not
+     * by list row. Make the whole list developer only instead.
      *
      * @param  list<Field>  $fields
+     *
+     * @throws InvalidArgumentException when one of the fields is developer only
      */
     public function fields(array $fields): self
     {
+        foreach ($fields as $field) {
+            if ($field instanceof self && $field->developerOnly) {
+                throw new InvalidArgumentException("The [{$field->name}] field is inside the [{$this->name}] list, so it cannot be developerOnly(). Make the whole list developerOnly() instead.");
+            }
+        }
+
         $this->fields = array_values($fields);
 
         return $this;
@@ -169,7 +179,9 @@ final class Field
     /**
      * Only developers may see and change this field. The builder hides it
      * from everyone else, and Content\PageValue::guard() keeps its stored
-     * value when someone else saves (a new block gets the default).
+     * value when someone else saves (a new block gets the default). Only a
+     * top-level field of a block may be developer only, a whole list
+     * included; one inside a list is refused (see fields()).
      */
     public function developerOnly(bool $developerOnly = true): self
     {

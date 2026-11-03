@@ -274,6 +274,30 @@ class PageGuardTest extends TestCase
         $this->assertSame($once, PageValue::guard($once, $stored));
     }
 
+    public function test_a_section_with_any_lock_keeps_its_type(): void
+    {
+        foreach (['move', 'remove', 'content', 'style'] as $lock) {
+            $stored = $this->page([$this->section('a'), $this->section('b', ['document' => [Blocks::paragraph('Asal')], 'padding' => 'sm'], ['lock' => [$lock => true]])]);
+            $new = $this->page([$this->section('a'), ['id' => 'b', 'type' => 'ref', 'ref' => 7]]);
+
+            $guarded = PageValue::guard($new, $stored);
+
+            $this->assertSame(['a', 'b'], $this->ids($guarded), $lock);
+            $this->assertSame($stored['sections'][1], $guarded['sections'][1], $lock);
+        }
+    }
+
+    public function test_a_synced_section_with_the_id_of_a_removal_locked_one_does_not_count_as_it(): void
+    {
+        $stored = $this->page([$this->section('b', [], ['lock' => ['remove' => true]]), $this->section('c')]);
+        $new = $this->page([$this->section('c'), ['id' => 'b', 'type' => 'ref', 'ref' => 7], ['id' => 'b', 'type' => 'ref', 'ref' => 8]]);
+
+        $guarded = PageValue::guard($new, $stored);
+
+        $this->assertSame(['rich', 'rich', 'rich'], array_column($guarded['sections'], 'type'));
+        $this->assertSame(['c', 'b', 'b'], $this->ids($guarded));
+    }
+
     public function test_a_locked_section_swapped_for_a_synced_one_with_its_id_comes_back(): void
     {
         $stored = $this->page([$this->section('a', ['document' => [Blocks::paragraph('Asal')]], ['lock' => ['content' => true]])]);
