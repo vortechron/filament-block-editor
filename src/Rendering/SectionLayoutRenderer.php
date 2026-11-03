@@ -6,6 +6,7 @@ use Vortechron\FilamentBlockEditor\BlockNote\BlockNoteDocument;
 use Vortechron\FilamentBlockEditor\BlockNote\BlockNoteRenderer;
 use Vortechron\FilamentBlockEditor\BlockNote\Blocks;
 use Vortechron\FilamentBlockEditor\Enums\SectionLayout;
+use Vortechron\FilamentBlockEditor\Styling\StyleSheet;
 use Vortechron\FilamentBlockEditor\Support\Urls;
 
 /**
@@ -70,7 +71,7 @@ final class SectionLayoutRenderer
         }
 
         try {
-            return match ($layout) {
+            return StyleSheet::collect(fn (): string => match ($layout) {
                 SectionLayout::Hero => $this->hero($blocks),
                 SectionLayout::Product => $this->product($blocks),
                 SectionLayout::Poster => $this->poster($blocks),
@@ -82,7 +83,7 @@ final class SectionLayoutRenderer
                 default => $this->onlyOwnBlocks($blocks)
                     ? '<div class="sf-own">'.$this->draw($blocks).'</div>'
                     : '<div class="sf-rich">'.$this->draw($blocks).'</div>',
-            };
+            });
         } finally {
             $this->context = new RenderContext;
             $this->forBuilder = false;
@@ -503,7 +504,7 @@ final class SectionLayoutRenderer
             $mark === 'cross' => 'cross',
             default => 'tick',
         };
-        $text = ['type' => 'paragraph', 'props' => is_array($block['props'] ?? null) ? $block['props'] : [], 'content' => $content, 'children' => [], ...$this->samePlace($block)];
+        $text = ['id' => $block['id'] ?? null, 'type' => 'paragraph', 'props' => is_array($block['props'] ?? null) ? $block['props'] : [], 'content' => $content, 'children' => [], ...$this->samePlace($block)];
         $children = is_array($block['children'] ?? null) ? array_values(array_filter($block['children'], is_array(...))) : [];
 
         if ($this->forBuilder && isset($block[BlockNoteRenderer::ITEM_PATH])) {
@@ -539,7 +540,7 @@ final class SectionLayoutRenderer
             $rest = array_slice($rest, 1);
         }
 
-        $words = ['type' => 'paragraph', 'props' => is_array($quote['props'] ?? null) ? $quote['props'] : [], 'content' => $quote['content'] ?? [], 'children' => [], ...$this->samePlace($quote)];
+        $words = ['id' => $quote['id'] ?? null, 'type' => 'paragraph', 'props' => is_array($quote['props'] ?? null) ? $quote['props'] : [], 'content' => $quote['content'] ?? [], 'children' => [], ...$this->samePlace($quote)];
 
         return '<figure class="sf-item sf-review"'.$this->itemMark($quote).'>'
             .($stars > 0 ? '<p class="sf-review-stars" aria-label="'.e(__('filament-block-editor::page.stars', ['count' => $stars])).'">'.str_repeat('★', $stars).'</p>' : '')

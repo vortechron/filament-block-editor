@@ -341,6 +341,20 @@ class PageRendererTest extends TestCase
         $this->assertSame('sf-rich-section sf-layout-plain', $this->first($html, '[data-block-id="plain"] section')->getAttribute('class'));
     }
 
+    public function test_section_and_block_rules_share_the_one_style_tag_of_the_page(): void
+    {
+        $block = ['id' => 'blk1', 'type' => 'paragraph', 'props' => ['look' => '{"style":{"desktop":{"opacity":"0.5"}}}'], 'content' => [$this->text('A')], 'children' => []];
+
+        $html = $this->render([
+            $this->section('s1', [$block], ['layout' => 'cards', 'style' => ['desktop' => ['padding_top' => '4px']]]),
+            $this->section('s2', [Blocks::heading(3, 'Kad'), $block]),
+        ]);
+
+        $this->assertSame(1, substr_count($html, '<style'));
+        $this->assertStringStartsWith('<style data-fbe-style>.sf-page .fbe-s-s1{padding-top:4px}.sf-page .fbe-b-blk1{opacity:0.5}', $html);
+        $this->assertCount(2, $this->select($html, 'p.fbe-b-blk1'));
+    }
+
     public function test_a_page_with_no_style_has_no_style_tag(): void
     {
         $html = $this->render([$this->section('plain', [Blocks::paragraph('C')], ['background' => 'color', 'background_color' => '#ffeecc'])]);

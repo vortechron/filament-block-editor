@@ -342,6 +342,74 @@ class BlockNoteRendererTest extends TestCase
         $this->assertStringContainsString('data-empty-media="photo"', $this->render([Blocks::gallery([])], new RenderContext(forBuilder: true)));
     }
 
+    /**
+     * @param  array<string, mixed>  $style
+     * @param  array<string, mixed>  $advanced
+     */
+    private function look(array $style, array $advanced = []): string
+    {
+        return json_encode(['style' => $style, 'advanced' => $advanced]);
+    }
+
+    public function test_a_block_with_a_look_gets_its_class_and_its_rules_in_one_style_tag(): void
+    {
+        $html = $this->render([
+            ['id' => 'p1', 'type' => 'paragraph', 'props' => ['look' => $this->look(['desktop' => ['padding_top' => '24px'], 'hover' => ['color' => '#ff0000']])], 'content' => [$this->text('Satu')], 'children' => []],
+            ['id' => 'h1', 'type' => 'heading', 'props' => ['level' => 2, 'look' => $this->look([], ['class' => 'big', 'hide_on' => ['phone']])], 'content' => [$this->text('Dua')], 'children' => []],
+            ['id' => 'p3', 'type' => 'paragraph', 'props' => [], 'content' => [$this->text('Tiga')], 'children' => []],
+        ]);
+
+        $this->assertSame(1, substr_count($html, '<style'));
+        $this->assertStringStartsWith('<style data-fbe-style>', $html);
+        $this->assertStringContainsString('.sf-page .fbe-b-p1{padding-top:24px}', $html);
+        $this->assertStringContainsString('.sf-page .fbe-b-p1:hover{color:#ff0000', $html);
+        $this->assertStringContainsString('@media (max-width: 767px){.sf-page .fbe-b-h1{display:none}}', $html);
+        $this->assertSame('fbe-b fbe-b-p1', $this->first($html, 'p')->getAttribute('class'));
+        $this->assertSame('fbe-b fbe-b-h1 big', $this->first($html, 'h2')->getAttribute('class'));
+        $this->assertFalse($this->select($html, 'p')[1]->hasAttribute('class'));
+    }
+
+    public function test_a_styled_button_keeps_its_own_element_so_buttons_stay_side_by_side(): void
+    {
+        $html = $this->render([
+            ['id' => 'btn1', 'type' => 'button', 'props' => ['text' => 'Hubungi', 'url' => '#x', 'variant' => 'outline', 'look' => $this->look(['desktop' => ['radius' => 'kit:radius']])]],
+        ]);
+
+        $this->assertSame('bn-button bn-button-outline fbe-b fbe-b-btn1', $this->first($html, 'a')->getAttribute('class'));
+        $this->assertSame([], $this->select($html, 'div.fbe-b'));
+        $this->assertStringContainsString('.sf-page .fbe-b-btn1{border-radius:var(--kit-radius)}', $html);
+    }
+
+    public function test_a_look_colour_or_alignment_wins_over_the_inline_blocknote_one(): void
+    {
+        $html = $this->render([
+            ['id' => 'p1', 'type' => 'paragraph', 'props' => ['textAlignment' => 'center', 'textColor' => 'red', 'backgroundColor' => 'blue', 'look' => $this->look(['phone' => ['color' => '#000000', 'text_align' => 'left']])], 'content' => [$this->text('A')]],
+            ['id' => 'p2', 'type' => 'paragraph', 'props' => ['textAlignment' => 'center', 'textColor' => 'red', 'look' => $this->look(['desktop' => ['opacity' => '0.5']])], 'content' => [$this->text('B')]],
+        ]);
+
+        [$styled, $other] = $this->select($html, 'p');
+
+        $this->assertSame('background-color: #dbeafe;', $styled->getAttribute('style'));
+        $this->assertSame('text-align: center;color: #dc2626;', $other->getAttribute('style'));
+    }
+
+    public function test_an_own_block_with_a_look_has_its_class_on_its_wrapper(): void
+    {
+        $this->app['view']->addNamespace('fixtures', __DIR__.'/../fixtures/views');
+        app(BlockRegistry::class)->register(OwnBlock::make('svg')->view('fixtures::blocks.svg'));
+
+        $html = $this->render([['id' => 'own1', 'type' => 'ownBlock', 'props' => ['kind' => 'svg', 'values' => '{}', 'look' => $this->look(['desktop' => ['max_width' => '40rem']])]]]);
+
+        $this->assertSame('bn-own-block fbe-b fbe-b-own1', $this->first($html, '[data-own-block]')->getAttribute('class'));
+    }
+
+    public function test_a_block_with_a_look_but_no_id_is_drawn_without_one(): void
+    {
+        $html = $this->render([['type' => 'paragraph', 'props' => ['look' => $this->look(['desktop' => ['opacity' => '0.5']])], 'content' => [$this->text('A')]]]);
+
+        $this->assertSame('<p>A</p>', $html);
+    }
+
     public function test_helpers_read_colours_and_video_links(): void
     {
         $this->assertSame('#aabbcc', BlockNoteRenderer::hexColor(' AABBCC '));

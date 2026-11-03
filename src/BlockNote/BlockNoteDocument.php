@@ -2,7 +2,9 @@
 
 namespace Vortechron\FilamentBlockEditor\BlockNote;
 
+use Illuminate\Support\Str;
 use Vortechron\FilamentBlockEditor\Blocks\BlockRegistry;
+use Vortechron\FilamentBlockEditor\Styling\Look;
 use Vortechron\FilamentBlockEditor\Support\Urls;
 
 /**
@@ -15,6 +17,11 @@ use Vortechron\FilamentBlockEditor\Support\Urls;
  * is missing. clean() puts that back. It also keeps addresses safe: picture,
  * video, file and link addresses that are not allowed are emptied or
  * unwrapped before they are stored.
+ *
+ * Every block may carry a `look` prop (Styling\Look): it is cleaned and
+ * stored again as compact JSON, or "" when empty. A block with a look
+ * needs a stable id for its `fbe-b-{id}` class, so one without a usable id
+ * gets one.
  */
 final class BlockNoteDocument
 {
@@ -151,7 +158,21 @@ final class BlockNoteDocument
             $block['children'] = is_array($block['children']) ? self::cleanBlocks($block['children']) : [];
         }
 
+        if (($block['props']['look'] ?? '') !== '') {
+            $block['id'] = self::blockId($block['id'] ?? null) ?? Str::lower(Str::random(8));
+        }
+
         return $block;
+    }
+
+    /**
+     * A block id made of letters, digits, dashes and underscores, or null.
+     */
+    public static function blockId(mixed $id): ?string
+    {
+        $id = is_string($id) ? substr((string) preg_replace('/[^A-Za-z0-9_-]/', '', $id), 0, 64) : '';
+
+        return $id === '' ? null : $id;
     }
 
     /**
@@ -160,6 +181,9 @@ final class BlockNoteDocument
      */
     private static function cleanProps(mixed $type, array $props): array
     {
+        if (array_key_exists('look', $props)) {
+            $props['look'] = Look::clean($props['look']);
+        }
         if (in_array($type, self::MEDIA_TYPES, true)) {
             $props['url'] = Urls::media($props['url'] ?? null) ?? '';
         }

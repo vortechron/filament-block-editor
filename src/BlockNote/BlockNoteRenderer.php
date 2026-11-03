@@ -4,6 +4,7 @@ namespace Vortechron\FilamentBlockEditor\BlockNote;
 
 use Vortechron\FilamentBlockEditor\Blocks\BlockRegistry;
 use Vortechron\FilamentBlockEditor\Rendering\RenderContext;
+use Vortechron\FilamentBlockEditor\Styling\StyleSheet;
 use Vortechron\FilamentBlockEditor\Support\Urls;
 
 /**
@@ -17,6 +18,9 @@ use Vortechron\FilamentBlockEditor\Support\Urls;
  * (Urls::media). Unknown block types are skipped. The package's own blocks
  * (button, gallery) are drawn here; an `ownBlock` is drawn by the app's
  * Blocks\BlockRegistry.
+ *
+ * A block's `look` prop (BlockLook) adds its class and its rules to the
+ * page's StyleSheet; drawn on its own, render() puts the <style> in front.
  *
  * Keep the numbers below in step with the editor kit (@vortechron/blocknote-kit).
  */
@@ -127,7 +131,7 @@ final class BlockNoteRenderer
         $this->forBuilder = $this->context->forBuilder;
 
         try {
-            return $this->renderBlocks($blocks);
+            return StyleSheet::collect(fn (): string => $this->renderBlocks($blocks));
         } finally {
             $this->context = new RenderContext;
             $this->forBuilder = false;
@@ -310,25 +314,24 @@ final class BlockNoteRenderer
         // Columns and cards hold their blocks in `children`, so they skip
         // the indent drawn below.
         if ($type === 'columnList') {
-            return $this->wrap($this->columnList($children, $path), $props, $insideColumn);
+            return $this->wrap($this->own($this->columnList($children, $path), $block), $props, $insideColumn);
         }
 
         if ($type === 'card') {
-            return $this->wrap($this->card($props, $content, $children, $insideColumn, $path), $props, $insideColumn);
+            return $this->wrap($this->own($this->card($props, $content, $children, $insideColumn, $path), $block), $props, $insideColumn);
         }
 
-        $style = $this->styleAttribute($props);
+        $style = $this->styleAttribute(BlockLook::inlineProps($props));
 
         if ($type === 'toggleListItem' || ($type === 'heading' && filter_var($props['isToggleable'] ?? false, FILTER_VALIDATE_BOOL))) {
             $isHeading = $type === 'heading';
             $summary = $isHeading ? $this->heading($props, $content, $style) : $this->inline($content);
 
-            return $this->wrap(
+            return $this->wrap($this->own(
                 '<details class="bn-toggle"><summary'.($isHeading ? '' : $style).'>'.$summary.'</summary>'
                     .'<div>'.$this->renderBlocks($children, $insideColumn, $path).'</div></details>',
-                $props,
-                $insideColumn,
-            );
+                $block,
+            ), $props, $insideColumn);
         }
 
         $html = match ($type) {
@@ -349,11 +352,23 @@ final class BlockNoteRenderer
             default => '',
         };
 
+        $html = $this->own($html, $block);
+
         if ($html !== '' && $children !== []) {
             $html .= '<div class="bn-indent">'.$this->renderBlocks($children, $insideColumn, $path).'</div>';
         }
 
         return $this->wrap($html, $props, $insideColumn);
+    }
+
+    /**
+     * The block's own element with its look (BlockLook).
+     *
+     * @param  array<mixed>  $block
+     */
+    private function own(string $html, array $block): string
+    {
+        return BlockLook::apply($html, $block, $this->context);
     }
 
     /**
@@ -493,7 +508,7 @@ final class BlockNoteRenderer
 
             $path = self::pathOf($item);
 
-            $html .= $this->markItem('<li'.$this->styleAttribute($props).'>', $path)
+            $html .= $this->markItem($this->own('<li'.$this->styleAttribute(BlockLook::inlineProps($props)).'>', $item), $path)
                 .$mark
                 .$this->inline($item['content'] ?? [])
                 .($children === [] ? '' : $this->renderBlocks($children, parentPath: $path))
