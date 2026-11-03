@@ -174,7 +174,7 @@ export function Canvas({ notices }: { notices: ReactNode }) {
                             <span className="flex items-center gap-2 rounded-full bg-neutral-900/90 px-3.5 py-2 text-xs font-medium text-white shadow-lg">
                                 <EyeOff className="size-3.5 shrink-0" />
                                 {t(
-                                    'This section is hidden, so it is not on the page. Show it again in the sidebar.',
+                                    'Visitors do not see this hidden section. Show it again in the sidebar.',
                                 )}
                             </span>
                         </div>
