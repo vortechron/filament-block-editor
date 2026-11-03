@@ -26,7 +26,7 @@ export function DesignPanel() {
     const { kit } = useBuilderContext();
     const current = kit.kit;
 
-    if (current === null) {
+    if (!kit.canSave) {
         return null;
     }
 

@@ -8,12 +8,14 @@ const SAVED_FOR_MS = 2000;
 
 /**
  * The design kit being edited, and saving it through `adapter.saveKit`.
- * The same shape as the page state (use-page-state.ts): `kit` is null
- * when the host has no design panel.
+ * The same shape as the page state (use-page-state.ts). `kit` is always
+ * there, for the colour and font pickers; `canSave` (the design panel)
+ * only when the host has `adapter.saveKit`.
  */
 export function useKitState() {
-    const { adapter, kit: initial } = useHost();
-    const [kit, setKitState] = useState<Kit | null>(initial);
+    const { adapter, kit: initial, kitDefaults } = useHost();
+    const canSave = typeof adapter.saveKit === 'function';
+    const [kit, setKitState] = useState<Kit>(initial);
     const [saved, setSaved] = useState(() => JSON.stringify(initial));
     const [processing, setProcessing] = useState(false);
     const [recentlySuccessful, setRecentlySuccessful] = useState(false);
@@ -22,7 +24,7 @@ export function useKitState() {
     const savedTimer = useRef<number | undefined>(undefined);
 
     function setKit(update: (current: Kit) => Kit) {
-        if (latest.current === null) {
+        if (!canSave) {
             return;
         }
 
@@ -35,7 +37,7 @@ export function useKitState() {
     async function save(): Promise<boolean> {
         const value = latest.current;
 
-        if (value === null || typeof adapter.saveKit !== 'function') {
+        if (typeof adapter.saveKit !== 'function') {
             return false;
         }
 
@@ -45,7 +47,7 @@ export function useKitState() {
         let result: SaveResult;
 
         try {
-            result = await adapter.saveKit(normalizeKit(value));
+            result = await adapter.saveKit(normalizeKit(value, kitDefaults));
         } catch (error) {
             result = {
                 ok: false,
@@ -80,13 +82,14 @@ export function useKitState() {
 
     return {
         kit,
+        canSave,
         setKit,
         save,
         errors,
         clearErrors: () => setErrors({}),
         processing,
         recentlySuccessful,
-        isDirty: kit !== null && JSON.stringify(kit) !== saved,
+        isDirty: canSave && JSON.stringify(kit) !== saved,
     };
 }
 

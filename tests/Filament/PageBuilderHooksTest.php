@@ -21,7 +21,9 @@ class PageBuilderHooksTest extends FilamentTestCase
 
         $this->assertSame(2, $options['value']['version']);
         $this->assertFalse($options['developer']);
-        $this->assertArrayNotHasKey('kit', $options);
+        // The kit and its defaults always go, for the colour and font pickers.
+        $this->assertSame(Kit::defaults(), $options['kit']);
+        $this->assertSame(Kit::defaults(), $options['kitDefaults']);
         $this->assertArrayNotHasKey('siteInfo', $options);
         $this->assertSame([], $options['syncedSections']);
         $this->assertSame([], $options['parts']);
@@ -29,6 +31,19 @@ class PageBuilderHooksTest extends FilamentTestCase
         $this->assertContains('serif', array_column($options['fonts'], 'value'));
         $this->assertSame(['key' => 'site.phone', 'label' => 'Telefon', 'type' => 'text', 'group' => 'Site', 'preview' => '012'], $options['dynamicValues'][0]);
         $this->assertSame(['saveKit' => false, 'saveSection' => false, 'saveSiteInfo' => false], $page->getPageBuilderSupports());
+    }
+
+    public function test_the_kit_defaults_hold_the_hosts_config(): void
+    {
+        $this->signIn();
+        config()->set('filament-block-editor.kit', ['colors' => ['primary' => '#c59d6e'], 'radius' => '8px']);
+
+        $options = Livewire::test(DemoBuilder::class)->instance()->getPageBuilderOptions();
+
+        $this->assertSame('#c59d6e', $options['kitDefaults']['colors']['primary']);
+        $this->assertSame('8px', $options['kitDefaults']['radius']);
+        $this->assertSame('#475569', $options['kitDefaults']['colors']['text']);
+        $this->assertSame($options['kitDefaults'], $options['kit']);
     }
 
     public function test_a_hook_the_host_did_not_override_is_refused(): void

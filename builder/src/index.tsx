@@ -52,6 +52,7 @@ export function mountPageBuilder(
     const locale = isLocale(options.locale) ? options.locale : 'ms';
     const strings = { ...(options.strings ?? {}) };
     const initialValue = normalizeValue(options.value);
+    const kitDefaults = normalizeKit(options.kitDefaults);
     const templates = normalizeTemplates(
         options.templates && options.templates.length > 0
             ? options.templates
@@ -86,10 +87,8 @@ export function mountPageBuilder(
                       typeof font.label === 'string',
               )
             : [],
-        kit:
-            options.kit && typeof adapter.saveKit === 'function'
-                ? normalizeKit(options.kit)
-                : null,
+        kit: normalizeKit(options.kit, kitDefaults),
+        kitDefaults,
         dynamicValues: normalizeDynamicValues(options.dynamicValues),
         syncedSections: normalizeSyncedSections(options.syncedSections),
         parts: normalizeParts(options.parts),

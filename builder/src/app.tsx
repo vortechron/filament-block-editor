@@ -275,9 +275,9 @@ function Builder({
                             isSaving={isSaving}
                             onPreview={() => setIsPreviewOpen(true)}
                             onDesign={
-                                kit.kit === null
-                                    ? undefined
-                                    : () => revealPanel({ name: 'design' })
+                                kit.canSave
+                                    ? () => revealPanel({ name: 'design' })
+                                    : undefined
                             }
                             onSave={saveEverything}
                         />
@@ -314,7 +314,7 @@ function Builder({
                 open={isPreviewOpen}
                 onOpenChange={setIsPreviewOpen}
                 draft={JSON.stringify(form.data)}
-                kit={kit.kit === null ? null : JSON.stringify(kit.kit)}
+                kit={kit.canSave ? JSON.stringify(kit.kit) : null}
                 initialDevice={device}
                 isDesktop={isDesktop}
             />

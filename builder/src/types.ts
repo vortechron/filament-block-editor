@@ -1,3 +1,5 @@
+import type RULES from '@/generated/rules.json';
+
 /**
  * The page value and everything the host passes in. The page value is the
  * same shape the PHP side stores and renders (Content\PageContent): a
@@ -189,7 +191,7 @@ export type SyncedSectionOption = {
     section: RichSection;
 };
 
-export type PartKey = 'header' | 'footer';
+export type PartKey = (typeof RULES.part_kinds)[number];
 
 /** The header or footer, shown on every page and built on its own. */
 export type PagePart = {
@@ -204,14 +206,8 @@ export type SiteInfo = {
     values: Record<string, Record<string, unknown>>;
 };
 
-/** What kind of document the builder edits. */
-export type DocumentKind =
-    | 'page'
-    | 'header'
-    | 'footer'
-    | 'section'
-    | 'card'
-    | 'single';
+/** What kind of document the builder edits. Enums\DocumentKind on the server. */
+export type DocumentKind = (typeof RULES.document_kinds)[number];
 
 /** A ready-made section for the Add panel, as the host sends it. */
 export type SectionTemplateInput = {
@@ -322,8 +318,16 @@ export type PageBuilderOptions = {
     onChange?: (value: PageValue) => void;
     /** Shows locks, custom CSS and developer-only fields. */
     developer?: boolean;
-    /** The design kit. The design panel shows when `adapter.saveKit` exists too. */
+    /**
+     * The current design kit. The colour and font pickers always use it;
+     * the design panel shows only when `adapter.saveKit` exists too.
+     */
     kit?: Kit | null;
+    /**
+     * The kit's defaults on this site (Kit::defaults(): the package's,
+     * with the host's config over them). Fills what `kit` leaves out.
+     */
+    kitDefaults?: Kit | null;
     /** The fonts a kit or a style may use, besides the theme's. */
     fonts?: FontChoice[];
     dynamicValues?: DynamicValueDefinition[];

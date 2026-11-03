@@ -26,9 +26,10 @@ use Vortechron\FilamentBlockEditor\Enums\DocumentKind;
 trait PageBuilderHooks
 {
     /**
-     * The stored design kit, for the builder's "Reka bentuk" panel. Null
-     * for none (the panel shows the current kit when savePageBuilderKit()
-     * is overridden).
+     * The stored design kit. Null uses the current kit (KitSource). The
+     * builder always gets the kit and Kit::defaults(), for its colour and
+     * font pickers; the "Reka bentuk" (design) panel shows only when
+     * savePageBuilderKit() is overridden.
      *
      * @return array<mixed>|null
      */
@@ -197,7 +198,8 @@ trait PageBuilderHooks
 
         return array_filter([
             'developer' => $this->isPageBuilderDeveloper(),
-            'kit' => $kit !== null ? Kit::normalize($kit) : ($this->overridesPageBuilderHook('savePageBuilderKit') ? app(KitSource::class)->current() : null),
+            'kit' => Kit::normalize($kit ?? app(KitSource::class)->current()),
+            'kitDefaults' => Kit::defaults(),
             'syncedSections' => $this->pageBuilderSyncedSections(),
             'parts' => array_values(array_filter($this->getPageBuilderParts(), fn (mixed $part): bool => is_array($part) && is_string($part['key'] ?? null) && (DocumentKind::tryFrom($part['key'])?->isPart() ?? false))),
             'siteInfo' => $siteInfo === null ? null : self::siteInfo($siteInfo),

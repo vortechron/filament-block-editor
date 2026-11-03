@@ -43,7 +43,8 @@ export function Canvas({ notices }: { notices: ReactNode }) {
     const { viewUrl, parts } = useHost();
     const { builder, form, device, isDesktop, revealPanel, kit, siteInfo } =
         useBuilderContext();
-    const kitDraft = kit.kit === null ? null : JSON.stringify(kit.kit);
+    // Only a kit that can change is sent with the preview.
+    const kitDraft = kit.canSave ? JSON.stringify(kit.kit) : null;
     const { blocks, selection } = builder;
     const showsFrame = isDesktop;
     const pageBox = useRef<HTMLDivElement>(null);

@@ -31,10 +31,12 @@ export type Host = {
     /** The host's fonts, besides the theme's own. */
     fonts: FontChoice[];
     /**
-     * The design kit the page starts with. Null when the host sent none or
-     * cannot save one: then there is no design panel.
+     * The design kit the page starts with: the host's kit, its gaps filled
+     * from `kitDefaults`. The colour and font pickers always use it.
      */
-    kit: Kit | null;
+    kit: Kit;
+    /** The site's kit defaults (Kit::defaults()), for filling gaps on save. */
+    kitDefaults: Kit;
     /** The values the site fills in: shop info in text, links and pictures. */
     dynamicValues: DynamicValueDefinition[];
     /** The synced sections this page may use, with the section each holds. */

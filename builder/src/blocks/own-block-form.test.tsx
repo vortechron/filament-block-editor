@@ -5,6 +5,7 @@ import { HostContext, type Host } from '@/lib/host';
 import { I18nContext } from '@/lib/i18n';
 import type { OwnBlockDefinition } from '@/types';
 import { OwnBlockForm } from './own-block-form';
+import { DEFAULT_KIT } from '@/lib/kit';
 
 const board: OwnBlockDefinition = {
     kind: 'stationery-board',
@@ -51,7 +52,8 @@ function wrap(upload: Host['upload'] = vi.fn(), developer = false) {
         viewUrl: null,
         developer,
         fonts: [],
-        kit: null,
+        kit: DEFAULT_KIT,
+        kitDefaults: DEFAULT_KIT,
         dynamicValues: [],
         syncedSections: [],
         parts: [],

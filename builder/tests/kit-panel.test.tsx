@@ -22,6 +22,40 @@ function lastPreviewKit(adapter: ReturnType<typeof kitAdapter>): Kit | undefined
     return adapter.preview.mock.calls.at(-1)?.[1]?.kit;
 }
 
+/** The colour a swatch of the section's Text colour picker shows. */
+async function textColourSwatch(name: string): Promise<string> {
+    await pickSection(/Selamat datang/);
+    fireEvent.click(await screen.findByRole('tab', { name: 'Style' }));
+
+    const picker = screen.getByRole('radiogroup', { name: 'Text colour' });
+
+    return (within(picker).getByRole('radio', { name }) as HTMLElement).style.background;
+}
+
+/** The host's Kit::defaults(), with its own config over the package's. */
+const HOST_DEFAULTS: Kit = {
+    ...DEFAULT_KIT,
+    colors: { ...DEFAULT_KIT.colors, primary: '#c59d6e', text: '#1f2328' },
+};
+
+describe('the kit in the colour pickers', () => {
+    it('is the host’s kit, even when the host can not save one', async () => {
+        mountBuilder({
+            kit: { ...KIT, colors: { ...KIT.colors, primary: '#14532d' } },
+            kitDefaults: HOST_DEFAULTS,
+        });
+
+        expect(screen.queryByRole('button', { name: 'Design' })).toBeNull();
+        expect(await textColourSwatch('Primary')).toBe('rgb(20, 83, 45)');
+    });
+
+    it('fills what the kit leaves out with the host’s defaults', async () => {
+        mountBuilder({ kit: { colors: { accent: '#ff0000' } } as unknown as Kit, kitDefaults: HOST_DEFAULTS });
+
+        expect(await textColourSwatch('Text')).toBe('rgb(31, 35, 40)');
+    });
+});
+
 describe('the design panel', () => {
     it('shows only when the host gives a kit and can save it', () => {
         mountBuilder({ kit: KIT });
@@ -58,6 +92,27 @@ describe('the design panel', () => {
         expect(adapter.saveKit).toHaveBeenCalledTimes(1);
         expect(adapter.saveKit.mock.calls[0][0].buttons.style).toBe('pill');
         expect(adapter.save).not.toHaveBeenCalled();
+    });
+
+    it('saves gaps in the kit as the host’s defaults', async () => {
+        const adapter = kitAdapter();
+
+        mountBuilder({
+            kit: { colors: { accent: '#ff0000' } } as unknown as Kit,
+            kitDefaults: HOST_DEFAULTS,
+            adapter,
+        });
+        openDesign();
+        fireEvent.click(screen.getByRole('radio', { name: 'Pill' }));
+        await act(async () => {
+            fireEvent.click(screen.getByRole('button', { name: 'Save design' }));
+        });
+
+        expect(adapter.saveKit.mock.calls[0][0].colors).toMatchObject({
+            accent: '#ff0000',
+            primary: '#c59d6e',
+            text: '#1f2328',
+        });
     });
 
     it('shows what the host refused, like a page save', async () => {
