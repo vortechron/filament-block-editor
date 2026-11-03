@@ -161,8 +161,8 @@
         "field_id_length": 40,
         "label_length": 200,
         "placeholder_length": 200,
-        "name_length": 100,
-        "submit_length": 60,
+        "name_length": 200,
+        "submit_length": 80,
         "success_length": 500,
         "subject_length": 200,
         "message_length": 1000,
@@ -170,7 +170,7 @@
         "webhook_length": 500,
         "rows": {
             "min": 2,
-            "max": 12,
+            "max": 10,
             "default": 4
         }
     },

@@ -1,6 +1,6 @@
 import { Plus, Trash2 } from 'lucide-react';
 import { useId, useState } from 'react';
-import { safeButtonUrl } from '@/blocks/button-url';
+import { linkOrReference } from '@/blocks/button-url';
 import { SegmentedChoice } from '@/editor/segmented-choice';
 import {
     type FormAction,
@@ -9,7 +9,7 @@ import {
     type FormField,
     isEmailTarget,
     isWebhookUrl,
-    LABEL_LENGTH,
+    SUBJECT_LENGTH,
     MESSAGE_LENGTH,
     SHOP_EMAIL,
     SHOP_WHATSAPP,
@@ -134,7 +134,7 @@ function ActionFields({
                     problem={t('This link will not work. Use https://, #, /, mailto: or tel:.')}
                     value={action.url}
                     allowEmpty
-                    isGood={(url) => safeButtonUrl(url) !== null}
+                    isGood={(url) => linkOrReference(url) !== null}
                     onChange={(url) => onChange({ type: 'redirect', url })}
                 />
             );
@@ -202,7 +202,7 @@ function EmailFields({
                 <Input
                     id={subjectId}
                     value={action.subject}
-                    maxLength={LABEL_LENGTH}
+                    maxLength={SUBJECT_LENGTH}
                     className="bg-card"
                     onChange={(event) => onChange({ ...action, subject: event.target.value })}
                 />

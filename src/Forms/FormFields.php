@@ -5,9 +5,10 @@ namespace Vortechron\FilamentBlockEditor\Forms;
 use Illuminate\Support\Str;
 
 /**
- * Cleans the fields of a form (FormDefinition). Each field comes out with
- * every key: `id`, `type`, `name`, `label`, `placeholder`, `required`,
- * `width`, plus `options` for a choice and `rows` for a textarea.
+ * Cleans the fields of a form (FormDefinition). A field of an unknown type
+ * is dropped. Each field comes out with every key: `id` (unique in the
+ * form), `type`, `name`, `label`, `placeholder`, `required`, `width`, plus
+ * `options` for a choice and `rows` for a textarea.
  *
  * A name is `[a-z][a-z0-9_]{0,39}`. A missing or bad one is made from the
  * label; a name used twice gets `_2`, `_3`, ... so every name is unique.
@@ -33,20 +34,19 @@ final class FormFields
     {
         $clean = [];
         $names = [];
+        $ids = [];
+        $known = array_filter(is_array($fields) ? $fields : [], fn (mixed $field): bool => is_array($field) && in_array($field['type'] ?? null, FormDefinition::FIELD_TYPES, true));
 
-        foreach (is_array($fields) ? array_values(array_filter($fields, is_array(...))) : [] as $field) {
-            if (count($clean) >= FormDefinition::MAX_FIELDS) {
-                break;
-            }
-
-            $type = in_array($field['type'] ?? null, FormDefinition::FIELD_TYPES, true) ? $field['type'] : 'text';
+        foreach (array_slice(array_values($known), 0, FormDefinition::MAX_FIELDS) as $field) {
+            $type = $field['type'];
             $label = FormDefinition::words($field['label'] ?? null, FormDefinition::MAX_LABEL);
             $name = self::uniqueName(self::name($field['name'] ?? null, $label), $names);
             $names[] = $name;
-            $id = is_string($field['id'] ?? null) ? substr((string) preg_replace('/[^A-Za-z0-9_-]/', '', $field['id']), 0, self::ID_LENGTH) : '';
+            $id = self::uniqueId($field['id'] ?? null, $ids);
+            $ids[] = $id;
 
             $clean[] = [
-                'id' => $id !== '' ? $id : Str::lower(Str::random(8)),
+                'id' => $id,
                 'type' => $type,
                 'name' => $name,
                 'label' => $label,
@@ -59,6 +59,22 @@ final class FormFields
         }
 
         return $clean;
+    }
+
+    /**
+     * The field's id when it is usable and not taken yet, else a new one.
+     *
+     * @param  list<string>  $taken
+     */
+    private static function uniqueId(mixed $id, array $taken): string
+    {
+        $id = is_string($id) ? substr((string) preg_replace('/[^A-Za-z0-9_-]/', '', $id), 0, self::ID_LENGTH) : '';
+
+        while ($id === '' || in_array($id, $taken, true)) {
+            $id = Str::lower(Str::random(8));
+        }
+
+        return $id;
     }
 
     private static function rows(mixed $rows): int

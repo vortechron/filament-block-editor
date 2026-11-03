@@ -80,8 +80,8 @@ declare const rules: {
         readonly "field_id_length": 40;
         readonly "label_length": 200;
         readonly "placeholder_length": 200;
-        readonly "name_length": 100;
-        readonly "submit_length": 60;
+        readonly "name_length": 200;
+        readonly "submit_length": 80;
         readonly "success_length": 500;
         readonly "subject_length": 200;
         readonly "message_length": 1000;
@@ -89,7 +89,7 @@ declare const rules: {
         readonly "webhook_length": 500;
         readonly "rows": {
             readonly "min": 2;
-            readonly "max": 12;
+            readonly "max": 10;
             readonly "default": 4;
         };
     };

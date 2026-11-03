@@ -42,9 +42,9 @@ final class FormDefinition
     /**
      * The longest each piece of text may be, in characters.
      */
-    public const NAME_LENGTH = 100;
+    public const NAME_LENGTH = 200;
 
-    public const SUBMIT_LENGTH = 60;
+    public const SUBMIT_LENGTH = 80;
 
     public const SUCCESS_LENGTH = 500;
 
@@ -62,7 +62,7 @@ final class FormDefinition
      */
     public const MIN_ROWS = 2;
 
-    public const MAX_ROWS = 12;
+    public const MAX_ROWS = 10;
 
     public const DEFAULT_ROWS = 4;
 
@@ -100,8 +100,8 @@ final class FormDefinition
     }
 
     /**
-     * Every part cleaned: known field types, unique field names, labels and
-     * options cut to size, and at most one action of each kind with a safe
+     * Every part cleaned: fields of a known type only, unique field ids and
+     * names, labels and options cut to size, and at most one action of each kind with a safe
      * address. Words are kept as written; the renderer escapes them.
      *
      * @return array{name: string, fields: list<array<string, mixed>>, submit: array{text: string, align: string}, success: string, actions: list<array<string, string>>}

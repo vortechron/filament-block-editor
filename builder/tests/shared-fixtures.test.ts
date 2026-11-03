@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { linkOrReference } from '../src/blocks/button-url';
 import { cleanClassNames, cleanCustomCss } from '../src/lib/advanced';
+import { cleanForm } from '../src/lib/form-definition';
 import { cleanStyleBag } from '../src/lib/style-bag';
 
 /**
@@ -51,4 +52,21 @@ describe('a link or a dynamic value', () => {
             expect(linkOrReference(input)).toBe(output);
         },
     );
+});
+
+describe('a form', () => {
+    it.each(
+        cases<{ input: unknown; output: object; unique_field_ids?: boolean }>('forms.json'),
+    )('$name', ({ input, output, unique_field_ids: uniqueIds }) => {
+        const form = cleanForm(input);
+
+        expect(form).toMatchObject(output);
+
+        if (uniqueIds) {
+            const ids = form.fields.map((field) => field.id);
+
+            expect(new Set(ids).size).toBe(ids.length);
+            expect(ids).not.toContain('');
+        }
+    });
 });

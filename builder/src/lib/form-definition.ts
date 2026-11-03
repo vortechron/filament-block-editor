@@ -1,31 +1,27 @@
-import { safeButtonUrl } from '@/blocks/button-url';
+import { linkOrReference } from '@/blocks/button-url';
+import RULES from '@/generated/rules.json';
+import { dynamicRefKey } from './dynamic-values';
 
 /**
  * The form block's JSON (docs/v2-plan.md, section 7), and the rules the
  * builder cleans it with before it goes into the block's `form` prop, so
  * it never sends junk. The server (Forms\FormDefinition) cleans it again.
+ * The limits and lists come from the exported rules
+ * (builder/src/generated/rules.json); tests/fixtures/shared/forms.json
+ * checks the two sides clean a form the same way.
  *
  * Typed text is cut to its limit but never trimmed here, so a space can be
  * typed between two words.
  */
 
-export const FORM_FIELD_TYPES = [
-    'text',
-    'email',
-    'tel',
-    'number',
-    'date',
-    'textarea',
-    'select',
-    'radio',
-    'checkboxes',
-    'consent',
-] as const;
+const FORM = RULES.form;
+
+export const FORM_FIELD_TYPES = FORM.field_types;
 
 export type FormFieldType = (typeof FORM_FIELD_TYPES)[number];
 
 /** Fields with a list of choices. */
-export const CHOICE_TYPES: readonly FormFieldType[] = ['select', 'radio', 'checkboxes'];
+export const CHOICE_TYPES: readonly FormFieldType[] = FORM.choice_types;
 
 /** Fields that show a hint inside the empty box. */
 export const PLACEHOLDER_TYPES: readonly FormFieldType[] = [
@@ -56,16 +52,11 @@ export type FormAction =
 
 export type FormActionType = FormAction['type'];
 
-export const FORM_ACTION_TYPES: readonly FormActionType[] = [
-    'email',
-    'whatsapp',
-    'redirect',
-    'webhook',
-];
+export const FORM_ACTION_TYPES: readonly FormActionType[] = FORM.action_types;
 
-export type SubmitAlign = 'left' | 'center' | 'right' | 'full';
+export type SubmitAlign = (typeof FORM.submit_aligns)[number];
 
-export const SUBMIT_ALIGNS: readonly SubmitAlign[] = ['left', 'center', 'right', 'full'];
+export const SUBMIT_ALIGNS: readonly SubmitAlign[] = FORM.submit_aligns;
 
 export type FormDefinition = {
     name: string;
@@ -75,25 +66,30 @@ export type FormDefinition = {
     actions: FormAction[];
 };
 
-export const MAX_FIELDS = 30;
-export const MAX_OPTIONS = 30;
-export const LABEL_LENGTH = 200;
-export const NAME_LENGTH = 40;
-export const SUBMIT_LENGTH = 80;
-export const SUCCESS_LENGTH = 500;
-export const MESSAGE_LENGTH = 1000;
-export const MIN_ROWS = 2;
-export const MAX_ROWS = 10;
-const DEFAULT_ROWS = 4;
+export const MAX_FIELDS = FORM.max_fields;
+export const MAX_OPTIONS = FORM.max_options;
+export const LABEL_LENGTH = FORM.label_length;
+export const PLACEHOLDER_LENGTH = FORM.placeholder_length;
+/** The longest a field name may be. */
+export const NAME_LENGTH = FORM.field_name_length;
+/** The longest the form's own name may be. */
+export const FORM_NAME_LENGTH = FORM.name_length;
+export const SUBMIT_LENGTH = FORM.submit_length;
+export const SUCCESS_LENGTH = FORM.success_length;
+export const SUBJECT_LENGTH = FORM.subject_length;
+export const MESSAGE_LENGTH = FORM.message_length;
+export const MIN_ROWS = FORM.rows.min;
+export const MAX_ROWS = FORM.rows.max;
+const DEFAULT_ROWS = FORM.rows.default;
+const EMAIL_LENGTH = FORM.email_length;
 
 /** The shop's own address and number, filled in by the site. */
 export const SHOP_EMAIL = '@site.email';
 export const SHOP_WHATSAPP = '@site.whatsapp_number';
 
-const FIELD_NAME = /^[a-z][a-z0-9_]{0,39}$/;
-const FIELD_ID = /^[A-Za-z0-9_-]{1,40}$/;
+const FIELD_NAME = new RegExp(`^(?:${FORM.field_name})$`);
+const FIELD_ID = new RegExp(`^[A-Za-z0-9_-]{1,${FORM.field_id_length}}$`);
 const EMAIL = /^[^\s@<>"]+@[^\s@<>"]+\.[^\s@<>"]+$/;
-const DYNAMIC_REF = /^@[a-z][a-z0-9_]*(\.[a-z0-9_]+){1,3}$/;
 const PHONE = /^\+?[0-9]{8,15}$/;
 const HTTPS = /^https:\/\/[^\s/?#]+[^\s]*$/i;
 
@@ -121,7 +117,7 @@ export function cleanForm(raw: unknown): FormDefinition {
     const submit = isObject(source.submit) ? source.submit : {};
 
     return {
-        name: text(source.name, LABEL_LENGTH),
+        name: text(source.name, FORM_NAME_LENGTH),
         fields: cleanFields(source.fields),
         submit: {
             text: text(submit.text, SUBMIT_LENGTH),
@@ -222,7 +218,7 @@ function cleanFields(raw: unknown): FormField[] {
                 name,
                 label,
                 ...(PLACEHOLDER_TYPES.includes(type)
-                    ? { placeholder: text(field.placeholder, LABEL_LENGTH) }
+                    ? { placeholder: text(field.placeholder, PLACEHOLDER_LENGTH) }
                     : {}),
                 required: field.required === true,
                 width: field.width === 'half' ? 'half' : 'full',
@@ -287,7 +283,7 @@ function cleanAction(action: Record<string, unknown>): FormAction {
             return {
                 type: 'email',
                 to: isEmailTarget(action.to) ? action.to : SHOP_EMAIL,
-                subject: text(action.subject, LABEL_LENGTH),
+                subject: text(action.subject, SUBJECT_LENGTH),
             };
         case 'whatsapp':
             return {
@@ -296,7 +292,7 @@ function cleanAction(action: Record<string, unknown>): FormAction {
                 message: text(action.message, MESSAGE_LENGTH),
             };
         case 'redirect':
-            return { type: 'redirect', url: safeButtonUrl(action.url) ?? '' };
+            return { type: 'redirect', url: linkOrReference(action.url) ?? '' };
         case 'webhook':
             return { type: 'webhook', url: isWebhookUrl(action.url) ? action.url.trim() : '' };
     }
@@ -306,13 +302,13 @@ function cleanAction(action: Record<string, unknown>): FormAction {
 export function isEmailTarget(value: unknown): value is string {
     return (
         typeof value === 'string' &&
-        (value === SHOP_EMAIL || (value.length <= 254 && EMAIL.test(value)))
+        (value === SHOP_EMAIL || (value.length <= EMAIL_LENGTH && EMAIL.test(value)))
     );
 }
 
 function isWhatsAppTarget(value: unknown): value is string {
     return (
-        typeof value === 'string' && (DYNAMIC_REF.test(value) || PHONE.test(value))
+        typeof value === 'string' && (dynamicRefKey(value) !== null || PHONE.test(value))
     );
 }
 

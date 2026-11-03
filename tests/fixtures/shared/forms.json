@@ -1,0 +1,612 @@
+{
+    "about": "A form block's form: cleaned by Forms\\FormDefinition::normalize (PHP) and cleanForm in builder/src/lib/form-definition.ts. Each output holds what both must give (the rest of the result is free: the builder leaves placeholder off fields that show none). With unique_field_ids, every field id must be different.",
+    "cases": [
+        {
+            "name": "the contract's form",
+            "input": {
+                "name": "Borang pertanyaan",
+                "fields": [
+                    {
+                        "id": "f1",
+                        "type": "text",
+                        "name": "nama",
+                        "label": "Nama",
+                        "placeholder": "",
+                        "required": true,
+                        "width": "half"
+                    },
+                    {
+                        "id": "f2",
+                        "type": "tel",
+                        "name": "telefon",
+                        "label": "Telefon",
+                        "required": true,
+                        "width": "half"
+                    },
+                    {
+                        "id": "f3",
+                        "type": "select",
+                        "name": "servis",
+                        "label": "Servis",
+                        "options": [
+                            "Fotostat",
+                            "Parcel"
+                        ]
+                    },
+                    {
+                        "id": "f4",
+                        "type": "textarea",
+                        "name": "mesej",
+                        "label": "Mesej",
+                        "rows": 4
+                    },
+                    {
+                        "id": "f5",
+                        "type": "consent",
+                        "name": "setuju",
+                        "label": "Saya setuju dihubungi.",
+                        "required": true
+                    }
+                ],
+                "submit": {
+                    "text": "Hantar",
+                    "align": "left"
+                },
+                "success": "Terima kasih. Kami akan hubungi anda.",
+                "actions": [
+                    {
+                        "type": "email",
+                        "to": "@site.email",
+                        "subject": "Pertanyaan baru dari website"
+                    },
+                    {
+                        "type": "whatsapp",
+                        "to": "@site.whatsapp_number",
+                        "message": "Hai, saya {nama}. {mesej}"
+                    },
+                    {
+                        "type": "redirect",
+                        "url": "/terima-kasih"
+                    },
+                    {
+                        "type": "webhook",
+                        "url": "https://hooks.example.com/x"
+                    }
+                ]
+            },
+            "output": {
+                "name": "Borang pertanyaan",
+                "fields": [
+                    {
+                        "id": "f1",
+                        "type": "text",
+                        "name": "nama",
+                        "label": "Nama",
+                        "placeholder": "",
+                        "required": true,
+                        "width": "half"
+                    },
+                    {
+                        "id": "f2",
+                        "type": "tel",
+                        "name": "telefon",
+                        "label": "Telefon",
+                        "placeholder": "",
+                        "required": true,
+                        "width": "half"
+                    },
+                    {
+                        "id": "f3",
+                        "type": "select",
+                        "name": "servis",
+                        "label": "Servis",
+                        "required": false,
+                        "width": "full",
+                        "options": [
+                            "Fotostat",
+                            "Parcel"
+                        ]
+                    },
+                    {
+                        "id": "f4",
+                        "type": "textarea",
+                        "name": "mesej",
+                        "label": "Mesej",
+                        "placeholder": "",
+                        "required": false,
+                        "width": "full",
+                        "rows": 4
+                    },
+                    {
+                        "id": "f5",
+                        "type": "consent",
+                        "name": "setuju",
+                        "label": "Saya setuju dihubungi.",
+                        "required": true,
+                        "width": "full"
+                    }
+                ],
+                "submit": {
+                    "text": "Hantar",
+                    "align": "left"
+                },
+                "success": "Terima kasih. Kami akan hubungi anda.",
+                "actions": [
+                    {
+                        "type": "email",
+                        "to": "@site.email",
+                        "subject": "Pertanyaan baru dari website"
+                    },
+                    {
+                        "type": "whatsapp",
+                        "to": "@site.whatsapp_number",
+                        "message": "Hai, saya {nama}. {mesej}"
+                    },
+                    {
+                        "type": "redirect",
+                        "url": "/terima-kasih"
+                    },
+                    {
+                        "type": "webhook",
+                        "url": "https://hooks.example.com/x"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "a form name up to 200 characters",
+            "input": {
+                "name": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+            },
+            "output": {
+                "name": "nnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"
+            }
+        },
+        {
+            "name": "button text up to 80 characters",
+            "input": {
+                "submit": {
+                    "text": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                    "align": "center"
+                }
+            },
+            "output": {
+                "submit": {
+                    "text": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                    "align": "center"
+                }
+            }
+        },
+        {
+            "name": "a full width button",
+            "input": {
+                "submit": {
+                    "text": "Hantar",
+                    "align": "full"
+                }
+            },
+            "output": {
+                "submit": {
+                    "text": "Hantar",
+                    "align": "full"
+                }
+            }
+        },
+        {
+            "name": "an unknown button alignment",
+            "input": {
+                "submit": {
+                    "text": "Hantar",
+                    "align": "middle"
+                }
+            },
+            "output": {
+                "submit": {
+                    "text": "Hantar",
+                    "align": "left"
+                }
+            }
+        },
+        {
+            "name": "a success message up to 500 characters",
+            "input": {
+                "success": "ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss"
+            },
+            "output": {
+                "success": "ssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss"
+            }
+        },
+        {
+            "name": "textarea rows at most 10",
+            "input": {
+                "fields": [
+                    {
+                        "id": "m",
+                        "type": "textarea",
+                        "name": "mesej",
+                        "label": "Mesej",
+                        "rows": 50
+                    }
+                ]
+            },
+            "output": {
+                "fields": [
+                    {
+                        "id": "m",
+                        "type": "textarea",
+                        "rows": 10
+                    }
+                ]
+            }
+        },
+        {
+            "name": "textarea rows at least 2",
+            "input": {
+                "fields": [
+                    {
+                        "id": "m",
+                        "type": "textarea",
+                        "name": "mesej",
+                        "label": "Mesej",
+                        "rows": 1
+                    }
+                ]
+            },
+            "output": {
+                "fields": [
+                    {
+                        "id": "m",
+                        "type": "textarea",
+                        "rows": 2
+                    }
+                ]
+            }
+        },
+        {
+            "name": "textarea rows when none are given",
+            "input": {
+                "fields": [
+                    {
+                        "id": "m",
+                        "type": "textarea",
+                        "name": "mesej",
+                        "label": "Mesej"
+                    }
+                ]
+            },
+            "output": {
+                "fields": [
+                    {
+                        "id": "m",
+                        "type": "textarea",
+                        "rows": 4
+                    }
+                ]
+            }
+        },
+        {
+            "name": "a field of an unknown type is dropped",
+            "input": {
+                "fields": [
+                    {
+                        "id": "p",
+                        "type": "password",
+                        "name": "kata",
+                        "label": "Kata laluan"
+                    },
+                    {
+                        "id": "a",
+                        "type": "text",
+                        "name": "nama",
+                        "label": "Nama"
+                    }
+                ]
+            },
+            "output": {
+                "fields": [
+                    {
+                        "id": "a",
+                        "type": "text",
+                        "name": "nama"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "a field with no type is dropped",
+            "input": {
+                "fields": [
+                    {
+                        "id": "p",
+                        "name": "kata",
+                        "label": "Kata"
+                    },
+                    {
+                        "id": "a",
+                        "type": "text",
+                        "name": "nama",
+                        "label": "Nama"
+                    }
+                ]
+            },
+            "output": {
+                "fields": [
+                    {
+                        "id": "a",
+                        "name": "nama"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "field ids are made unique, the first one kept",
+            "input": {
+                "fields": [
+                    {
+                        "id": "f1",
+                        "type": "text",
+                        "name": "nama",
+                        "label": "Nama"
+                    },
+                    {
+                        "id": "f1",
+                        "type": "text",
+                        "name": "emel",
+                        "label": "Emel"
+                    }
+                ]
+            },
+            "output": {
+                "fields": [
+                    {
+                        "id": "f1",
+                        "name": "nama"
+                    },
+                    {
+                        "name": "emel"
+                    }
+                ]
+            },
+            "unique_field_ids": true
+        },
+        {
+            "name": "a field with no id gets one",
+            "input": {
+                "fields": [
+                    {
+                        "type": "text",
+                        "name": "nama",
+                        "label": "Nama"
+                    }
+                ]
+            },
+            "output": {
+                "fields": [
+                    {
+                        "name": "nama"
+                    }
+                ]
+            },
+            "unique_field_ids": true
+        },
+        {
+            "name": "a field name made from its label",
+            "input": {
+                "fields": [
+                    {
+                        "id": "a",
+                        "type": "text",
+                        "label": "Nombor IC"
+                    }
+                ]
+            },
+            "output": {
+                "fields": [
+                    {
+                        "name": "nombor_ic",
+                        "label": "Nombor IC"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "a taken name gets _2",
+            "input": {
+                "fields": [
+                    {
+                        "id": "a",
+                        "type": "text",
+                        "name": "nama",
+                        "label": "Nama"
+                    },
+                    {
+                        "id": "b",
+                        "type": "text",
+                        "name": "nama",
+                        "label": "Nama lain"
+                    }
+                ]
+            },
+            "output": {
+                "fields": [
+                    {
+                        "name": "nama"
+                    },
+                    {
+                        "name": "nama_2"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "options are trimmed, and empty and repeated ones dropped",
+            "input": {
+                "fields": [
+                    {
+                        "id": "s",
+                        "type": "radio",
+                        "name": "pilih",
+                        "label": "Pilih",
+                        "options": [
+                            " A ",
+                            "A",
+                            "",
+                            "B"
+                        ]
+                    }
+                ]
+            },
+            "output": {
+                "fields": [
+                    {
+                        "options": [
+                            "A",
+                            "B"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "name": "a label up to 200 characters",
+            "input": {
+                "fields": [
+                    {
+                        "id": "a",
+                        "type": "text",
+                        "name": "nama",
+                        "label": "llllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll"
+                    }
+                ]
+            },
+            "output": {
+                "fields": [
+                    {
+                        "label": "llllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllllll"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "a redirect to a shop link is kept",
+            "input": {
+                "actions": [
+                    {
+                        "type": "redirect",
+                        "url": "@site.whatsapp"
+                    }
+                ]
+            },
+            "output": {
+                "actions": [
+                    {
+                        "type": "redirect",
+                        "url": "@site.whatsapp"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "a redirect to a path",
+            "input": {
+                "actions": [
+                    {
+                        "type": "redirect",
+                        "url": "/terima-kasih"
+                    }
+                ]
+            },
+            "output": {
+                "actions": [
+                    {
+                        "type": "redirect",
+                        "url": "/terima-kasih"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "an email action to a real address",
+            "input": {
+                "actions": [
+                    {
+                        "type": "email",
+                        "to": "owner@a.test",
+                        "subject": "Baru"
+                    }
+                ]
+            },
+            "output": {
+                "actions": [
+                    {
+                        "type": "email",
+                        "to": "owner@a.test",
+                        "subject": "Baru"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "at most one action of each kind",
+            "input": {
+                "actions": [
+                    {
+                        "type": "email",
+                        "to": "@site.email",
+                        "subject": "Satu"
+                    },
+                    {
+                        "type": "email",
+                        "to": "@site.email",
+                        "subject": "Dua"
+                    }
+                ]
+            },
+            "output": {
+                "actions": [
+                    {
+                        "type": "email",
+                        "subject": "Satu"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "an unknown action is dropped",
+            "input": {
+                "actions": [
+                    {
+                        "type": "sms",
+                        "to": "@site.phone"
+                    },
+                    {
+                        "type": "redirect",
+                        "url": "/ok"
+                    }
+                ]
+            },
+            "output": {
+                "actions": [
+                    {
+                        "type": "redirect",
+                        "url": "/ok"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "not a form",
+            "input": "nope",
+            "output": {
+                "name": "",
+                "fields": [],
+                "submit": {
+                    "text": "",
+                    "align": "left"
+                },
+                "success": "",
+                "actions": []
+            }
+        }
+    ]
+}

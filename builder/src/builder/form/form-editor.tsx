@@ -3,7 +3,7 @@ import { SegmentedChoice } from '@/editor/segmented-choice';
 import {
     cleanForm,
     type FormDefinition,
-    LABEL_LENGTH,
+    FORM_NAME_LENGTH,
     parseForm,
     SUBMIT_LENGTH,
     SUCCESS_LENGTH,
@@ -55,7 +55,7 @@ export function FormEditor({
                 <Input
                     id={nameId}
                     value={current.name}
-                    maxLength={LABEL_LENGTH}
+                    maxLength={FORM_NAME_LENGTH}
                     className="bg-card"
                     onChange={(event) => {
                         const name = event.target.value;

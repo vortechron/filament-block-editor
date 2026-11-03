@@ -9,6 +9,7 @@ import {
     LABEL_LENGTH,
     MAX_ROWS,
     MIN_ROWS,
+    PLACEHOLDER_LENGTH,
     PLACEHOLDER_TYPES,
     typeFieldName,
 } from '@/lib/form-definition';
@@ -141,7 +142,7 @@ export function FormFieldEditor({
                     <Input
                         id={ids.hint}
                         value={field.placeholder ?? ''}
-                        maxLength={LABEL_LENGTH}
+                        maxLength={PLACEHOLDER_LENGTH}
                         className="bg-card"
                         onChange={(event) => set({ placeholder: event.target.value })}
                     />

@@ -55,7 +55,8 @@ class FormDefinitionTest extends TestCase
     public function test_bad_fields_are_cleaned(): void
     {
         $form = FormDefinition::normalize(['fields' => [
-            ['type' => 'password', 'name' => 'Nama Penuh!', 'label' => 'Nama penuh', 'width' => 'third', 'required' => 'yes'],
+            ['type' => 'password', 'name' => 'kata', 'label' => 'Kata laluan'],
+            ['type' => 'text', 'name' => 'Nama Penuh!', 'label' => 'Nama penuh', 'width' => 'third', 'required' => 'yes'],
             ['type' => 'email', 'name' => 'nama_penuh', 'label' => str_repeat('a', 250), 'placeholder' => ['x']],
             ['type' => 'text', 'label' => '<b>Bandar</b>'],
             ['type' => 'textarea', 'name' => '9lives', 'rows' => 99],
@@ -73,7 +74,7 @@ class FormDefinitionTest extends TestCase
         $this->assertSame('bbandarb', $city['name']);
         $this->assertSame('<b>Bandar</b>', $city['label']);
         $this->assertSame('field', $text['name']);
-        $this->assertSame(12, $text['rows']);
+        $this->assertSame(10, $text['rows']);
         $this->assertArrayNotHasKey('options', $plain);
         $this->assertArrayNotHasKey('rows', $plain);
         $this->assertSame(['A', 'B', 'C'], $radio['options']);
@@ -156,7 +157,7 @@ class FormDefinitionTest extends TestCase
 
         $form = json_decode($clean[0]['props']['form'], true);
 
-        $this->assertSame('text', $form['fields'][0]['type']);
+        $this->assertSame([], $form['fields']);
         $this->assertSame([], $form['actions']);
         $this->assertMatchesRegularExpression('/^[a-z0-9]{8}$/', $clean[0]['id']);
         $this->assertSame(FormDefinition::normalize(self::example()), json_decode($clean[1]['props']['form'], true));
