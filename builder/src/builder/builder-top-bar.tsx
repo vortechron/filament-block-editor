@@ -240,7 +240,7 @@ function SaveState({
 
     if (hasUnsavedChanges) {
         return (
-            <span className="text-warning mr-1 hidden items-center gap-1.5 text-xs font-medium xl:flex">
+            <span className="text-warning mr-1 hidden items-center gap-1.5 text-xs font-medium 2xl:flex">
                 <span className="bg-warning size-1.5 rounded-full" />
                 {t('Unsaved changes')}
             </span>
@@ -248,7 +248,7 @@ function SaveState({
     }
 
     return recentlySaved ? null : (
-        <span className="text-muted-foreground mr-1 hidden items-center gap-1.5 text-xs xl:flex">
+        <span className="text-muted-foreground mr-1 hidden items-center gap-1.5 text-xs 2xl:flex">
             <Check className="size-3.5" />
             {t('All changes saved')}
         </span>

@@ -99,6 +99,7 @@ export function FormEditor({
                         { value: 'left', label: t('Left') },
                         { value: 'center', label: t('Centre') },
                         { value: 'right', label: t('Right') },
+                        { value: 'full', label: t('Full width') },
                     ]}
                     onChange={(align) =>
                         change((form) => ({ ...form, submit: { ...form.submit, align } }))

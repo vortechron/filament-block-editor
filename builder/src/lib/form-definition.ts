@@ -63,9 +63,9 @@ export const FORM_ACTION_TYPES: readonly FormActionType[] = [
     'webhook',
 ];
 
-export type SubmitAlign = 'left' | 'center' | 'right';
+export type SubmitAlign = 'left' | 'center' | 'right' | 'full';
 
-export const SUBMIT_ALIGNS: readonly SubmitAlign[] = ['left', 'center', 'right'];
+export const SUBMIT_ALIGNS: readonly SubmitAlign[] = ['left', 'center', 'right', 'full'];
 
 export type FormDefinition = {
     name: string;
