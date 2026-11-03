@@ -14,15 +14,23 @@ class DemoBuilder extends PageBuilderPage
 {
     protected static ?string $slug = 'demo-builder';
 
-    /** @var array{sections: array<mixed>}|null */
+    /** @var array<string, mixed>|null */
     public static ?array $saved = null;
 
     /** Tests flip this to check that every builder call asks first. */
     public static bool $denied = false;
 
+    /** Tests flip this to save as a developer. */
+    public static bool $developer = false;
+
     protected function authorizePageBuilder(): void
     {
         abort_if(self::$denied, 403);
+    }
+
+    protected function isPageBuilderDeveloper(): bool
+    {
+        return self::$developer;
     }
 
     protected static ?string $title = 'Demo page';

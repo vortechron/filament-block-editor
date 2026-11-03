@@ -175,4 +175,14 @@ class OwnBlockTest extends TestCase
         $this->assertSame(['tone' => 'info'], $block->clean(['tone' => 'bogus']));
         $this->assertSame(['tone' => 'warn'], $block->clean(['tone' => 'warn']));
     }
+
+    public function test_a_developer_only_field_says_so_to_the_builder(): void
+    {
+        $definition = OwnBlock::make('embed')->fields([Field::text('title'), Field::textarea('code')->developerOnly()])->toArray();
+
+        $this->assertArrayNotHasKey('developerOnly', $definition['fields'][0]);
+        $this->assertTrue($definition['fields'][1]['developerOnly']);
+        $this->assertTrue(Field::text('x')->developerOnly()->isDeveloperOnly());
+        $this->assertFalse(Field::text('x')->isDeveloperOnly());
+    }
 }

@@ -51,6 +51,58 @@ class PageBuilderPageTest extends FilamentTestCase
         $this->assertArrayNotHasKey('extra', DemoBuilder::$saved['sections'][0]['data']);
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    private function storedWithDeveloperData(): array
+    {
+        return ['version' => 2, 'sections' => [
+            ['id' => 'lockme', 'type' => 'rich', 'lock' => ['move' => true], 'data' => ['document' => [], 'advanced' => ['css' => 'selector { color: red; }']]],
+            ['id' => 'other1', 'type' => 'rich', 'data' => ['document' => []]],
+        ]];
+    }
+
+    public function test_a_non_developer_save_keeps_the_stored_locks_and_custom_css(): void
+    {
+        $this->signIn();
+        DemoBuilder::$saved = $this->storedWithDeveloperData();
+
+        Livewire::test(DemoBuilder::class)
+            ->call('savePageBuilder', ['version' => 2, 'sections' => [
+                ['id' => 'other1', 'type' => 'rich', 'lock' => ['remove' => true], 'data' => ['document' => [], 'advanced' => ['css' => 'selector { display: none; }']]],
+                ['id' => 'lockme', 'type' => 'rich', 'data' => ['document' => []]],
+                ['id' => 'added1', 'type' => 'rich', 'lock' => ['content' => true], 'data' => ['document' => [], 'advanced' => ['css' => 'selector { display: none; }']]],
+            ]])
+            ->assertReturned(['ok' => true]);
+
+        [$locked, $other, $added] = DemoBuilder::$saved['sections'];
+
+        $this->assertSame(2, DemoBuilder::$saved['version']);
+        $this->assertSame(['lockme', 'other1', 'added1'], array_column(DemoBuilder::$saved['sections'], 'id'));
+        $this->assertSame(['move' => true], $locked['lock']);
+        $this->assertSame(['css' => 'selector { color: red; }'], $locked['data']['advanced']);
+        $this->assertArrayNotHasKey('lock', $other);
+        $this->assertArrayNotHasKey('advanced', $other['data']);
+        $this->assertArrayNotHasKey('lock', $added);
+        $this->assertArrayNotHasKey('advanced', $added['data']);
+    }
+
+    public function test_a_developer_save_keeps_the_new_locks_and_custom_css(): void
+    {
+        $this->signIn();
+        DemoBuilder::$saved = $this->storedWithDeveloperData();
+        DemoBuilder::$developer = true;
+
+        Livewire::test(DemoBuilder::class)
+            ->call('savePageBuilder', ['version' => 2, 'sections' => [
+                ['id' => 'added1', 'type' => 'rich', 'lock' => ['content' => true], 'data' => ['document' => [], 'advanced' => ['css' => 'selector { display: none; }']]],
+            ]])
+            ->assertReturned(['ok' => true]);
+
+        $this->assertSame(['content' => true], DemoBuilder::$saved['sections'][0]['lock']);
+        $this->assertSame(['css' => 'selector { display: none; }'], DemoBuilder::$saved['sections'][0]['data']['advanced']);
+    }
+
     public function test_saving_too_many_sections_is_refused_with_a_reason(): void
     {
         $this->signIn();

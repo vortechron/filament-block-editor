@@ -8,6 +8,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Vortechron\FilamentBlockEditor\Blocks\BlockRegistry;
 use Vortechron\FilamentBlockEditor\Content\PageContent;
+use Vortechron\FilamentBlockEditor\Content\PageValue;
 use Vortechron\FilamentBlockEditor\Support\Assets;
 use Vortechron\FilamentBlockEditor\Templates\SectionTemplates;
 
@@ -19,8 +20,8 @@ use Vortechron\FilamentBlockEditor\Templates\SectionTemplates;
  *
  * The page supplies the value, saves it and draws the preview:
  *
- *     protected function getPageBuilderValue(): array          // ['sections' => [...]]
- *     protected function savePageBuilderValue(array $value): void
+ *     protected function getPageBuilderValue(): array          // a page value of any format
+ *     protected function savePageBuilderValue(array $value): void  // ['version' => 2, 'sections' => [...]]
  *     protected function renderPageBuilderPreview(array $sections): string  // a full HTML document
  */
 trait InteractsWithPageBuilder
@@ -33,12 +34,16 @@ trait InteractsWithPageBuilder
     public ?TemporaryUploadedFile $pageBuilderUpload = null;
 
     /**
-     * @return array{sections: array<mixed>}
+     * The stored page: a page value of any format (Content\PageValue):
+     * `['version' => 2, 'sections' => [...]]`, `['sections' => [...]]` or a
+     * bare list of sections. It is upgraded before the builder gets it.
+     *
+     * @return array<mixed>
      */
     abstract protected function getPageBuilderValue(): array;
 
     /**
-     * @param  array{sections: list<array<string, mixed>>}  $value  already validated and cleaned
+     * @param  array{version: int, sections: list<array<string, mixed>>}  $value  a format 2 value, already validated, cleaned and guarded
      */
     abstract protected function savePageBuilderValue(array $value): void;
 
@@ -49,6 +54,16 @@ trait InteractsWithPageBuilder
      * @param  list<array<string, mixed>>  $sections
      */
     abstract protected function renderPageBuilderPreview(array $sections): string;
+
+    /**
+     * Whether the signed-in user is a developer: they may set locks, custom
+     * CSS and developer-only fields. Everyone else's saves go through
+     * PageValue::guard(), which keeps the stored developer-only data.
+     */
+    protected function isPageBuilderDeveloper(): bool
+    {
+        return false;
+    }
 
     /**
      * Checks that the signed-in user may edit this page. It runs before
@@ -128,6 +143,7 @@ trait InteractsWithPageBuilder
     {
         $this->authorizePageBuilder();
 
+        $value = PageValue::upgrade($value);
         $validator = Validator::make(['sections' => $value['sections'] ?? null], PageContent::rules('sections'));
 
         if ($validator->fails()) {
@@ -137,7 +153,15 @@ trait InteractsWithPageBuilder
             ];
         }
 
-        $this->savePageBuilderValue(['sections' => PageContent::normalize($value['sections'])]);
+        $value = PageValue::normalize($value);
+
+        // Safe by default: a host that forgets the guard still never saves
+        // locks or custom CSS from someone who is not a developer.
+        if (! $this->isPageBuilderDeveloper()) {
+            $value = PageValue::guard($value, PageValue::normalize($this->getPageBuilderValue()));
+        }
+
+        $this->savePageBuilderValue($value);
 
         return ['ok' => true];
     }

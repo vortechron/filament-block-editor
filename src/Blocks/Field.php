@@ -37,6 +37,8 @@ final class Field
 
     private int|float|null $max = null;
 
+    private bool $developerOnly = false;
+
     private function __construct(public readonly string $name, public readonly string $type)
     {
         if (preg_match('/^[A-Za-z0-9_-]+$/', $name) !== 1) {
@@ -165,6 +167,23 @@ final class Field
     }
 
     /**
+     * Only developers may see and change this field. The builder hides it
+     * from everyone else, and Content\PageValue::guard() keeps its stored
+     * value when someone else saves (a new block gets the default).
+     */
+    public function developerOnly(bool $developerOnly = true): self
+    {
+        $this->developerOnly = $developerOnly;
+
+        return $this;
+    }
+
+    public function isDeveloperOnly(): bool
+    {
+        return $this->developerOnly;
+    }
+
+    /**
      * What the builder gets for this field.
      *
      * @return array<string, mixed>
@@ -183,6 +202,7 @@ final class Field
             ...($this->type === 'number' && $this->min !== null ? ['min' => $this->min] : []),
             ...($this->type === 'number' && $this->max !== null ? ['max' => $this->max] : []),
             ...($default !== null ? ['default' => $default] : []),
+            ...($this->developerOnly ? ['developerOnly' => true] : []),
         ];
     }
 

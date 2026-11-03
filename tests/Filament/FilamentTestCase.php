@@ -39,6 +39,7 @@ abstract class FilamentTestCase extends TestCase
 
         DemoBuilder::$saved = null;
         DemoBuilder::$denied = false;
+        DemoBuilder::$developer = false;
     }
 
     protected function getPackageProviders($app): array

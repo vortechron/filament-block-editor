@@ -96,6 +96,21 @@ final class PageValue
     }
 
     /**
+     * The value a person who is not a developer may save: the new value
+     * with the stored developer-only data and every lock put back (see
+     * PageGuard). Run it on every save by someone who is not a developer;
+     * running it twice changes nothing.
+     *
+     * @param  array<mixed>  $new  a page value of any format
+     * @param  array<mixed>  $stored  the stored page value, of any format
+     * @return array{version: int, sections: list<array<string, mixed>>}
+     */
+    public static function guard(array $new, array $stored): array
+    {
+        return self::normalize(PageGuard::apply(self::normalize($new)['sections'], self::normalize($stored)['sections']));
+    }
+
+    /**
      * Adds (or replaces) the step that upgrades a value of version `$from`
      * to `$from + 1` (1 <= $from < VERSION; other steps never run). The
      * step gets the value and returns the new one.
