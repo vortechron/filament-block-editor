@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { useHost } from '@/lib/host';
+import { normalizeValue } from '@/lib/page-value';
 import type { PageValue, SaveResult } from '@/types';
 
 /** How long "Saved" shows after a save. */
@@ -51,7 +52,8 @@ export function usePageState(
         let result: SaveResult;
 
         try {
-            result = await adapter.save(value);
+            // The server stays the authority; the builder never sends junk.
+            result = await adapter.save(normalizeValue(value));
         } catch (error) {
             result = {
                 ok: false,

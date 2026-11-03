@@ -8,12 +8,6 @@ import {
     Trash2,
     Type,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
-import {
-    Tooltip,
-    TooltipContent,
-    TooltipTrigger,
-} from '@/ui/tooltip';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -22,8 +16,10 @@ import {
     hasInvalidBackgroundColor,
     RichLookFields,
 } from '../editor/rich-look-fields';
+import { ActionButton } from './action-button';
 import { useBuilderContext } from './builder-context';
 import { ItemGrid } from './catalog-tiles';
+import { RefSectionPanel } from './ref-section-panel';
 import { LAYOUT_ICONS, LAYOUT_LABELS } from './section-thumbs';
 import { SectionWords } from './section-words';
 
@@ -47,6 +43,11 @@ export function SectionPanel() {
     }
 
     const block = builder.blocks[index];
+
+    if (block.type === 'ref') {
+        return <RefSectionPanel block={block} index={index} />;
+    }
+
     const Icon = LAYOUT_ICONS[block.data.layout];
     const isHidden = block.hidden === true;
     const count = builder.blocks.length;
@@ -177,53 +178,20 @@ export function SectionPanel() {
                     onChange={(data) =>
                         // Only the look changes here. The words come from
                         // the latest document, which may be newer.
-                        builder.updateSection(block.id, (current) => ({
-                            ...current,
-                            data: { ...data, document: current.data.document },
-                        }))
+                        builder.updateSection(block.id, (current) =>
+                            current.type === 'rich'
+                                ? {
+                                      ...current,
+                                      data: {
+                                          ...data,
+                                          document: current.data.document,
+                                      },
+                                  }
+                                : current,
+                        )
                     }
                 />
             )}
         </div>
-    );
-}
-
-export function ActionButton({
-    label,
-    onClick,
-    disabled,
-    destructive,
-    isActive,
-    children,
-}: {
-    label: string;
-    onClick: () => void;
-    disabled?: boolean;
-    destructive?: boolean;
-    isActive?: boolean;
-    children: ReactNode;
-}) {
-    return (
-        <Tooltip>
-            <TooltipTrigger asChild>
-                <button
-                    type="button"
-                    aria-label={label}
-                    disabled={disabled}
-                    onClick={onClick}
-                    className={cn(
-                        'grid size-8 place-items-center rounded-lg transition-colors disabled:opacity-35 [&_svg]:size-4',
-                        destructive
-                            ? 'text-destructive hover:bg-destructive/10'
-                            : 'text-muted-foreground hover:bg-card hover:text-foreground dark:hover:bg-input/50 hover:shadow-sm',
-                        isActive &&
-                            'bg-card text-foreground dark:bg-input/70 shadow-sm',
-                    )}
-                >
-                    {children}
-                </button>
-            </TooltipTrigger>
-            <TooltipContent>{label}</TooltipContent>
-        </Tooltip>
     );
 }

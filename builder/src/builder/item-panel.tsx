@@ -20,7 +20,7 @@ import { SegmentedChoice } from '../editor/segmented-choice';
 import { useBuilderContext } from './builder-context';
 import { describeBlock } from './item-catalog';
 import { PhotoField, VideoField } from './media-field';
-import { ActionButton } from './section-panel';
+import { ActionButton } from './action-button';
 import type { ItemSnapshot, SectionEditorHandle } from './types';
 
 /** Text blocks that can switch between each other without losing the words. */

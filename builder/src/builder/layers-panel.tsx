@@ -24,9 +24,8 @@ import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { MAX_SECTIONS } from '@/lib/page-value';
 import type { Section } from '@/types';
-import { blockTitle } from '../editor/block-meta';
 import { useBuilderContext } from './builder-context';
-import { LAYOUT_ICONS, LAYOUT_LABELS } from './section-thumbs';
+import { sectionIcon, sectionKind, sectionTitle } from './section-meta';
 import { TemplateMenu } from './template-menu';
 
 /**
@@ -151,9 +150,9 @@ function LayerRow({
         transition,
         isDragging,
     } = useSortable({ id: block.id });
-    const Icon = LAYOUT_ICONS[block.data.layout];
+    const Icon = sectionIcon(block);
     const isHidden = block.hidden === true;
-    const title = blockTitle(block) || t('Empty section');
+    const title = sectionTitle(block, t);
 
     return (
         <li
@@ -203,7 +202,10 @@ function LayerRow({
                         {title}
                     </span>
                     <span className="text-muted-foreground block truncate text-xs">
-                        {index + 1}. {t(LAYOUT_LABELS[block.data.layout])}
+                        {index + 1}.{' '}
+                        {block.type === 'ref'
+                            ? `#${String(block.ref)}`
+                            : sectionKind(block, t)}
                         {isHidden && ` · ${t('Hidden')}`}
                     </span>
                 </span>

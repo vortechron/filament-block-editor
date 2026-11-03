@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { MAX_SECTIONS, sectionFromTemplate } from '@/lib/page-value';
+import { lastRich, MAX_SECTIONS, sectionFromTemplate } from '@/lib/page-value';
 import type { Section, SectionTemplate } from '@/types';
 import { duplicateBlock, withHidden } from '../editor/block-meta';
 import {
@@ -295,16 +295,20 @@ export function useBuilder({
      * picked section, or at the end of the last section.
      */
     function defaultItemTarget(): ItemTarget | null {
-        if (selection.sectionId && indexOf(selection.sectionId) !== -1) {
+        const picked = blocks.find(
+            (block) => block.id === selection.sectionId,
+        );
+
+        if (picked?.type === 'rich') {
             return {
-                sectionId: selection.sectionId,
+                sectionId: picked.id,
                 place: selection.itemId
                     ? { blockId: selection.itemId, placement: 'after' }
                     : { blockId: null },
             };
         }
 
-        const last = blocks.at(-1);
+        const last = lastRich(blocks);
 
         return last ? { sectionId: last.id, place: { blockId: null } } : null;
     }
@@ -330,9 +334,14 @@ export function useBuilder({
         }
 
         const { sectionId, place } = goal;
-        const layout =
-            blocks.find((block) => block.id === sectionId)?.data.layout ??
-            'plain';
+        const section = blocks.find((block) => block.id === sectionId);
+
+        // A synced section's words are not in this page.
+        if (section?.type === 'ref') {
+            return;
+        }
+
+        const layout = section?.data.layout ?? 'plain';
 
         // Only the picked section's editor is open, in the sidebar.
         if (!handles.has(sectionId)) {

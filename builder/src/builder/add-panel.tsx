@@ -2,10 +2,11 @@ import { MousePointerClick, Search, X } from 'lucide-react';
 import { useState } from 'react';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
+import { lastRich } from '@/lib/page-value';
 import type { SectionTemplate } from '@/types';
-import { blockTitle } from '../editor/block-meta';
 import { useBuilderContext } from './builder-context';
 import { ItemGrid, matchesSearch, TemplateTile } from './catalog-tiles';
+import { sectionTitle } from './section-meta';
 
 type AddTab = 'sections' | 'items';
 
@@ -134,7 +135,7 @@ export function AddPanel({ onAdded }: { onAdded?: () => void }) {
                 tab={tab}
                 sectionLabel={
                     section
-                        ? `${sectionIndex + 1}. ${blockTitle(section) || t('Empty section')}`
+                        ? `${sectionIndex + 1}. ${sectionTitle(section, t)}`
                         : null
                 }
                 hasItem={selection.itemId !== null}
@@ -185,9 +186,8 @@ export function AddPanel({ onAdded }: { onAdded?: () => void }) {
             ) : (
                 <ItemGrid
                     layout={
-                        section?.data.layout ??
-                        blocks.at(-1)?.data.layout ??
-                        null
+                        (section?.type === 'rich' ? section : lastRich(blocks))
+                            ?.data.layout ?? null
                     }
                     query={query}
                     onPick={(key) => {

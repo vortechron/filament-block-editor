@@ -1,11 +1,11 @@
 import { newSectionId } from '@/lib/page-value';
-import type { RichDocument, Section } from '@/types';
+import type { RichDocument, RichSection, Section } from '@/types';
 
 /**
  * The name a section shows in the list: its first heading, or its first
  * line when it has no heading.
  */
-export function blockTitle(block: Section): string {
+export function blockTitle(block: RichSection): string {
     const heading = block.data.document.find((item) => item.type === 'heading');
 
     return (
@@ -15,7 +15,7 @@ export function blockTitle(block: Section): string {
     );
 }
 
-export function duplicateBlock(block: Section): Section {
+export function duplicateBlock<T extends Section>(block: T): T {
     return { ...structuredClone(block), id: newSectionId() };
 }
 
@@ -23,14 +23,14 @@ export function duplicateBlock(block: Section): Section {
  * The same section, hidden from the page or shown again. A shown section
  * has no `hidden` key, the same as the server stores it.
  */
-export function withHidden(block: Section, hidden: boolean): Section {
+export function withHidden<T extends Section>(block: T, hidden: boolean): T {
     if (hidden) {
         return { ...block, hidden: true };
     }
 
     const { hidden: _wasHidden, ...shown } = block;
 
-    return shown;
+    return shown as T;
 }
 
 /**

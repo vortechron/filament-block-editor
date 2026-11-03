@@ -13,7 +13,7 @@ import { cn } from '@/lib/utils';
 import { useHost } from '@/lib/host';
 import { useBuilderContext } from './builder-context';
 import { type FramePick, PageFrame } from './page-frame';
-import { LAYOUT_LABELS } from './section-thumbs';
+import { sectionKind } from './section-meta';
 import { TemplateMenu } from './template-menu';
 
 /** How wide the page is drawn for each device. */
@@ -55,7 +55,7 @@ export function Canvas({ notices }: { notices: ReactNode }) {
     const sectionLabels = new Map(
         blocks.map((block, index) => [
             block.id,
-            `${index + 1}. ${t(LAYOUT_LABELS[block.data.layout])}`,
+            `${index + 1}. ${sectionKind(block, t)}`,
         ]),
     );
 

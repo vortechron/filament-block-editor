@@ -1,9 +1,16 @@
 import { act, fireEvent, screen, waitFor } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mountPageBuilder } from '../src/index';
-import type { PageBuilderAdapter, PageValue, SaveResult } from '../src/types';
+import type {
+    PageBuilderAdapter,
+    PageValue,
+    PageValueInput,
+    RichSection,
+    SaveResult,
+} from '../src/types';
 
-const value: PageValue = {
+/** A format 1 value, as hosts stored it before format 2. */
+const value: PageValueInput = {
     sections: [
         {
             id: 'hero0001',
@@ -88,12 +95,14 @@ describe('mounting the page builder', () => {
         await waitFor(() => expect(adapter.preview).toHaveBeenCalled());
 
         const previewed = adapter.preview.mock.calls[0][0] as PageValue;
+        const section = previewed.sections[0] as RichSection;
 
+        expect(previewed.version).toBe(2);
         expect(previewed.sections).toHaveLength(1);
-        expect(previewed.sections[0].id).toBe('hero0001');
-        expect(previewed.sections[0].data.layout).toBe('hero');
+        expect(section.id).toBe('hero0001');
+        expect(section.data.layout).toBe('hero');
         // Missing look fields come with their defaults.
-        expect(previewed.sections[0].data.width).toBe('normal');
+        expect(section.data.width).toBe('normal');
     });
 
     it('draws inside one scoped element, with menus in its own layer', () => {

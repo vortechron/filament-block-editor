@@ -52,6 +52,43 @@ export type RichButton = 'theme' | 'solid' | 'outline' | 'pill' | 'shadow';
 /** `full` drops the section body's max width and side padding. */
 export type SectionWidth = 'normal' | 'full';
 
+/** The widths a style can change at. `desktop` is the base. */
+export type StyleDevice = 'desktop' | 'tablet' | 'phone';
+
+/** A part of a style bag: one device, or the look under the pointer. */
+export type StyleVariant = StyleDevice | 'hover';
+
+/** Style keys and their CSS values, like `{ padding_top: '24px' }`. */
+export type StyleValues = Record<string, string>;
+
+/**
+ * An open-ended style, per device. Mirrors Styling\StyleBag: `tablet`
+ * applies up to 1024px wide, `phone` up to 767px, `hover` under the
+ * pointer (a few colour keys only).
+ */
+export type StyleBag = Partial<Record<StyleVariant, StyleValues>>;
+
+/** Extra class names, devices to hide on, and developer-only CSS. Mirrors Styling\Advanced. */
+export type Advanced = {
+    class?: string | null;
+    /** Developers only. `selector` stands for the element itself. */
+    css?: string | null;
+    hide_on?: StyleDevice[];
+};
+
+/** What a block's `look` prop holds, as a JSON string. */
+export type BlockLook = { style?: StyleBag; advanced?: Advanced };
+
+/** What a non-developer may not do to a section. Each key is only there when true. */
+export type SectionLock = {
+    move?: true;
+    remove?: true;
+    content?: true;
+    style?: true;
+};
+
+export type LockKey = keyof SectionLock;
+
 /** One section's document and look. Mirrors Content\PageContent. */
 export type SectionData = {
     document: RichDocument;
@@ -75,18 +112,104 @@ export type SectionData = {
     /** The section's id on the page, for menu links like #about. */
     anchor: string | null;
     width: SectionWidth;
+    /** The open-ended style. It wins over the fields above. Left out when empty. */
+    style?: StyleBag;
+    /** Left out when empty. */
+    advanced?: Advanced;
 };
 
-/** A section of the page. `hidden` sections stay off the public page. */
-export type Section = {
+/** A section the page draws from its own document. `hidden` sections stay off the public page. */
+export type RichSection = {
     id: string;
     type: 'rich';
     data: SectionData;
     hidden?: true;
+    lock?: SectionLock;
 };
 
-/** The value the builder edits, saves and previews. */
-export type PageValue = { sections: Section[] };
+/** A synced section: the page shows the section stored under `ref`. */
+export type RefSection = {
+    id: string;
+    type: 'ref';
+    ref: number | string;
+    hidden?: true;
+};
+
+export type Section = RichSection | RefSection;
+
+/** The value the builder edits, saves and previews. Format 2 (Content\PageValue::VERSION). */
+export type PageValue = { version: 2; sections: Section[] };
+
+/**
+ * A value the host may pass in: format 2, or format 1 (`{ sections }` or
+ * a bare list of sections), which the builder upgrades.
+ */
+export type PageValueInput =
+    | { version?: number; sections?: readonly unknown[] }
+    | readonly unknown[];
+
+/** The site's design values. Mirrors Design\Kit. */
+export type Kit = {
+    version: 1;
+    colors: Record<string, string>;
+    custom_colors: KitColor[];
+    fonts: { heading: string; body: string };
+    text: { base_size: string; heading_weight: string };
+    radius: string;
+    buttons: {
+        style: string;
+        radius: string;
+        size: string;
+        text_transform: string;
+        font_weight: string;
+    };
+    forms: { style: string; radius: string; labels: string };
+};
+
+/** A colour the site adds to the 8 fixed ones. */
+export type KitColor = { key: string; label: string; value: string };
+
+/** A font the host offers, by the key stored in the kit or a style. */
+export type FontChoice = { value: string; label: string };
+
+/** A value the site fills in when the page is drawn. Mirrors Content\DynamicValues. */
+export type DynamicValueDefinition = {
+    key: string;
+    label: string;
+    type: 'text' | 'link' | 'image';
+    group?: string;
+    preview?: string | null;
+};
+
+/** A synced section the host offers, with the section it holds. */
+export type SyncedSectionOption = {
+    id: number | string;
+    title: string;
+    editUrl?: string | null;
+    section: RichSection;
+};
+
+/** The header or footer, shown on every page and built on its own. */
+export type PagePart = {
+    key: 'header' | 'footer';
+    title: string;
+    editUrl: string;
+};
+
+/** The shop info form shown with the header and footer. */
+export type SiteInfo = {
+    groups: { key: string; label: string; fields: OwnBlockField[] }[];
+    values: Record<string, Record<string, unknown>>;
+};
+
+/** What kind of document the builder edits. */
+export type DocumentKind =
+    | 'page'
+    | 'header'
+    | 'footer'
+    | 'section'
+    | 'card'
+    | 'single';
 
 /** A ready-made section for the Add panel, as the host sends it. */
 export type SectionTemplateInput = {
@@ -130,6 +253,8 @@ export type OwnBlockField = {
     /** For `list`: the fields of one row, and how many rows at most. */
     fields?: OwnBlockField[];
     maxItems?: number | null;
+    /** Only developers see the field. Its value is kept for everyone. */
+    developerOnly?: boolean;
     [key: string]: unknown;
 };
 
@@ -149,19 +274,36 @@ export type SaveResult =
 
 export type UploadKind = 'image' | 'video' | 'file';
 
+/** What `saveSection` answers. */
+export type SaveSectionResult =
+    | { ok: true; id: number | string; template?: SectionTemplateInput }
+    | { ok: false; errors: Record<string, string> };
+
 /** How the builder talks to the host. */
 export type PageBuilderAdapter = {
     save: (value: PageValue) => Promise<SaveResult>;
-    /** A full HTML document of the page, drawn with the builder's markers. */
-    preview: (value: PageValue) => Promise<string>;
+    /**
+     * A full HTML document of the page, drawn with the builder's markers.
+     * `extra.kit` is the design kit with changes not saved yet.
+     */
+    preview: (value: PageValue, extra?: { kit?: Kit }) => Promise<string>;
     upload: (
         file: File,
         kind: UploadKind,
     ) => Promise<{ url: string; name?: string }>;
+    /** Saves the design kit. Without it there is no design panel. */
+    saveKit?: (kit: Kit) => Promise<SaveResult>;
+    saveSection?: (
+        section: RichSection,
+        meta: { title: string; synced: boolean },
+    ) => Promise<SaveSectionResult>;
+    saveSiteInfo?: (
+        values: Record<string, Record<string, unknown>>,
+    ) => Promise<SaveResult>;
 };
 
 export type PageBuilderOptions = {
-    value?: Partial<PageValue> | null;
+    value?: PageValueInput | null;
     adapter: PageBuilderAdapter;
     blocks?: OwnBlockDefinition[];
     templates?: SectionTemplateInput[];
@@ -176,6 +318,17 @@ export type PageBuilderOptions = {
     /** The page's accent colour, as #rrggbb. */
     accent?: string | null;
     onChange?: (value: PageValue) => void;
+    /** Shows locks, custom CSS and developer-only fields. */
+    developer?: boolean;
+    /** The design kit. The design panel shows when `adapter.saveKit` exists too. */
+    kit?: Kit | null;
+    /** The fonts a kit or a style may use, besides the theme's. */
+    fonts?: FontChoice[];
+    dynamicValues?: DynamicValueDefinition[];
+    syncedSections?: SyncedSectionOption[];
+    parts?: PagePart[];
+    siteInfo?: SiteInfo | null;
+    kind?: DocumentKind;
 };
 
 export type PageBuilderInstance = {

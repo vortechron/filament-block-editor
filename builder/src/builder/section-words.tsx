@@ -9,7 +9,7 @@ import {
 } from 'react';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
-import type { Section } from '@/types';
+import type { RichSection } from '@/types';
 import { Skeleton } from '@/ui/skeleton';
 import { EditorErrorBoundary } from '../editor/editor-error-boundary';
 import { useBuilderContext } from './builder-context';
@@ -33,7 +33,7 @@ const SHEET_SETTLE_MS = 260;
  * too. It stays open, out of sight, while an item's settings show,
  * because those settings change the item through this editor.
  */
-export function SectionWords({ block }: { block: Section }) {
+export function SectionWords({ block }: { block: RichSection }) {
     const t = useT();
     const { builder } = useBuilderContext();
     const { accent, ownBlocks, upload } = useHost();
@@ -175,10 +175,14 @@ export function SectionWords({ block }: { block: Section }) {
                             }}
                             uploadFile={(file) => upload(file)}
                             onDocumentChange={(document) =>
-                                builder.updateSection(block.id, (current) => ({
-                                    ...current,
-                                    data: { ...current.data, document },
-                                }))
+                                builder.updateSection(block.id, (current) =>
+                                    current.type === 'rich'
+                                        ? {
+                                              ...current,
+                                              data: { ...current.data, document },
+                                          }
+                                        : current,
+                                )
                             }
                             onHandle={(next) =>
                                 builder.registerHandle(block.id, next)

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useHost } from '@/lib/host';
+import { normalizeValue } from '@/lib/page-value';
 import type { PageValue } from '@/types';
 
 /** Wait this long after the last key press before asking for a new preview. */
@@ -35,7 +36,11 @@ export function useDraftPreview(draft: string): DraftPreview {
                 setIsUpdating(true);
 
                 Promise.resolve()
-                    .then(() => adapter.preview(JSON.parse(draft) as PageValue))
+                    .then(() =>
+                        adapter.preview(
+                            normalizeValue(JSON.parse(draft) as PageValue),
+                        ),
+                    )
                     .then((page) => {
                         if (!isCurrent) {
                             return;

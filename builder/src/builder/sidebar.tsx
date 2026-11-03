@@ -9,12 +9,12 @@ import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/tooltip';
-import { blockTitle } from '../editor/block-meta';
 import { AddPanel } from './add-panel';
 import { useBuilderContext } from './builder-context';
 import { describeBlock } from './item-catalog';
 import { ItemPanel } from './item-panel';
 import { LayersPanel } from './layers-panel';
+import { sectionTitle } from './section-meta';
 import { SectionPanel } from './section-panel';
 import type { HomePanelName } from './types';
 
@@ -116,7 +116,7 @@ function SidebarHeader() {
     ];
 
     if (section) {
-        const sectionLabel = `${sectionIndex + 1}. ${blockTitle(section) || t('Empty section')}`;
+        const sectionLabel = `${sectionIndex + 1}. ${sectionTitle(section, t)}`;
 
         crumbs.push(
             panel.name === 'item'

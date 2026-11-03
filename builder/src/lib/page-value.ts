@@ -1,16 +1,26 @@
 import type {
     PageValue,
+    PageValueInput,
+    RichSection,
     Section,
     SectionData,
     SectionLayout,
     SectionTemplate,
     SectionTemplateInput,
 } from '@/types';
+import { cleanAdvanced } from './advanced';
+import { cleanLock } from './locks';
+import { cleanStyleBag } from './style-bag';
 
 /** Same limit as Content\PageContent::MAX_SECTIONS. */
 export const MAX_SECTIONS = 30;
 
+/** The page value format the builder writes. Mirrors Content\PageValue::VERSION. */
+export const PAGE_VALUE_VERSION = 2;
+
 const ANCHOR_LENGTH = 40;
+
+const REF_LENGTH = 40;
 
 export const SECTION_LAYOUTS: readonly SectionLayout[] = [
     'plain',
@@ -69,31 +79,71 @@ export function newSectionId(): string {
     return Math.random().toString(36).slice(2, 10).padEnd(8, '0');
 }
 
-/** The value the builder starts from, whatever the host passed. */
+/**
+ * The value the builder starts from and sends, whatever the host passed:
+ * format 2, or format 1 (`{ sections }` or a bare list), upgraded. The
+ * server stays the authority; this only makes sure the builder never
+ * sends junk.
+ */
 export function normalizeValue(
-    value: Partial<PageValue> | null | undefined,
+    value: PageValueInput | PageValue | null | undefined,
 ): PageValue {
-    const sections = Array.isArray(value?.sections) ? value.sections : [];
+    const sections: readonly unknown[] = Array.isArray(value)
+        ? value
+        : Array.isArray((value as { sections?: unknown } | null)?.sections)
+          ? (value as { sections: readonly unknown[] }).sections
+          : [];
 
     return {
+        version: PAGE_VALUE_VERSION,
         sections: sections
-            .filter((section) => typeof section === 'object' && section !== null)
+            .filter(
+                (section): section is Record<string, unknown> =>
+                    typeof section === 'object' && section !== null,
+            )
+            .filter((section) => section.type !== 'ref' || isRef(section.ref))
             .slice(0, MAX_SECTIONS)
             .map(normalizeSection),
     };
 }
 
-function normalizeSection(section: Partial<Section>): Section {
+export function isRichSection(section: Section): section is RichSection {
+    return section.type === 'rich';
+}
+
+/** The last section with words of its own, for adding an item to. */
+export function lastRich(sections: readonly Section[]): RichSection | undefined {
+    return sections.filter(isRichSection).at(-1);
+}
+
+/** A synced section's id: a positive whole number, or text up to 40 characters. */
+export function isRef(value: unknown): value is number | string {
+    return typeof value === 'number'
+        ? Number.isInteger(value) && value > 0
+        : typeof value === 'string' &&
+              value !== '' &&
+              value.length <= REF_LENGTH;
+}
+
+function normalizeSection(section: Record<string, unknown>): Section {
     const id =
         typeof section.id === 'string' && section.id !== ''
             ? section.id
             : newSectionId();
+    const hidden = section.hidden === true ? { hidden: true as const } : {};
+
+    if (section.type === 'ref') {
+        return { id, type: 'ref', ref: section.ref as number | string, ...hidden };
+    }
+
+    const lock = cleanLock(section.lock);
 
     return {
         id,
         type: 'rich',
-        data: normalizeSectionData(section.data),
-        ...(section.hidden === true ? { hidden: true as const } : {}),
+        data: normalizeSectionData(section.data as Partial<SectionData>),
+        ...hidden,
+        ...(lock ? { lock } : {}),
     };
 }
 
@@ -109,6 +159,8 @@ export function normalizeSectionData(
     const text = (key: string): string | null =>
         typeof raw[key] === 'string' && raw[key] !== '' ? raw[key] : null;
     const tint = Number(raw.tint);
+    const style = cleanStyleBag(raw.style);
+    const advanced = cleanAdvanced(raw.advanced);
 
     return {
         document: Array.isArray(raw.document)
@@ -130,6 +182,8 @@ export function normalizeSectionData(
         button: pick('button'),
         anchor: isAnchor(raw.anchor) ? raw.anchor : null,
         width: pick('width'),
+        ...(style ? { style } : {}),
+        ...(advanced ? { advanced } : {}),
     };
 }
 
@@ -195,7 +249,7 @@ export function normalizeTemplates(
  * A new section from a ready-made template. The data is copied, so editing
  * the section never changes the template.
  */
-export function sectionFromTemplate(template: SectionTemplate): Section {
+export function sectionFromTemplate(template: SectionTemplate): RichSection {
     return {
         id: newSectionId(),
         type: 'rich',
