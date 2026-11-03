@@ -4,6 +4,8 @@ namespace Vortechron\FilamentBlockEditor\BlockNote;
 
 use Vortechron\FilamentBlockEditor\Blocks\BlockRegistry;
 use Vortechron\FilamentBlockEditor\Content\DynamicValues;
+use Vortechron\FilamentBlockEditor\Forms\FormDefinition;
+use Vortechron\FilamentBlockEditor\Forms\FormRenderer;
 use Vortechron\FilamentBlockEditor\Rendering\RenderContext;
 use Vortechron\FilamentBlockEditor\Styling\StyleSheet;
 use Vortechron\FilamentBlockEditor\Support\Urls;
@@ -103,7 +105,7 @@ final class BlockNoteRenderer
     public const TYPES = [
         'paragraph', 'heading', 'quote', 'codeBlock', 'bulletListItem', 'numberedListItem', 'checkListItem',
         'toggleListItem', 'divider', 'image', 'video', 'audio', 'file', 'table', 'spacer', 'card', 'columnList', 'column',
-        Blocks::GALLERY, Blocks::BUTTON, Blocks::OWN_BLOCK,
+        Blocks::GALLERY, Blocks::BUTTON, Blocks::OWN_BLOCK, Blocks::FORM,
     ];
 
     /**
@@ -356,6 +358,7 @@ final class BlockNoteRenderer
             Blocks::BUTTON => $this->button($props),
             Blocks::GALLERY => $this->gallery($props),
             Blocks::OWN_BLOCK => $this->ownBlock($block, $props),
+            Blocks::FORM => $this->form($block, $props),
             default => '',
         };
 
@@ -673,6 +676,20 @@ final class BlockNoteRenderer
 
         return ($this->registry ?? app(BlockRegistry::class))
             ->render($kind, Blocks::decodeValues($props['values'] ?? null), $this->context, $block);
+    }
+
+    /**
+     * A form anyone builds in the editor (Forms\FormRenderer). It needs a
+     * block id for its key; BlockNoteDocument::clean() gives every form one.
+     *
+     * @param  array<mixed>  $block
+     * @param  array<mixed>  $props
+     */
+    private function form(array $block, array $props): string
+    {
+        $id = BlockNoteDocument::blockId($block['id'] ?? null);
+
+        return $id === null ? '' : app(FormRenderer::class)->render(FormDefinition::fromProps($props), $id, $this->context);
     }
 
     private function table(mixed $content): string

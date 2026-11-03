@@ -15,6 +15,9 @@ namespace Vortechron\FilamentBlockEditor\Rendering;
  * `values`: dynamic values for this draw (Content\DynamicValues), by key,
  * such as `['entry.title' => 'Kopi']`. They win over the registered ones.
  *
+ * `sectionId`: the section being drawn, set by PageRenderer, so a form
+ * knows its key (`{sectionId}.{blockId}`).
+ *
  * A public visitor gets neither flag: `new RenderContext()`.
  */
 final readonly class RenderContext
@@ -26,6 +29,7 @@ final readonly class RenderContext
         public bool $forBuilder = false,
         public bool $isPreview = false,
         public array $values = [],
+        public ?string $sectionId = null,
     ) {}
 
     /**
@@ -35,6 +39,14 @@ final readonly class RenderContext
      */
     public function withValues(array $values): self
     {
-        return new self($this->forBuilder, $this->isPreview, [...$this->values, ...$values]);
+        return new self($this->forBuilder, $this->isPreview, [...$this->values, ...$values], $this->sectionId);
+    }
+
+    /**
+     * The same context, drawing the section with this id.
+     */
+    public function withSection(string $id): self
+    {
+        return new self($this->forBuilder, $this->isPreview, $this->values, $id);
     }
 }

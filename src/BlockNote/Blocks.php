@@ -2,6 +2,7 @@
 
 namespace Vortechron\FilamentBlockEditor\BlockNote;
 
+use Vortechron\FilamentBlockEditor\Forms\FormDefinition;
 use Vortechron\FilamentBlockEditor\Support\Urls;
 
 /**
@@ -9,7 +10,7 @@ use Vortechron\FilamentBlockEditor\Support\Urls;
  * templates, a starter page or a data migration. BlockNote fills in ids and
  * any prop left out when it opens the document.
  *
- * `gallery`, `button` and `ownBlock` are this package's own blocks (see the
+ * `gallery`, `button`, `ownBlock` and `form` are this package's own blocks (see the
  * builder's blocks and Blocks\BlockRegistry).
  */
 final class Blocks
@@ -19,6 +20,8 @@ final class Blocks
     public const BUTTON = 'button';
 
     public const OWN_BLOCK = 'ownBlock';
+
+    public const FORM = 'form';
 
     public const BUTTON_VARIANTS = ['solid', 'outline'];
 
@@ -131,6 +134,28 @@ final class Blocks
     public static function ownBlock(string $kind, array $values = []): array
     {
         return self::block(self::OWN_BLOCK, ['kind' => $kind, 'values' => self::encodeValues($values)]);
+    }
+
+    /**
+     * A form anyone can build (Forms\FormDefinition). BlockNote props hold
+     * only text, so the form is kept as a JSON string in `form`.
+     *
+     * @param  array<string, mixed>  $form
+     * @return array<string, mixed>
+     */
+    public static function form(array $form = []): array
+    {
+        return self::block(self::FORM, ['form' => FormDefinition::encode(FormDefinition::normalize($form)), 'look' => '']);
+    }
+
+    /**
+     * A dynamic value inside text (Content\DynamicValues), for a block's content.
+     *
+     * @return array{type: string, props: array{key: string}}
+     */
+    public static function dynamic(string $key): array
+    {
+        return ['type' => 'dynamic', 'props' => ['key' => $key]];
     }
 
     /**

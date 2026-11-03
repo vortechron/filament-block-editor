@@ -5,6 +5,7 @@ namespace Vortechron\FilamentBlockEditor\BlockNote;
 use Illuminate\Support\Str;
 use Vortechron\FilamentBlockEditor\Blocks\BlockRegistry;
 use Vortechron\FilamentBlockEditor\Content\DynamicValues;
+use Vortechron\FilamentBlockEditor\Forms\FormDefinition;
 use Vortechron\FilamentBlockEditor\Styling\Look;
 use Vortechron\FilamentBlockEditor\Support\Urls;
 
@@ -159,7 +160,7 @@ final class BlockNoteDocument
             $block['content'] = self::cleanContent($block['content']);
         }
 
-        if (array_key_exists('props', $block) || in_array($type, [...self::MEDIA_TYPES, Blocks::GALLERY, Blocks::BUTTON, Blocks::OWN_BLOCK], true)) {
+        if (array_key_exists('props', $block) || in_array($type, [...self::MEDIA_TYPES, Blocks::GALLERY, Blocks::BUTTON, Blocks::OWN_BLOCK, Blocks::FORM], true)) {
             $block['props'] = self::cleanProps($type, is_array($block['props'] ?? null) ? $block['props'] : []);
         }
 
@@ -169,7 +170,8 @@ final class BlockNoteDocument
             $block['children'] = is_array($block['children']) ? self::cleanBlocks($block['children']) : [];
         }
 
-        if (($block['props']['look'] ?? '') !== '') {
+        // A styled block needs a stable class, and a form a stable key.
+        if (($block['props']['look'] ?? '') !== '' || $type === Blocks::FORM) {
             $block['id'] = self::blockId($block['id'] ?? null) ?? Str::lower(Str::random(8));
         }
 
@@ -211,6 +213,10 @@ final class BlockNoteDocument
                 'url' => Urls::link($props['url'] ?? null) ?? DynamicValues::reference($props['url'] ?? null) ?? '',
                 'variant' => in_array($props['variant'] ?? null, Blocks::BUTTON_VARIANTS, true) ? $props['variant'] : Blocks::BUTTON_VARIANTS[0],
             ];
+        }
+
+        if ($type === Blocks::FORM) {
+            $props['form'] = FormDefinition::encode(FormDefinition::normalize(FormDefinition::decode($props['form'] ?? null)));
         }
 
         if ($type === Blocks::OWN_BLOCK) {

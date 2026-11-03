@@ -15,6 +15,8 @@ use Vortechron\FilamentBlockEditor\Content\NullSectionResolver;
 use Vortechron\FilamentBlockEditor\Content\SectionResolver;
 use Vortechron\FilamentBlockEditor\Design\DefaultKitSource;
 use Vortechron\FilamentBlockEditor\Design\KitSource;
+use Vortechron\FilamentBlockEditor\Forms\FormEndpoint;
+use Vortechron\FilamentBlockEditor\Forms\NullFormEndpoint;
 
 class FilamentBlockEditorServiceProvider extends PackageServiceProvider
 {
@@ -67,6 +69,9 @@ class FilamentBlockEditorServiceProvider extends PackageServiceProvider
 
         // Hosts that store synced sections bind their own.
         $this->app->bindIf(SectionResolver::class, NullSectionResolver::class);
+
+        // Hosts that save form submissions bind their own.
+        $this->app->bindIf(FormEndpoint::class, NullFormEndpoint::class);
     }
 
     public function packageBooted(): void

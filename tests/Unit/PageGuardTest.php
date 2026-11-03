@@ -207,6 +207,48 @@ class PageGuardTest extends TestCase
         $this->assertSame(['title' => 'Tambah', 'code' => 'safe'], Blocks::decodeValues($inner[1]['props']['values']));
     }
 
+    /**
+     * @param  list<array<string, string>>  $actions
+     * @return array<string, mixed>
+     */
+    private function formBlock(string $id, array $actions): array
+    {
+        return ['id' => $id, ...Blocks::form(['fields' => [['type' => 'text', 'name' => 'nama']], 'actions' => $actions])];
+    }
+
+    /**
+     * @return list<array<string, string>>
+     */
+    private function actionsOf(array $block): array
+    {
+        return json_decode($block['props']['form'], true)['actions'];
+    }
+
+    public function test_a_form_webhook_is_kept_from_the_stored_form_and_dropped_from_new_forms_also_inside_a_column(): void
+    {
+        $hook = ['type' => 'webhook', 'url' => 'https://hooks.example.com/stored'];
+        $evil = ['type' => 'webhook', 'url' => 'https://evil.example/steal'];
+        $email = ['type' => 'email', 'to' => 'owner@example.com', 'subject' => 'Baru'];
+        $stored = $this->page([$this->section('a', ['document' => [
+            $this->formBlock('frm1', [$hook]),
+            $this->columns('cols', [$this->formBlock('frm2', [$hook])]),
+            $this->formBlock('frm3', [$hook]),
+        ]])]);
+        $new = $this->page([$this->section('a', ['document' => [
+            $this->formBlock('frm1', [$email, $evil]),
+            $this->columns('cols', [$this->formBlock('frm2', []), $this->formBlock('frm4', [$evil])]),
+            $this->formBlock('frm3', [$email]),
+        ]])]);
+
+        $document = PageValue::guard($new, $stored)['sections'][0]['data']['document'];
+        [$inner, $added] = $document[1]['children'][0]['children'];
+
+        $this->assertSame([$email, $hook], $this->actionsOf($document[0]));
+        $this->assertSame([$hook], $this->actionsOf($inner));
+        $this->assertSame([], $this->actionsOf($added));
+        $this->assertSame([$email, $hook], $this->actionsOf($document[2]));
+    }
+
     public function test_a_section_locked_against_removal_is_put_back_where_it_was_and_shown(): void
     {
         $stored = $this->page([

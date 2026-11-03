@@ -18,4 +18,13 @@ return [
         'next' => 'Gambar seterusnya',
         'go_to' => 'Papar gambar :number',
     ],
+
+    // The form block.
+    'form' => [
+        'submit' => 'Hantar',
+        'success' => 'Terima kasih. Kami sudah terima maklumat anda.',
+        'required' => 'wajib',
+        'choose' => 'Pilih satu',
+        'honeypot' => 'Jangan isi ruang ini',
+    ],
 ];

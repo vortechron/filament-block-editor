@@ -113,7 +113,7 @@ final class PageRenderer
         return view('filament-block-editor::section', [
             'data' => $look->data,
             'layout' => $layout,
-            'html' => $this->layouts->render($data['document'] ?? [], $layout, $context),
+            'html' => $this->layouts->render($data['document'] ?? [], $layout, $context->withSection($id)),
             'classes' => $look->classes,
             'inlineBackground' => $look->inlineBackground,
         ])->render();

@@ -6,6 +6,7 @@ use Vortechron\FilamentBlockEditor\BlockNote\BlockNoteDocument;
 use Vortechron\FilamentBlockEditor\BlockNote\Blocks;
 use Vortechron\FilamentBlockEditor\Blocks\BlockRegistry;
 use Vortechron\FilamentBlockEditor\Blocks\Field;
+use Vortechron\FilamentBlockEditor\Forms\FormDefinition;
 use Vortechron\FilamentBlockEditor\Styling\Look;
 
 /**
@@ -13,7 +14,8 @@ use Vortechron\FilamentBlockEditor\Styling\Look;
  * block id, through every column, card and indent):
  *
  * - a block's custom CSS (`look.advanced.css`);
- * - an own block's developer-only fields (Field::developerOnly()).
+ * - an own block's developer-only fields (Field::developerOnly());
+ * - a form's `webhook` action.
  *
  * A block that also exists in the stored page gets its stored values back;
  * a new block loses its CSS and gets the fields' defaults. Everything else
@@ -86,6 +88,10 @@ final class DeveloperData
             $props['look'] = $look;
         }
 
+        if (($block['type'] ?? null) === Blocks::FORM) {
+            $props['form'] = self::formWebhook($props['form'] ?? null, ($old['type'] ?? null) === Blocks::FORM ? $old['props']['form'] ?? null : null);
+        }
+
         if (($block['type'] ?? null) === Blocks::OWN_BLOCK) {
             $props['values'] = self::ownBlockValues($props, ($old['type'] ?? null) === Blocks::OWN_BLOCK ? $old['props'] ?? [] : null);
         }
@@ -112,6 +118,19 @@ final class DeveloperData
         unset($advanced['css']);
 
         return Look::encode([...$look, 'advanced' => [...$advanced, ...($css === null ? [] : ['css' => $css])]]);
+    }
+
+    /**
+     * The new form with the stored form's webhook (or none). Other actions
+     * are the new form's.
+     */
+    private static function formWebhook(mixed $new, mixed $old): string
+    {
+        $form = FormDefinition::normalize(FormDefinition::decode($new));
+        $webhook = FormDefinition::fromProps(['form' => $old])->action('webhook');
+        $actions = array_values(array_filter($form['actions'], fn (array $action): bool => $action['type'] !== 'webhook'));
+
+        return FormDefinition::encode([...$form, 'actions' => [...$actions, ...($webhook === null ? [] : [$webhook])]]);
     }
 
     /**

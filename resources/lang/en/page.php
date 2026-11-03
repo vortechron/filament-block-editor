@@ -18,4 +18,13 @@ return [
         'next' => 'Next photo',
         'go_to' => 'Show photo :number',
     ],
+
+    // The form block.
+    'form' => [
+        'submit' => 'Send',
+        'success' => 'Thank you. We have your details.',
+        'required' => 'required',
+        'choose' => 'Choose one',
+        'honeypot' => 'Leave this field empty',
+    ],
 ];
