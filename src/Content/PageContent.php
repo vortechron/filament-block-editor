@@ -17,7 +17,14 @@ use Vortechron\FilamentBlockEditor\Support\Urls;
  *     [['id' => 'a1b2c3d4', 'type' => 'rich', 'data' => [...]], ...]
  *
  * A section the author hid also has 'hidden' => true. It stays in the
- * builder but is left off the public page.
+ * builder but is left off the public page. A developer may lock a section
+ * ('lock' => ['move' => true, ...], see LOCKS); PageValue::guard() keeps
+ * the lock when someone else saves.
+ *
+ * A synced section is a reference to a section kept somewhere else (see
+ * SectionResolver). It has no data of its own:
+ *
+ *     ['id' => 'k9x8', 'type' => 'ref', 'ref' => 12]
  *
  * normalize() is the only way content should reach your storage. It keeps
  * known fields and drops anything else.
@@ -27,6 +34,15 @@ final class PageContent
     public const MAX_SECTIONS = 30;
 
     public const TYPE = 'rich';
+
+    public const REF = 'ref';
+
+    /**
+     * What a lock can stop: moving the section, removing or hiding it,
+     * changing its document, and changing its look (the look fields,
+     * `style` and `advanced`).
+     */
+    public const LOCKS = ['move', 'remove', 'content', 'style'];
 
     /**
      * The longest an id or an anchor may be.
@@ -65,7 +81,7 @@ final class PageContent
      */
     public static function types(): array
     {
-        return [self::TYPE];
+        return [self::TYPE, self::REF];
     }
 
     /**
@@ -78,8 +94,12 @@ final class PageContent
     {
         return [
             $attribute => ['present', 'array', 'max:'.self::MAX_SECTIONS],
-            "{$attribute}.*" => ['array'],
-            "{$attribute}.*.type" => ['required', 'string', 'in:'.self::TYPE],
+            "{$attribute}.*" => ['array', function (string $attribute, mixed $value, Closure $fail): void {
+                if (is_array($value) && ($value['type'] ?? null) === self::REF && self::ref($value['ref'] ?? null) === null) {
+                    $fail('A synced section needs a ref: a positive number or an id of letters, digits, dashes and underscores.');
+                }
+            }],
+            "{$attribute}.*.type" => ['required', 'string', 'in:'.implode(',', self::types())],
             "{$attribute}.*.data" => ['nullable', 'array'],
             "{$attribute}.*.data.document" => ['sometimes', 'nullable', 'array', function (string $attribute, mixed $value, Closure $fail): void {
                 if (BlockNoteDocument::isTooBig($value)) {
@@ -92,37 +112,103 @@ final class PageContent
 
     /**
      * @param  array<mixed>  $sections
-     * @return list<array{id: string, type: string, data: array<string, mixed>, hidden?: true}>
+     * @return list<array<string, mixed>>
      */
     public static function normalize(array $sections): array
     {
         $normalized = [];
 
         foreach (array_slice(array_values($sections), 0, self::MAX_SECTIONS) as $section) {
-            if (! is_array($section) || ($section['type'] ?? null) !== self::TYPE) {
-                continue;
+            $clean = is_array($section) ? self::section($section) : null;
+
+            if ($clean !== null) {
+                $normalized[] = $clean;
             }
-
-            $id = is_string($section['id'] ?? null) ? preg_replace('/[^A-Za-z0-9_-]/', '', $section['id']) : '';
-            $data = is_array($section['data'] ?? null) ? $section['data'] : [];
-            $isHidden = filter_var($section['hidden'] ?? false, FILTER_VALIDATE_BOOLEAN);
-
-            $normalized[] = [
-                'id' => $id !== '' && $id !== null ? Str::limit($id, self::MAX_NAME_LENGTH, '') : self::newId(),
-                'type' => self::TYPE,
-                'data' => self::cleanFields($data),
-                ...($isHidden ? ['hidden' => true] : []),
-            ];
         }
 
         return $normalized;
     }
 
     /**
+     * One section cleaned, or null when it is not one.
+     *
+     * @param  array<mixed>  $section
+     * @return array<string, mixed>|null
+     */
+    private static function section(array $section): ?array
+    {
+        $type = $section['type'] ?? null;
+
+        if ($type !== self::TYPE && $type !== self::REF) {
+            return null;
+        }
+
+        $id = is_string($section['id'] ?? null) ? (string) preg_replace('/[^A-Za-z0-9_-]/', '', $section['id']) : '';
+        $id = $id !== '' ? Str::limit($id, self::MAX_NAME_LENGTH, '') : self::newId();
+        $hidden = filter_var($section['hidden'] ?? false, FILTER_VALIDATE_BOOLEAN) ? ['hidden' => true] : [];
+
+        if ($type === self::REF) {
+            $ref = self::ref($section['ref'] ?? null);
+
+            return $ref === null ? null : ['id' => $id, 'type' => self::REF, 'ref' => $ref, ...$hidden];
+        }
+
+        $lock = self::lock($section['lock'] ?? null);
+
+        return [
+            'id' => $id,
+            'type' => self::TYPE,
+            'data' => self::cleanFields(is_array($section['data'] ?? null) ? $section['data'] : []),
+            ...$hidden,
+            ...($lock === [] ? [] : ['lock' => $lock]),
+        ];
+    }
+
+    /**
+     * The id of a synced section: a positive whole number, or an id of
+     * letters, digits, dashes and underscores (MAX_NAME_LENGTH at most).
+     * A string of digits is read as a number.
+     */
+    public static function ref(mixed $ref): int|string|null
+    {
+        if (is_int($ref)) {
+            return $ref > 0 ? $ref : null;
+        }
+
+        if (! is_string($ref) || preg_match('/^[A-Za-z0-9_-]{1,'.self::MAX_NAME_LENGTH.'}$/', $ref) !== 1) {
+            return null;
+        }
+
+        return ctype_digit($ref) ? ((int) $ref > 0 ? (int) $ref : null) : $ref;
+    }
+
+    /**
+     * The lock keys that are true, in LOCKS order.
+     *
+     * @return array<string, true>
+     */
+    public static function lock(mixed $lock): array
+    {
+        if (! is_array($lock)) {
+            return [];
+        }
+
+        $clean = [];
+
+        foreach (self::LOCKS as $key) {
+            if (filter_var($lock[$key] ?? false, FILTER_VALIDATE_BOOLEAN)) {
+                $clean[$key] = true;
+            }
+        }
+
+        return $clean;
+    }
+
+    /**
      * The sections people see.
      *
-     * @param  list<array{id: string, type: string, data: array<string, mixed>, hidden?: true}>  $sections
-     * @return list<array{id: string, type: string, data: array<string, mixed>, hidden?: true}>
+     * @param  list<array<string, mixed>>  $sections
+     * @return list<array<string, mixed>>
      */
     public static function visible(array $sections): array
     {

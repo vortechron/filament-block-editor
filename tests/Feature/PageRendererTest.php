@@ -299,6 +299,16 @@ class PageRendererTest extends TestCase
         $this->assertStringNotContainsString('bn-media-empty', $html);
     }
 
+    public function test_it_draws_a_page_value_of_any_format_the_same(): void
+    {
+        $sections = [$this->section('one', [Blocks::heading(2, 'Satu')])];
+        $bare = $this->render($sections);
+
+        $this->assertStringContainsString('Satu', $bare);
+        $this->assertSame($bare, app(PageRenderer::class)->render(['sections' => $sections], new RenderContext));
+        $this->assertSame($bare, app(PageRenderer::class)->render(['version' => 2, 'sections' => $sections], new RenderContext));
+    }
+
     public function test_a_page_without_sections_is_empty(): void
     {
         $this->assertSame('', $this->render([]));

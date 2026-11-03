@@ -261,6 +261,66 @@ class PageContentTest extends TestCase
         $this->assertStringContainsString('too long', strtolower($tooBig->errors()->first()));
     }
 
+    public function test_a_ref_section_keeps_its_ref_and_hidden_flag_and_has_no_data(): void
+    {
+        $sections = PageContent::normalize([
+            ['id' => 'k9x8', 'type' => 'ref', 'ref' => 12, 'hidden' => true, 'data' => ['document' => []], 'lock' => ['move' => true]],
+            ['id' => 'k9x9', 'type' => 'ref', 'ref' => 'header-main'],
+            ['id' => 'k9y0', 'type' => 'ref', 'ref' => '12'],
+        ]);
+
+        $this->assertSame([
+            ['id' => 'k9x8', 'type' => 'ref', 'ref' => 12, 'hidden' => true],
+            ['id' => 'k9x9', 'type' => 'ref', 'ref' => 'header-main'],
+            ['id' => 'k9y0', 'type' => 'ref', 'ref' => 12],
+        ], $sections);
+        $this->assertSame(['rich', 'ref'], PageContent::types());
+    }
+
+    /**
+     * @return array<string, array{0: mixed}>
+     */
+    public static function badRefs(): array
+    {
+        return [
+            'zero' => [0],
+            'negative' => [-3],
+            'markup' => ['<b>x</b>'],
+            'too long' => [str_repeat('a', 41)],
+            'empty' => [''],
+            'a float' => [1.5],
+            'an array' => [[12]],
+            'missing' => [null],
+        ];
+    }
+
+    #[DataProvider('badRefs')]
+    public function test_a_ref_section_with_a_bad_ref_is_dropped(mixed $ref): void
+    {
+        $this->assertSame([], PageContent::normalize([['id' => 'r1', 'type' => 'ref', 'ref' => $ref]]));
+    }
+
+    public function test_a_lock_keeps_only_the_known_keys_that_are_true_and_is_left_out_when_empty(): void
+    {
+        [$locked, $partly, $open] = PageContent::normalize([
+            ['id' => 'a', 'type' => 'rich', 'lock' => ['move' => true, 'remove' => '1', 'content' => true, 'style' => true, 'evil' => true], 'data' => []],
+            ['id' => 'b', 'type' => 'rich', 'lock' => ['move' => false, 'style' => true], 'data' => []],
+            ['id' => 'c', 'type' => 'rich', 'lock' => 'everything', 'data' => []],
+        ]);
+
+        $this->assertSame(['move' => true, 'remove' => true, 'content' => true, 'style' => true], $locked['lock']);
+        $this->assertSame(['style' => true], $partly['lock']);
+        $this->assertArrayNotHasKey('lock', $open);
+    }
+
+    public function test_the_rules_accept_ref_sections_and_refuse_bad_refs(): void
+    {
+        $this->assertTrue(Validator::make(['sections' => [['type' => 'ref', 'ref' => 4]]], PageContent::rules())->passes());
+        $this->assertTrue(Validator::make(['sections' => [['type' => 'ref', 'ref' => 'footer']]], PageContent::rules())->passes());
+        $this->assertFalse(Validator::make(['sections' => [['type' => 'ref']]], PageContent::rules())->passes());
+        $this->assertFalse(Validator::make(['sections' => [['type' => 'ref', 'ref' => '"><script>']]], PageContent::rules())->passes());
+    }
+
     public function test_the_rules_can_be_prefixed_for_a_nested_field(): void
     {
         $rules = PageContent::rules('page.content');

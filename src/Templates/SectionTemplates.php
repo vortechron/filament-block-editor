@@ -94,7 +94,7 @@ final class SectionTemplates
         $section = $section instanceof Closure ? $section($locale) : $section;
         $normalized = PageContent::normalize([['id' => $section['id'] ?? PageContent::newId(), ...$section]]);
 
-        if ($normalized === []) {
+        if (($normalized[0]['type'] ?? null) !== PageContent::TYPE) {
             throw new InvalidArgumentException("The [{$key}] template is not a section. It needs 'type' => '".PageContent::TYPE."' and a 'data' array.");
         }
 

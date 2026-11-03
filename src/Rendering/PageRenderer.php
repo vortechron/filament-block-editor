@@ -3,10 +3,12 @@
 namespace Vortechron\FilamentBlockEditor\Rendering;
 
 use Vortechron\FilamentBlockEditor\Content\PageContent;
+use Vortechron\FilamentBlockEditor\Content\PageValue;
 use Vortechron\FilamentBlockEditor\Enums\SectionLayout;
 
 /**
- * Draws a page: a list of sections (Content\PageContent) as HTML.
+ * Draws a page as HTML: a page value of any format (Content\PageValue), or
+ * a bare list of sections (Content\PageContent).
  *
  * Each section is wrapped in `<div data-block-id="{id}">`. In a preview the
  * wrapper also carries `data-empty-label`, the words shown while the section
@@ -25,13 +27,17 @@ final class PageRenderer
     public function __construct(private readonly SectionLayoutRenderer $layouts) {}
 
     /**
-     * @param  array<mixed>  $sections  sections as stored; they are normalized first
+     * @param  array<mixed>  $sections  a page value or a list of sections, as stored; it is upgraded and normalized first
      */
     public function render(array $sections, RenderContext $context): string
     {
         $html = '';
 
-        foreach (PageContent::visible(PageContent::normalize($sections)) as $section) {
+        foreach (PageContent::visible(PageValue::normalize($sections)['sections']) as $section) {
+            if ($section['type'] !== PageContent::TYPE) {
+                continue;
+            }
+
             $html .= '<div data-block-id="'.e($section['id']).'"'
                 .($context->isPreview ? ' data-empty-label="'.e(__('filament-block-editor::preview.empty_section')).'"' : '')
                 .'>'.$this->section($section['data'], $context).'</div>';
