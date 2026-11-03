@@ -1,0 +1,110 @@
+{
+    "about": "A link that may be a dynamic value (button url, inline link href, own block link field, form redirect): Support\\Urls::linkOrReference (PHP) and linkOrReference in builder/src/blocks/button-url.ts must both give output (null: no link).",
+    "cases": [
+        {
+            "name": "a web address",
+            "input": "https://wa.me/60123456789",
+            "output": "https://wa.me/60123456789"
+        },
+        {
+            "name": "a plain http address",
+            "input": "http://a.test/x",
+            "output": "http://a.test/x"
+        },
+        {
+            "name": "a path on this site",
+            "input": "/contact",
+            "output": "/contact"
+        },
+        {
+            "name": "spaces around are trimmed",
+            "input": " /contact ",
+            "output": "/contact"
+        },
+        {
+            "name": "an anchor",
+            "input": "#about",
+            "output": "#about"
+        },
+        {
+            "name": "a mail link",
+            "input": "mailto:hello@a.test",
+            "output": "mailto:hello@a.test"
+        },
+        {
+            "name": "a phone link",
+            "input": "tel:+60123456789",
+            "output": "tel:+60123456789"
+        },
+        {
+            "name": "a shop link",
+            "input": "@site.whatsapp",
+            "output": "@site.whatsapp"
+        },
+        {
+            "name": "a shop link with two parts",
+            "input": "@site.social.facebook",
+            "output": "@site.social.facebook"
+        },
+        {
+            "name": "a key with four parts",
+            "input": "@entry.a.b.c",
+            "output": "@entry.a.b.c"
+        },
+        {
+            "name": "a key with five parts",
+            "input": "@entry.a.b.c.d",
+            "output": null
+        },
+        {
+            "name": "a key with no dot",
+            "input": "@site",
+            "output": null
+        },
+        {
+            "name": "a key in capitals",
+            "input": "@Site.phone",
+            "output": null
+        },
+        {
+            "name": "a key with a space after",
+            "input": "@site.phone ",
+            "output": null
+        },
+        {
+            "name": "javascript:",
+            "input": "javascript:alert(1)",
+            "output": null
+        },
+        {
+            "name": "another site with no scheme",
+            "input": "//evil.test",
+            "output": null
+        },
+        {
+            "name": "data:",
+            "input": "data:text/html,x",
+            "output": null
+        },
+        {
+            "name": "ftp:",
+            "input": "ftp://a.test",
+            "output": null
+        },
+        {
+            "name": "a bare word",
+            "input": "contact",
+            "output": null
+        },
+        {
+            "name": "empty",
+            "input": "",
+            "output": null
+        },
+        {
+            "name": "not text",
+            "input": 5,
+            "output": null
+        }
+    ]
+}

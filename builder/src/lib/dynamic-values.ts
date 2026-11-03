@@ -1,3 +1,4 @@
+import RULES from '@/generated/rules.json';
 import type { DynamicValueDefinition } from '@/types';
 
 /**
@@ -6,8 +7,8 @@ import type { DynamicValueDefinition } from '@/types';
  * in a link or a picture they are stored as `@key`, like `@site.whatsapp`.
  */
 
-/** Same rule as Content\DynamicValues and BlockNoteDocument. */
-export const DYNAMIC_KEY = /^[a-z][a-z0-9_]*(\.[a-z0-9_]+){1,3}$/;
+/** The key rule of Content\DynamicValues::KEY, from the exported rules. */
+export const DYNAMIC_KEY = new RegExp(`^(?:${RULES.dynamic_key})$`);
 
 const TYPES: readonly DynamicValueDefinition['type'][] = ['text', 'link', 'image'];
 

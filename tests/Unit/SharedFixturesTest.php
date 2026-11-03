@@ -6,6 +6,7 @@ use PHPUnit\Framework\Attributes\DataProvider;
 use Vortechron\FilamentBlockEditor\Styling\Advanced;
 use Vortechron\FilamentBlockEditor\Styling\CustomCss;
 use Vortechron\FilamentBlockEditor\Styling\StyleBag;
+use Vortechron\FilamentBlockEditor\Support\Urls;
 use Vortechron\FilamentBlockEditor\Tests\TestCase;
 
 /**
@@ -68,6 +69,23 @@ class SharedFixturesTest extends TestCase
     public function test_custom_css_cleans_the_same_on_both_sides(array $case): void
     {
         $this->assertSame($case['output'], CustomCss::clean($case['input']));
+    }
+
+    /**
+     * @return array<string, array{0: array<string, mixed>}>
+     */
+    public static function links(): array
+    {
+        return self::cases('links.json');
+    }
+
+    /**
+     * @param  array<string, mixed>  $case
+     */
+    #[DataProvider('links')]
+    public function test_a_link_or_a_dynamic_value_cleans_the_same_on_both_sides(array $case): void
+    {
+        $this->assertSame($case['output'], Urls::linkOrReference($case['input']));
     }
 
     /**

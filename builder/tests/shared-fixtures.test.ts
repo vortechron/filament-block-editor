@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { linkOrReference } from '../src/blocks/button-url';
 import { cleanClassNames, cleanCustomCss } from '../src/lib/advanced';
 import { cleanStyleBag } from '../src/lib/style-bag';
 
@@ -39,6 +40,15 @@ describe('custom CSS', () => {
         '$name',
         ({ input, output }) => {
             expect(cleanCustomCss(input)).toBe(output);
+        },
+    );
+});
+
+describe('a link or a dynamic value', () => {
+    it.each(cases<{ input: unknown; output: string | null }>('links.json'))(
+        '$name',
+        ({ input, output }) => {
+            expect(linkOrReference(input)).toBe(output);
         },
     );
 });

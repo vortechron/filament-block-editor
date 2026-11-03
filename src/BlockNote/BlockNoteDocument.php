@@ -199,7 +199,7 @@ final class BlockNoteDocument
         }
         if (in_array($type, self::MEDIA_TYPES, true)) {
             $url = $props['url'] ?? null;
-            $props['url'] = Urls::media($url) ?? (in_array($type, self::DYNAMIC_MEDIA_TYPES, true) ? DynamicValues::reference($url) : null) ?? '';
+            $props['url'] = (in_array($type, self::DYNAMIC_MEDIA_TYPES, true) ? Urls::mediaOrReference($url) : Urls::media($url)) ?? '';
         }
 
         if ($type === Blocks::GALLERY) {
@@ -210,7 +210,7 @@ final class BlockNoteDocument
             $props = [
                 ...$props,
                 'text' => is_string($props['text'] ?? null) ? $props['text'] : '',
-                'url' => Urls::link($props['url'] ?? null) ?? DynamicValues::reference($props['url'] ?? null) ?? '',
+                'url' => Urls::linkOrReference($props['url'] ?? null) ?? '',
                 'variant' => in_array($props['variant'] ?? null, Blocks::BUTTON_VARIANTS, true) ? $props['variant'] : Blocks::BUTTON_VARIANTS[0],
             ];
         }
@@ -281,7 +281,7 @@ final class BlockNoteDocument
 
             $inner = self::cleanContent($item['content'] ?? []);
 
-            if (Urls::link($item['href'] ?? null) === null && DynamicValues::reference($item['href'] ?? null) === null) {
+            if (Urls::linkOrReference($item['href'] ?? null) === null) {
                 array_push($clean, ...(is_array($inner) ? $inner : []));
 
                 continue;

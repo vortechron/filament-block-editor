@@ -249,8 +249,8 @@ final class Field
             'select' => $this->cleanSelect($value) ?? $fallback(),
             'toggle' => is_bool($value) || is_scalar($value) ? filter_var($value, FILTER_VALIDATE_BOOLEAN) : $fallback(),
             'number' => $this->cleanNumber($value) ?? $fallback(),
-            'image' => Urls::media($value) ?? DynamicValues::reference($value) ?? $fallback(),
-            'link' => Urls::link($value) ?? DynamicValues::reference($value) ?? $fallback(),
+            'image' => Urls::mediaOrReference($value) ?? $fallback(),
+            'link' => Urls::linkOrReference($value) ?? $fallback(),
             'list' => is_array($value) ? $this->cleanList($value) : $fallback(),
         };
     }

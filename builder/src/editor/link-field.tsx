@@ -1,5 +1,5 @@
 import { useId } from 'react';
-import { safeButtonUrl } from '@/blocks/button-url';
+import { linkOrReference } from '@/blocks/button-url';
 import { useT } from '@/lib/i18n';
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
@@ -23,8 +23,7 @@ export function LinkField({
 }) {
     const t = useT();
     const id = useId();
-    const isBroken =
-        value.trim() !== '' && !isDynamicRef(value) && safeButtonUrl(value) === null;
+    const isBroken = value.trim() !== '' && linkOrReference(value) === null;
 
     return (
         <div className="grid grid-cols-1 content-start gap-1.5">

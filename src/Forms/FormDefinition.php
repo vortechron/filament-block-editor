@@ -256,7 +256,7 @@ final class FormDefinition
         return match ($type) {
             'email' => ($to = self::email($to)) === null ? null : ['type' => 'email', 'to' => $to, 'subject' => self::words($action['subject'] ?? null, self::SUBJECT_LENGTH)],
             'whatsapp' => ($to = self::phone($to)) === null ? null : ['type' => 'whatsapp', 'to' => $to, 'message' => self::words($action['message'] ?? null, self::MESSAGE_LENGTH)],
-            'redirect' => ($url = Urls::link($url) ?? DynamicValues::reference($url)) === null ? null : ['type' => 'redirect', 'url' => $url],
+            'redirect' => ($url = Urls::linkOrReference($url)) === null ? null : ['type' => 'redirect', 'url' => $url],
             'webhook' => ($url = self::webhook($url)) === null ? null : ['type' => 'webhook', 'url' => $url],
         };
     }
