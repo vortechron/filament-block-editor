@@ -504,8 +504,11 @@ type PageBuilderAdapter = {
   this site (`/path`), not `https://`. The only at-rules allowed are `@media` and `@supports`. Every selector of
   every rule, inside those at-rules too, must start with `selector`, so custom CSS can only reach its own element
   and what is inside it. Braces hidden in a quote or behind a backslash, nested rules, `image-set()` and `src()`
-  are refused too. Plain declarations with no rule (`color: red`) apply to the element. Reason: custom CSS with an
-  attribute selector and a `url()` to another site can leak data from the page, such as a form's token.
+  are refused too. Plain declarations with no rule (`color: red`) apply to the element. A `url()` path holds only
+  plain URL characters (`A-Z a-z 0-9 . _ ~ ! $ & ( ) * + , ; = : @ % / -`, so no query string), and never starts
+  with `//` or `/\`. Selectors may not use the `+` or `~` combinators, `:root`, `:host`, `:has(`, or an attribute
+  selector on `value`. Reason: custom CSS with an attribute selector and a `url()` to another site can leak data
+  from the page, such as a form's token.
 - **A page value's `version` is clamped** to 1 … `VERSION` before the upgrade steps run (security review). A
   version below 1 or not a whole number counts as 1, one above `VERSION` counts as `VERSION`. So
   `registerUpgrade()` takes `$from` from 1 to `VERSION - 1`; other steps never run. Reason: a huge negative

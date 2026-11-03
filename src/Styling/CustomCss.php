@@ -15,7 +15,12 @@ namespace Vortechron\FilamentBlockEditor\Styling;
  * - every rule's selectors each start with `selector`, also inside
  *   `@media` and `@supports`, the only at-rules allowed; plain
  *   declarations with no rule apply to the element;
- * - `url()` only with a path on this site (`/path`); no `image-set()`,
+ * - no selector reaches past the element: no `+` or `~` combinator, no
+ *   `:root`, `:host` or `:has(`, and no attribute selector on `value`
+ *   (so CSS cannot read a form's token);
+ * - `url()` only with a path on this site (`/path`) of plain URL
+ *   characters: no backslash, space or control character, and never
+ *   `//` or `/\` at the start (browsers read both as another site); no `image-set()`,
  *   `src()`, `expression(`, `javascript:`, `behavior:` or `-moz-binding`,
  *   checked after CSS escapes are decoded;
  * - braces in balance, none hidden in a quote or behind a backslash, no
@@ -46,7 +51,7 @@ final class CustomCss
 
         $decoded = strtolower(self::decodeEscapes($css));
 
-        if (str_contains($decoded, '<') || preg_match(self::BANNED, $decoded) === 1 || ! self::urlsAllowed($decoded) || ! self::bracesShown($css, $decoded)) {
+        if (str_contains($decoded, '<') || preg_match(self::BANNED, $decoded) === 1 || ! self::urlsAllowed($css) || ! self::urlsAllowed($decoded) || ! self::bracesShown($css, $decoded)) {
             return null;
         }
 
@@ -90,16 +95,21 @@ final class CustomCss
     }
 
     /**
-     * Every url() is closed and points at a path on this site.
+     * Every url() is closed and points at a path on this site made of plain
+     * URL characters. Checked on the CSS as written and as decoded.
      */
-    private static function urlsAllowed(string $decoded): bool
+    private static function urlsAllowed(string $css): bool
     {
-        if (preg_match_all('/url\s*\(/', $decoded) !== preg_match_all('/url\s*\(\s*([\'"]?)([^\'")]*)\1\s*\)/', $decoded, $matches)) {
+        // A quoted address, or an unquoted one (which can hold no quote,
+        // bracket or space).
+        if (preg_match_all('/url\s*\(/i', $css) !== preg_match_all('/url\s*\(\s*(?:"([^"]*)"|\'([^\']*)\'|([^\'"()\s]*))\s*\)/i', $css, $matches, PREG_SET_ORDER)) {
             return false;
         }
 
-        foreach ($matches[2] as $url) {
-            if (preg_match('~^/(?!/)~', trim($url)) !== 1) {
+        foreach ($matches as $match) {
+            $url = ($match[1] ?? '').($match[2] ?? '').($match[3] ?? '');
+
+            if (preg_match('~^/[A-Za-z0-9._\~!$&()*+,;=:@%/-]*$~', $url) !== 1 || in_array($url[1] ?? '', ['/', '\\'], true)) {
                 return false;
             }
         }
@@ -192,7 +202,34 @@ final class CustomCss
         }
 
         foreach (self::selectors($prelude) as $selector) {
-            if (preg_match('/^selector(?![\w-])/', trim($selector)) !== 1) {
+            if (preg_match('/^selector(?![\w-])/', trim($selector)) !== 1 || ! self::staysInside(strtolower(self::decodeEscapes($selector)))) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Whether a selector (strings emptied, escapes decoded) only reaches
+     * the element and what is inside it.
+     */
+    private static function staysInside(string $selector): bool
+    {
+        if (preg_match('/:(?:root|host|has)/', $selector) === 1 || preg_match('/\[\s*(?:[\w*-]*\|)?value(?![\w-])/', $selector) === 1) {
+            return false;
+        }
+
+        $depth = 0;
+
+        foreach (str_split($selector) as $character) {
+            $depth += match ($character) {
+                '(', '[' => 1,
+                ')', ']' => -1,
+                default => 0,
+            };
+
+            if ($depth === 0 && ($character === '+' || $character === '~')) {
                 return false;
             }
         }
