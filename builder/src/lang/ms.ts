@@ -263,6 +263,7 @@ export default {
     'Sections': 'Seksyen',
     'See-through': 'Lut sinar',
     'Semi-bold': 'Separa tebal',
+    'Settings': 'Tetapan',
     'Several photos visitors swipe through': 'Beberapa gambar yang pelawat leret',
     'Shadow': 'Bayang',
     'Show on the page': 'Tunjuk pada halaman',

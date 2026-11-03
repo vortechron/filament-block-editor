@@ -146,3 +146,66 @@ describe('the advanced tab of a section', () => {
         expect(screen.queryByLabelText('Custom CSS')).toBeNull();
     });
 });
+
+describe('the style panel of a picked item', () => {
+    const withButton = {
+        version: 2,
+        sections: [
+            {
+                id: 'hero0001',
+                type: 'rich',
+                data: {
+                    layout: 'hero',
+                    document: [
+                        { id: 'head0001', type: 'heading', props: { level: 1 }, content: 'Selamat datang' },
+                        { id: 'btn00001', type: 'button', props: { text: 'Beli', url: '#beli' } },
+                    ],
+                },
+            },
+        ],
+    };
+
+    async function openButtonSettings() {
+        await pickSection(/Selamat datang/);
+        fireEvent.click(await screen.findByRole('button', { name: 'Change link' }));
+    }
+
+    function buttonLook(builder: Parameters<typeof firstSection>[0]): unknown {
+        const button = firstSection(builder).data.document.find(
+            (block) => block.id === 'btn00001',
+        ) as { props: { look: string } };
+
+        return button.props.look === '' ? '' : JSON.parse(button.props.look);
+    }
+
+    it('writes the style into the block’s look prop, per device', async () => {
+        const { builder } = mountBuilder({ value: withButton });
+
+        await openButtonSettings();
+        fireEvent.click(await screen.findByRole('tab', { name: 'Style' }));
+        styleDevice('Tablet');
+        fireEvent.change(screen.getByLabelText('Space inside, top'), {
+            target: { value: '8' },
+        });
+
+        expect(buttonLook(builder)).toEqual({
+            style: { tablet: { padding_top: '8px' } },
+        });
+
+        fireEvent.click(screen.getByRole('button', { name: 'Reset Space inside, top' }));
+
+        expect(buttonLook(builder)).toBe('');
+    });
+
+    it('writes advanced settings into the look prop too', async () => {
+        const { builder } = mountBuilder({ value: withButton });
+
+        await openButtonSettings();
+        fireEvent.click(await screen.findByRole('tab', { name: 'Advanced' }));
+        fireEvent.click(screen.getByRole('switch', { name: 'Hide on laptops' }));
+
+        expect(buttonLook(builder)).toEqual({
+            advanced: { hide_on: ['desktop'] },
+        });
+    });
+});

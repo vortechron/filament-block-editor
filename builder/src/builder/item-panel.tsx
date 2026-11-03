@@ -19,6 +19,7 @@ import { Input } from '@/ui/input';
 import { SegmentedChoice } from '../editor/segmented-choice';
 import { useBuilderContext } from './builder-context';
 import { describeBlock } from './item-catalog';
+import { ItemTabs } from './item-tabs';
 import { PhotoField, VideoField } from './media-field';
 import { ActionButton } from './action-button';
 import type { ItemSnapshot, SectionEditorHandle } from './types';
@@ -113,8 +114,8 @@ function readItem(
 
 /**
  * The picked item: its own settings (the button's words and link, an own
- * block's fields, a heading's size, colours, width and space) and buttons
- * to move, copy or delete it. Every change goes into the section's
+ * block's fields, a heading's size, colours, width and space), its style
+ * and advanced tabs, and buttons to move, copy or delete it. Every change goes into the section's
  * editor, and the page shows it a moment later.
  */
 export function ItemPanel() {
@@ -218,252 +219,260 @@ export function ItemPanel() {
                 </ActionButton>
             </div>
 
-            {item.type === 'button' && (
-                <ButtonFields
-                    text={propText(item.props.text, '')}
-                    url={propText(item.props.url, '')}
-                    variant={propText(item.props.variant, 'solid')}
-                    onChange={update}
-                />
-            )}
-
-            {item.type === 'ownBlock' &&
-                (ownDefinition ? (
-                    <OwnBlockForm
-                        definition={ownDefinition}
-                        values={propText(item.props.values, '{}')}
-                        onChange={(values) => update({ values })}
-                    />
-                ) : (
-                    <InfoCard>
-                        {t(
-                            'This app has no block of this kind any more. Its values are kept, and the page leaves it out.',
-                        )}
-                    </InfoCard>
-                ))}
-
-            {item.type === 'gallery' && (
-                <InfoCard>
-                    {t(
-                        'Add, remove and reorder the photos in the section. Tap Edit in the section.',
-                    )}
-                </InfoCard>
-            )}
-
-            {(item.type === 'image' || item.type === 'video') && (
-                <div className="grid grid-cols-1 gap-3">
-                    {item.type === 'image' ? (
-                        <PhotoField
+            <ItemTabs
+                key={item.id}
+                look={item.props.look}
+                onLookChange={(look) => update({ look })}
+            >
+                <div className="grid grid-cols-1 gap-5">
+                    {item.type === 'button' && (
+                        <ButtonFields
+                            text={propText(item.props.text, '')}
                             url={propText(item.props.url, '')}
-                            onChange={(url) => update({ url })}
-                        />
-                    ) : (
-                        <VideoField
-                            url={propText(item.props.url, '')}
-                            onChange={(url) => update({ url })}
+                            variant={propText(item.props.variant, 'solid')}
+                            onChange={update}
                         />
                     )}
-                    {item.type === 'image' && (
-                        <TextField
-                            label={t('Caption')}
-                            hint={t(
-                                'Shown under the photo. Also helps search engines.',
+
+                    {item.type === 'ownBlock' &&
+                        (ownDefinition ? (
+                            <OwnBlockForm
+                                definition={ownDefinition}
+                                values={propText(item.props.values, '{}')}
+                                onChange={(values) => update({ values })}
+                            />
+                        ) : (
+                            <InfoCard>
+                                {t(
+                                    'This app has no block of this kind any more. Its values are kept, and the page leaves it out.',
+                                )}
+                            </InfoCard>
+                        ))}
+
+                    {item.type === 'gallery' && (
+                        <InfoCard>
+                            {t(
+                                'Add, remove and reorder the photos in the section. Tap Edit in the section.',
                             )}
-                            value={propText(item.props.caption, '')}
-                            onChange={(caption) => update({ caption })}
-                        />
+                        </InfoCard>
+                    )}
+
+                    {(item.type === 'image' || item.type === 'video') && (
+                        <div className="grid grid-cols-1 gap-3">
+                            {item.type === 'image' ? (
+                                <PhotoField
+                                    url={propText(item.props.url, '')}
+                                    onChange={(url) => update({ url })}
+                                />
+                            ) : (
+                                <VideoField
+                                    url={propText(item.props.url, '')}
+                                    onChange={(url) => update({ url })}
+                                />
+                            )}
+                            {item.type === 'image' && (
+                                <TextField
+                                    label={t('Caption')}
+                                    hint={t(
+                                        'Shown under the photo. Also helps search engines.',
+                                    )}
+                                    value={propText(item.props.caption, '')}
+                                    onChange={(caption) => update({ caption })}
+                                />
+                            )}
+                        </div>
+                    )}
+
+                    {item.type === 'spacer' && (
+                        <Group label={t('Height')}>
+                            <SegmentedChoice
+                                label={t('Height')}
+                                value={propText(item.props.size, 'md')}
+                                options={SPACER_SIZES.map((option) => ({ ...option }))}
+                                onChange={(size) => update({ size })}
+                            />
+                        </Group>
+                    )}
+
+                    {item.type === 'card' && (
+                        <InfoCard>
+                            {t(
+                                'Type the card title in the section. Press Enter at the end of the title, then Tab, to put words inside the card.',
+                            )}
+                        </InfoCard>
+                    )}
+
+                    {item.type === 'columnList' && (
+                        <InfoCard>
+                            {t(
+                                'Drag the line between two columns in the section to change how wide they are.',
+                            )}
+                        </InfoCard>
+                    )}
+
+                    {isText && (
+                        <Group label={t('Kind of text')}>
+                            <div className="grid grid-cols-3 gap-1.5">
+                                {TEXT_TYPES.map((option) => {
+                                    const isChosen =
+                                        option.type === item.type &&
+                                        (option.level === null ||
+                                            Number(item.props.level) === option.level ||
+                                            (option.level === 2 &&
+                                                Number(item.props.level) <= 2) ||
+                                            (option.level === 3 &&
+                                                Number(item.props.level) >= 3));
+
+                                    return (
+                                        <button
+                                            key={option.value}
+                                            type="button"
+                                            aria-pressed={isChosen}
+                                            onClick={() =>
+                                                handle.changeItemType(
+                                                    item.id,
+                                                    option.type,
+                                                    option.level === null
+                                                        ? {}
+                                                        : { level: option.level },
+                                                )
+                                            }
+                                            className={cn(
+                                                'h-9 rounded-lg border px-1 text-xs font-medium transition-colors',
+                                                isChosen
+                                                    ? 'border-foreground bg-secondary text-foreground'
+                                                    : 'text-muted-foreground hover:bg-secondary/60 bg-card',
+                                            )}
+                                        >
+                                            {t(option.label)}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </Group>
+                    )}
+
+                    {item.type === 'heading' && (
+                        <Group
+                            label={t('Heading size')}
+                            hint={t(
+                                'In a Cards section, every small heading starts a new card.',
+                            )}
+                        >
+                            <SegmentedChoice
+                                label={t('Heading size')}
+                                value={propText(item.props.level, '2')}
+                                options={[1, 2, 3, 4].map((level) => ({
+                                    value: String(level),
+                                    label: `H${level}`,
+                                }))}
+                                onChange={(level) => update({ level: Number(level) })}
+                            />
+                        </Group>
+                    )}
+
+                    {'textAlignment' in item.props && (
+                        <Group label={t('Alignment')}>
+                            <div className="grid grid-cols-3 gap-1.5">
+                                {(
+                                    [
+                                        ['left', TextAlignStart, t('Left')],
+                                        ['center', TextAlignCenter, t('Centre')],
+                                        ['right', TextAlignEnd, t('Right')],
+                                    ] as const
+                                ).map(([value, AlignIcon, alignLabel]) => {
+                                    const isChosen =
+                                        (item.props.textAlignment ?? 'left') === value;
+
+                                    return (
+                                        <button
+                                            key={value}
+                                            type="button"
+                                            aria-pressed={isChosen}
+                                            aria-label={alignLabel}
+                                            title={alignLabel}
+                                            onClick={() =>
+                                                update({ textAlignment: value })
+                                            }
+                                            className={cn(
+                                                'grid h-9 place-items-center rounded-lg border transition-colors',
+                                                isChosen
+                                                    ? 'border-foreground bg-secondary text-foreground'
+                                                    : 'text-muted-foreground hover:bg-secondary/60 bg-card',
+                                            )}
+                                        >
+                                            <AlignIcon className="size-4" />
+                                        </button>
+                                    );
+                                })}
+                            </div>
+                        </Group>
+                    )}
+
+                    {isText && 'textColor' in item.props && (
+                        <Group label={t('Text colour')}>
+                            <Swatches
+                                colors={TEXT_COLORS}
+                                value={propText(item.props.textColor, 'default')}
+                                kind="text"
+                                onChange={(textColor) => update({ textColor })}
+                            />
+                        </Group>
+                    )}
+
+                    {isText && 'backgroundColor' in item.props && (
+                        <Group label={t('Highlight')}>
+                            <Swatches
+                                colors={HIGHLIGHTS}
+                                value={propText(item.props.backgroundColor, 'default')}
+                                kind="background"
+                                onChange={(backgroundColor) =>
+                                    update({ backgroundColor })
+                                }
+                            />
+                        </Group>
+                    )}
+
+                    {'width' in item.props && (
+                        <Group
+                            label={t('Width')}
+                            hint={t('Or drag the edge of the item in the section.')}
+                        >
+                            <SegmentedChoice
+                                label={t('Width')}
+                                value={nearestWidth(Number(item.props.width ?? 12))}
+                                options={WIDTHS.map((option) => ({
+                                    value: option.value,
+                                    label: t(option.label),
+                                }))}
+                                onChange={(width) => update({ width: Number(width) })}
+                            />
+                        </Group>
+                    )}
+
+                    {'spaceTop' in item.props && (
+                        <Group label={t('Space above')}>
+                            <SegmentedChoice
+                                label={t('Space above')}
+                                value={propText(item.props.spaceTop, 'none')}
+                                options={SPACES.map((option) => ({ ...option }))}
+                                onChange={(spaceTop) => update({ spaceTop })}
+                            />
+                        </Group>
+                    )}
+
+                    {'spaceBottom' in item.props && (
+                        <Group label={t('Space below')}>
+                            <SegmentedChoice
+                                label={t('Space below')}
+                                value={propText(item.props.spaceBottom, 'none')}
+                                options={SPACES.map((option) => ({ ...option }))}
+                                onChange={(spaceBottom) => update({ spaceBottom })}
+                            />
+                        </Group>
                     )}
                 </div>
-            )}
-
-            {item.type === 'spacer' && (
-                <Group label={t('Height')}>
-                    <SegmentedChoice
-                        label={t('Height')}
-                        value={propText(item.props.size, 'md')}
-                        options={SPACER_SIZES.map((option) => ({ ...option }))}
-                        onChange={(size) => update({ size })}
-                    />
-                </Group>
-            )}
-
-            {item.type === 'card' && (
-                <InfoCard>
-                    {t(
-                        'Type the card title in the section. Press Enter at the end of the title, then Tab, to put words inside the card.',
-                    )}
-                </InfoCard>
-            )}
-
-            {item.type === 'columnList' && (
-                <InfoCard>
-                    {t(
-                        'Drag the line between two columns in the section to change how wide they are.',
-                    )}
-                </InfoCard>
-            )}
-
-            {isText && (
-                <Group label={t('Kind of text')}>
-                    <div className="grid grid-cols-3 gap-1.5">
-                        {TEXT_TYPES.map((option) => {
-                            const isChosen =
-                                option.type === item.type &&
-                                (option.level === null ||
-                                    Number(item.props.level) === option.level ||
-                                    (option.level === 2 &&
-                                        Number(item.props.level) <= 2) ||
-                                    (option.level === 3 &&
-                                        Number(item.props.level) >= 3));
-
-                            return (
-                                <button
-                                    key={option.value}
-                                    type="button"
-                                    aria-pressed={isChosen}
-                                    onClick={() =>
-                                        handle.changeItemType(
-                                            item.id,
-                                            option.type,
-                                            option.level === null
-                                                ? {}
-                                                : { level: option.level },
-                                        )
-                                    }
-                                    className={cn(
-                                        'h-9 rounded-lg border px-1 text-xs font-medium transition-colors',
-                                        isChosen
-                                            ? 'border-foreground bg-secondary text-foreground'
-                                            : 'text-muted-foreground hover:bg-secondary/60 bg-card',
-                                    )}
-                                >
-                                    {t(option.label)}
-                                </button>
-                            );
-                        })}
-                    </div>
-                </Group>
-            )}
-
-            {item.type === 'heading' && (
-                <Group
-                    label={t('Heading size')}
-                    hint={t(
-                        'In a Cards section, every small heading starts a new card.',
-                    )}
-                >
-                    <SegmentedChoice
-                        label={t('Heading size')}
-                        value={propText(item.props.level, '2')}
-                        options={[1, 2, 3, 4].map((level) => ({
-                            value: String(level),
-                            label: `H${level}`,
-                        }))}
-                        onChange={(level) => update({ level: Number(level) })}
-                    />
-                </Group>
-            )}
-
-            {'textAlignment' in item.props && (
-                <Group label={t('Alignment')}>
-                    <div className="grid grid-cols-3 gap-1.5">
-                        {(
-                            [
-                                ['left', TextAlignStart, t('Left')],
-                                ['center', TextAlignCenter, t('Centre')],
-                                ['right', TextAlignEnd, t('Right')],
-                            ] as const
-                        ).map(([value, AlignIcon, alignLabel]) => {
-                            const isChosen =
-                                (item.props.textAlignment ?? 'left') === value;
-
-                            return (
-                                <button
-                                    key={value}
-                                    type="button"
-                                    aria-pressed={isChosen}
-                                    aria-label={alignLabel}
-                                    title={alignLabel}
-                                    onClick={() =>
-                                        update({ textAlignment: value })
-                                    }
-                                    className={cn(
-                                        'grid h-9 place-items-center rounded-lg border transition-colors',
-                                        isChosen
-                                            ? 'border-foreground bg-secondary text-foreground'
-                                            : 'text-muted-foreground hover:bg-secondary/60 bg-card',
-                                    )}
-                                >
-                                    <AlignIcon className="size-4" />
-                                </button>
-                            );
-                        })}
-                    </div>
-                </Group>
-            )}
-
-            {isText && 'textColor' in item.props && (
-                <Group label={t('Text colour')}>
-                    <Swatches
-                        colors={TEXT_COLORS}
-                        value={propText(item.props.textColor, 'default')}
-                        kind="text"
-                        onChange={(textColor) => update({ textColor })}
-                    />
-                </Group>
-            )}
-
-            {isText && 'backgroundColor' in item.props && (
-                <Group label={t('Highlight')}>
-                    <Swatches
-                        colors={HIGHLIGHTS}
-                        value={propText(item.props.backgroundColor, 'default')}
-                        kind="background"
-                        onChange={(backgroundColor) =>
-                            update({ backgroundColor })
-                        }
-                    />
-                </Group>
-            )}
-
-            {'width' in item.props && (
-                <Group
-                    label={t('Width')}
-                    hint={t('Or drag the edge of the item in the section.')}
-                >
-                    <SegmentedChoice
-                        label={t('Width')}
-                        value={nearestWidth(Number(item.props.width ?? 12))}
-                        options={WIDTHS.map((option) => ({
-                            value: option.value,
-                            label: t(option.label),
-                        }))}
-                        onChange={(width) => update({ width: Number(width) })}
-                    />
-                </Group>
-            )}
-
-            {'spaceTop' in item.props && (
-                <Group label={t('Space above')}>
-                    <SegmentedChoice
-                        label={t('Space above')}
-                        value={propText(item.props.spaceTop, 'none')}
-                        options={SPACES.map((option) => ({ ...option }))}
-                        onChange={(spaceTop) => update({ spaceTop })}
-                    />
-                </Group>
-            )}
-
-            {'spaceBottom' in item.props && (
-                <Group label={t('Space below')}>
-                    <SegmentedChoice
-                        label={t('Space below')}
-                        value={propText(item.props.spaceBottom, 'none')}
-                        options={SPACES.map((option) => ({ ...option }))}
-                        onChange={(spaceBottom) => update({ spaceBottom })}
-                    />
-                </Group>
-            )}
+            </ItemTabs>
         </div>
     );
 }
