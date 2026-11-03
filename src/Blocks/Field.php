@@ -4,6 +4,8 @@ namespace Vortechron\FilamentBlockEditor\Blocks;
 
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use Vortechron\FilamentBlockEditor\Content\DynamicValues;
+use Vortechron\FilamentBlockEditor\Rendering\RenderContext;
 use Vortechron\FilamentBlockEditor\Support\Urls;
 
 /**
@@ -247,10 +249,41 @@ final class Field
             'select' => $this->cleanSelect($value) ?? $fallback(),
             'toggle' => is_bool($value) || is_scalar($value) ? filter_var($value, FILTER_VALIDATE_BOOLEAN) : $fallback(),
             'number' => $this->cleanNumber($value) ?? $fallback(),
-            'image' => Urls::media($value) ?? $fallback(),
-            'link' => Urls::link($value) ?? $fallback(),
+            'image' => Urls::media($value) ?? DynamicValues::reference($value) ?? $fallback(),
+            'link' => Urls::link($value) ?? DynamicValues::reference($value) ?? $fallback(),
             'list' => is_array($value) ? $this->cleanList($value) : $fallback(),
         };
+    }
+
+    /**
+     * A cleaned value with its dynamic values resolved for drawing: an
+     * `@key` link or picture becomes the value it points at (checked by
+     * the address rules, or null), in lists too.
+     */
+    public function resolve(mixed $value, RenderContext $context): mixed
+    {
+        return match ($this->type) {
+            'image' => app(DynamicValues::class)->media($value, $context),
+            'link' => app(DynamicValues::class)->link($value, $context),
+            'list' => is_array($value) ? array_map(fn (mixed $item): mixed => is_array($item) ? self::resolveFields($this->fields, $item, $context) : $item, $value) : $value,
+            default => $value,
+        };
+    }
+
+    /**
+     * @param  list<Field>  $fields
+     * @param  array<string, mixed>  $values  cleaned values
+     * @return array<string, mixed>
+     */
+    public static function resolveFields(array $fields, array $values, RenderContext $context): array
+    {
+        foreach ($fields as $field) {
+            if (array_key_exists($field->name, $values)) {
+                $values[$field->name] = $field->resolve($values[$field->name], $context);
+            }
+        }
+
+        return $values;
     }
 
     private function scalarText(mixed $value): ?string

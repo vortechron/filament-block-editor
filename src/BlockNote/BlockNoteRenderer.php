@@ -3,6 +3,7 @@
 namespace Vortechron\FilamentBlockEditor\BlockNote;
 
 use Vortechron\FilamentBlockEditor\Blocks\BlockRegistry;
+use Vortechron\FilamentBlockEditor\Content\DynamicValues;
 use Vortechron\FilamentBlockEditor\Rendering\RenderContext;
 use Vortechron\FilamentBlockEditor\Styling\StyleSheet;
 use Vortechron\FilamentBlockEditor\Support\Urls;
@@ -18,6 +19,12 @@ use Vortechron\FilamentBlockEditor\Support\Urls;
  * (Urls::media). Unknown block types are skipped. The package's own blocks
  * (button, gallery) are drawn here; an `ownBlock` is drawn by the app's
  * Blocks\BlockRegistry.
+ *
+ * Dynamic values (Content\DynamicValues) are resolved here: dynamic text
+ * is drawn as its escaped value (in the builder inside
+ * `<span class="bn-dynamic" data-dynamic="{key}">`, with the value's label
+ * when it is empty), and `@key` links and pictures are resolved, then
+ * checked by the same address rules.
  *
  * A block's `look` prop (BlockLook) adds its class and its rules to the
  * page's StyleSheet; drawn on its own, render() puts the <style> in front.
@@ -533,7 +540,7 @@ final class BlockNoteRenderer
      */
     private function image(array $props): string
     {
-        $url = Urls::media($props['url'] ?? null);
+        $url = $this->media($props['url'] ?? null);
 
         if ($url === null) {
             return $this->emptyMedia('photo');
@@ -554,7 +561,7 @@ final class BlockNoteRenderer
      */
     private function video(array $props): string
     {
-        $url = Urls::media($props['url'] ?? null);
+        $url = $this->media($props['url'] ?? null);
 
         if ($url === null) {
             return $this->emptyMedia('video');
@@ -628,7 +635,7 @@ final class BlockNoteRenderer
 
         $variant = in_array($props['variant'] ?? null, Blocks::BUTTON_VARIANTS, true) ? $props['variant'] : Blocks::BUTTON_VARIANTS[0];
         $class = 'bn-button bn-button-'.$variant;
-        $url = Urls::link($props['url'] ?? null);
+        $url = $this->link($props['url'] ?? null);
 
         return $url === null
             ? '<span class="'.$class.'">'.e($text).'</span>'
@@ -723,8 +730,14 @@ final class BlockNoteRenderer
                 continue;
             }
 
+            if (($item['type'] ?? null) === 'dynamic') {
+                $html .= $this->dynamic($item);
+
+                continue;
+            }
+
             if (($item['type'] ?? null) === 'link') {
-                $url = Urls::link($item['href'] ?? null);
+                $url = $this->link($item['href'] ?? null);
                 $inner = $this->inline($item['content'] ?? []);
                 $html .= $url === null ? $inner : '<a href="'.e($url).'" target="_blank" rel="noopener">'.$inner.'</a>';
 
@@ -735,6 +748,46 @@ final class BlockNoteRenderer
         }
 
         return $html;
+    }
+
+    /**
+     * A dynamic value in the text, escaped. Visitors get nothing when it is
+     * empty; the builder marks it, and shows its label when it is empty.
+     *
+     * @param  array<mixed>  $item
+     */
+    private function dynamic(array $item): string
+    {
+        $key = $item['props']['key'] ?? null;
+
+        if (! DynamicValues::isKey($key)) {
+            return '';
+        }
+
+        $values = app(DynamicValues::class);
+        $value = $values->resolve($key, $this->context);
+
+        if (! $this->forBuilder) {
+            return $value === null ? '' : nl2br(e($value), false);
+        }
+
+        return '<span class="bn-dynamic" data-dynamic="'.e($key).'">'.nl2br(e($value ?? $values->label($key) ?? $key), false).'</span>';
+    }
+
+    /**
+     * A link address, its dynamic value resolved, through Urls::link().
+     */
+    private function link(mixed $url): ?string
+    {
+        return app(DynamicValues::class)->link($url, $this->context);
+    }
+
+    /**
+     * A picture or video address, its dynamic value resolved, through Urls::media().
+     */
+    private function media(mixed $url): ?string
+    {
+        return app(DynamicValues::class)->media($url, $this->context);
     }
 
     /**

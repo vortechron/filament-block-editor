@@ -5,9 +5,9 @@ namespace Vortechron\FilamentBlockEditor\Rendering;
 use Vortechron\FilamentBlockEditor\BlockNote\BlockNoteDocument;
 use Vortechron\FilamentBlockEditor\BlockNote\BlockNoteRenderer;
 use Vortechron\FilamentBlockEditor\BlockNote\Blocks;
+use Vortechron\FilamentBlockEditor\Content\DynamicValues;
 use Vortechron\FilamentBlockEditor\Enums\SectionLayout;
 use Vortechron\FilamentBlockEditor\Styling\StyleSheet;
-use Vortechron\FilamentBlockEditor\Support\Urls;
 
 /**
  * Draws a section's document in its layout (Enums\SectionLayout). It only
@@ -313,7 +313,7 @@ final class SectionLayoutRenderer
 
         return $this->forBuilder || match ($type) {
             Blocks::GALLERY => Blocks::galleryUrls($props['images'] ?? null) !== [],
-            default => Urls::media($props['url'] ?? null) !== null,
+            default => app(DynamicValues::class)->media($props['url'] ?? null, $this->context) !== null,
         };
     }
 

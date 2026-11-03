@@ -4,6 +4,7 @@ namespace Vortechron\FilamentBlockEditor\BlockNote;
 
 use Illuminate\Support\Str;
 use Vortechron\FilamentBlockEditor\Blocks\BlockRegistry;
+use Vortechron\FilamentBlockEditor\Content\DynamicValues;
 use Vortechron\FilamentBlockEditor\Styling\Look;
 use Vortechron\FilamentBlockEditor\Support\Urls;
 
@@ -17,6 +18,11 @@ use Vortechron\FilamentBlockEditor\Support\Urls;
  * is missing. clean() puts that back. It also keeps addresses safe: picture,
  * video, file and link addresses that are not allowed are emptied or
  * unwrapped before they are stored.
+ *
+ * A dynamic value (Content\DynamicValues) is kept: the inline content
+ * `{ "type": "dynamic", "props": { "key": "site.phone" } }`, and a
+ * reference such as `@site.whatsapp` in a link or `@entry.photo` in an
+ * image or video address. The renderer resolves and checks them.
  *
  * Every block may carry a `look` prop (Styling\Look): it is cleaned and
  * stored again as compact JSON, or "" when empty. A block with a look
@@ -35,6 +41,11 @@ final class BlockNoteDocument
      * Block types whose `url` prop is a picture, video, audio or file.
      */
     private const MEDIA_TYPES = ['image', 'video', 'audio', 'file', 'card'];
+
+    /**
+     * Media blocks whose address may be a dynamic value (`@entry.photo`).
+     */
+    private const DYNAMIC_MEDIA_TYPES = ['image', 'video'];
 
     /**
      * The longest an own block's kind may be.
@@ -185,7 +196,8 @@ final class BlockNoteDocument
             $props['look'] = Look::clean($props['look']);
         }
         if (in_array($type, self::MEDIA_TYPES, true)) {
-            $props['url'] = Urls::media($props['url'] ?? null) ?? '';
+            $url = $props['url'] ?? null;
+            $props['url'] = Urls::media($url) ?? (in_array($type, self::DYNAMIC_MEDIA_TYPES, true) ? DynamicValues::reference($url) : null) ?? '';
         }
 
         if ($type === Blocks::GALLERY) {
@@ -196,7 +208,7 @@ final class BlockNoteDocument
             $props = [
                 ...$props,
                 'text' => is_string($props['text'] ?? null) ? $props['text'] : '',
-                'url' => Urls::link($props['url'] ?? null) ?? '',
+                'url' => Urls::link($props['url'] ?? null) ?? DynamicValues::reference($props['url'] ?? null) ?? '',
                 'variant' => in_array($props['variant'] ?? null, Blocks::BUTTON_VARIANTS, true) ? $props['variant'] : Blocks::BUTTON_VARIANTS[0],
             ];
         }
@@ -245,6 +257,16 @@ final class BlockNoteDocument
         $clean = [];
 
         foreach ($content as $item) {
+            if (is_array($item) && ($item['type'] ?? null) === 'dynamic') {
+                $key = $item['props']['key'] ?? null;
+
+                if (DynamicValues::isKey($key)) {
+                    $clean[] = ['type' => 'dynamic', 'props' => ['key' => $key]];
+                }
+
+                continue;
+            }
+
             if (! is_array($item) || ($item['type'] ?? null) !== 'link') {
                 $clean[] = $item;
 
@@ -253,7 +275,7 @@ final class BlockNoteDocument
 
             $inner = self::cleanContent($item['content'] ?? []);
 
-            if (Urls::link($item['href'] ?? null) === null) {
+            if (Urls::link($item['href'] ?? null) === null && DynamicValues::reference($item['href'] ?? null) === null) {
                 array_push($clean, ...(is_array($inner) ? $inner : []));
 
                 continue;
