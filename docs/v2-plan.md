@@ -506,7 +506,7 @@ type PageBuilderAdapter = {
   and what is inside it. Braces hidden in a quote or behind a backslash, nested rules, `image-set()` and `src()`
   are refused too. Plain declarations with no rule (`color: red`) apply to the element. A `url()` path holds only
   plain URL characters (`A-Z a-z 0-9 . _ ~ ! $ & ( ) * + , ; = : @ % / -`, so no query string), and never starts
-  with `//` or `/\`. Selectors may not use the `+` or `~` combinators, `:root`, `:host`, `:has(`, or an attribute
+  with `//`. No backslash is allowed anywhere (no CSS escapes), so nothing can hide behind one. Selectors may not use the `+` or `~` combinators, `:root`, `:host`, `:has(`, or an attribute
   selector on `value`. Reason: custom CSS with an attribute selector and a `url()` to another site can leak data
   from the page, such as a form's token.
 - **`Kit::css()` maps the old `--sf-*` names only for kit values that differ from the package defaults.** The

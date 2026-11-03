@@ -11,7 +11,8 @@ namespace Vortechron\FilamentBlockEditor\Styling;
  * reach other elements (an attribute selector on the form's token, plus a
  * url()) can leak data. clean() drops the whole value when any check fails:
  *
- * - no `<` at all, so it can never close the <style> it is printed in;
+ * - no `<` and no backslash at all: it can never close the <style> it is
+ *   printed in, and no CSS escape can hide a word, a brace or a bracket;
  * - every rule's selectors each start with `selector`, also inside
  *   `@media` and `@supports`, the only at-rules allowed; plain
  *   declarations with no rule apply to the element;
@@ -20,11 +21,10 @@ namespace Vortechron\FilamentBlockEditor\Styling;
  *   (so CSS cannot read a form's token);
  * - `url()` only with a path on this site (`/path`) of plain URL
  *   characters: no backslash, space or control character, and never
- *   `//` or `/\` at the start (browsers read both as another site); no `image-set()`,
- *   `src()`, `expression(`, `javascript:`, `behavior:` or `-moz-binding`,
- *   checked after CSS escapes are decoded;
- * - braces in balance, none hidden in a quote or behind a backslash, no
- *   nested rules, and at most MAX_LENGTH characters.
+ *   `//` at the start (browsers read it as another site); no `image-set()`,
+ *   `src()`, `expression(`, `javascript:`, `behavior:` or `-moz-binding`;
+ * - braces in balance, none hidden in a quote, no nested rules, and at most
+ *   MAX_LENGTH characters.
  */
 final class CustomCss
 {
@@ -39,7 +39,7 @@ final class CustomCss
 
     public static function clean(mixed $css): ?string
     {
-        if (! is_string($css) || strlen($css) > self::MAX_LENGTH || str_contains($css, '<')) {
+        if (! is_string($css) || strlen($css) > self::MAX_LENGTH || strpbrk($css, '<\\') !== false) {
             return null;
         }
 
@@ -49,9 +49,7 @@ final class CustomCss
             return null;
         }
 
-        $decoded = strtolower(self::decodeEscapes($css));
-
-        if (str_contains($decoded, '<') || preg_match(self::BANNED, $decoded) === 1 || ! self::urlsAllowed($css) || ! self::urlsAllowed($decoded) || ! self::bracesShown($css, $decoded)) {
+        if (preg_match(self::BANNED, strtolower($css)) === 1 || ! self::urlsAllowed($css)) {
             return null;
         }
 
@@ -84,19 +82,8 @@ final class CustomCss
     }
 
     /**
-     * CSS escapes (`\73`, `\:`) as the characters they stand for, so a
-     * banned word cannot hide behind them.
-     */
-    private static function decodeEscapes(string $css): string
-    {
-        $css = (string) preg_replace_callback('/\\\\([0-9a-fA-F]{1,6})\s?/', fn (array $match): string => mb_chr(hexdec($match[1]) ?: 0xFFFD) ?: '', $css);
-
-        return (string) preg_replace('/\\\\(.)/s', '$1', $css);
-    }
-
-    /**
      * Every url() is closed and points at a path on this site made of plain
-     * URL characters. Checked on the CSS as written and as decoded.
+     * URL characters.
      */
     private static function urlsAllowed(string $css): bool
     {
@@ -109,23 +96,12 @@ final class CustomCss
         foreach ($matches as $match) {
             $url = ($match[1] ?? '').($match[2] ?? '').($match[3] ?? '');
 
-            if (preg_match('~^/[A-Za-z0-9._\~!$&()*+,;=:@%/-]*$~', $url) !== 1 || in_array($url[1] ?? '', ['/', '\\'], true)) {
+            if (preg_match('~^/[A-Za-z0-9._\~!$&()*+,;=:@%/-]*$~', $url) !== 1 || ($url[1] ?? '') === '/') {
                 return false;
             }
         }
 
         return true;
-    }
-
-    /**
-     * No brace comes from an escape (`\}`, `\7d`): the braces seen are the
-     * braces the browser reads.
-     */
-    private static function bracesShown(string $css, string $decoded): bool
-    {
-        return preg_match('/\\\\[{}]/', $css) !== 1
-            && substr_count($css, '{') === substr_count($decoded, '{')
-            && substr_count($css, '}') === substr_count($decoded, '}');
     }
 
     /**
@@ -202,7 +178,7 @@ final class CustomCss
         }
 
         foreach (self::selectors($prelude) as $selector) {
-            if (preg_match('/^selector(?![\w-])/', trim($selector)) !== 1 || ! self::staysInside(strtolower(self::decodeEscapes($selector)))) {
+            if (preg_match('/^selector(?![\w-])/', trim($selector)) !== 1 || ! self::staysInside(strtolower($selector))) {
                 return false;
             }
         }
@@ -211,8 +187,8 @@ final class CustomCss
     }
 
     /**
-     * Whether a selector (strings emptied, escapes decoded) only reaches
-     * the element and what is inside it.
+     * Whether a selector (strings emptied, as written) only reaches the
+     * element and what is inside it.
      */
     private static function staysInside(string $selector): bool
     {
