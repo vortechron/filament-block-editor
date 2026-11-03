@@ -497,3 +497,36 @@ type PageBuilderAdapter = {
 ## Deviations
 
 (Tracks write changes to this contract here, with the reason.)
+
+### Track B1 (builder: design), 3 November 2026
+
+1. **The builder puts its section editor together itself.** blocknote-kit's `BlockEditor` makes its schema
+   inside, and its columns (`column`, `columnList`) can not get one more prop from outside. The builder now builds
+   the same editor from the kit's exported parts (`builder/src/editor/page-block-editor.tsx`) with its own schema
+   (`page-schema.ts`), so every block has `look`. It leaves out the kit's media library and font picker, which the
+   builder never used. The kit itself is unchanged. Better long-term fix: a kit release whose `createKitSchema`
+   takes extra props for every block; then `page-block-editor.tsx` can go.
+2. **The kit's card and spacer get `look` on their shared config.** They are React blocks, and BlockNote draws a
+   React block with the prop schema it was made with, not the schema's copy (a copy crashes the editor). The
+   builder can not remake them, so `addLookToKitReactBlock()` adds the prop to their config object once, at
+   schema creation. The page's own React blocks (gallery, button, own block) declare `look` themselves. **Track
+   B2: the form block must put `...LOOK_PROP_SCHEMA` in its own `propSchema`.**
+3. **Every block in a saved document now carries `look: ""`.** BlockNote writes every prop, so blocks the builder
+   touched have the key. The page draws the same.
+4. **Font values in a style bag:** the builder accepts `kit:heading`, `kit:body` and any font key that matches
+   `[a-z0-9][a-z0-9_-]{0,39}` other than `theme`, because it may not know the host's config fonts. The server
+   checks the real list.
+5. **A `ref` section with a bad `ref`** (not a positive whole number or 1 to 40 characters of text) is dropped when
+   the builder reads the value. It is junk the server would refuse.
+6. **A copy made by a non-developer has no `lock` and no `advanced.css`** in the builder, the same as the server's
+   guard does for new elements, so the builder shows it as it will be saved.
+7. **Section tabs:** the old "Style" tab (layout, background, presets) is now "Look" ("Rupa"). The new "Style"
+   ("Gaya") tab is the style bag panel, then "Advanced" ("Lanjutan"). A picked item gets "Settings", "Style" and
+   "Advanced". A `style` lock hides Look, Style and Advanced for non-developers.
+8. **Saving the kit:** the design panel has its own "Save design" button, and the top bar Save also saves the kit
+   when it has unsaved changes. Kit save errors show in the same notice as page errors, titled "Your design was
+   not saved".
+9. **Hover's base value is the laptop value.** A device without its own value shows where its value comes from:
+   phone from tablet, then laptop; tablet and hover from laptop.
+10. **`content` lock for non-developers:** the section's words editor is not opened at all, so its items can not
+    be picked or added to. A "Locked" ("Dikunci") note shows instead.
