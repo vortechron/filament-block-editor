@@ -14,7 +14,7 @@ import { MobileDock } from './builder/mobile-dock';
 import { PreviewDialog } from './builder/preview-dialog';
 import { SaveErrors, sectionIndexOfError } from './builder/save-errors';
 import { Sidebar } from './builder/sidebar';
-import type { Device } from './builder/types';
+import type { Device, SidebarPanel } from './builder/types';
 import { useBuilder } from './builder/use-builder';
 import { useBuilderShortcuts } from './builder/use-builder-shortcuts';
 import { ConfirmDialog } from './editor/confirm-dialog';
@@ -117,7 +117,10 @@ function Builder({
     // Tablets get the sidebar too. Phones get the bar at the bottom.
     const isDesktop = useMediaQuery('(min-width: 768px)');
 
-    useUnsavedChangesGuard(form.isDirty);
+    const hasUnsavedChanges = form.isDirty || kit.isDirty;
+    const isSaving = form.processing || kit.processing;
+
+    useUnsavedChangesGuard(hasUnsavedChanges);
 
     // On a phone the sheet covers the lower part of the page. When it opens
     // for a section or an item, bring that part up above it.
@@ -148,6 +151,25 @@ function Builder({
         }
     }
 
+    function revealPanel(panel: SidebarPanel) {
+        builder.openPanel(panel);
+
+        if (!isDesktop) {
+            setIsDockOpen(true);
+        }
+    }
+
+    /** Saves the page and the design kit, whichever has changes. */
+    function saveEverything() {
+        if (kit.isDirty) {
+            void kit.save();
+        }
+
+        if (form.isDirty) {
+            saveAndShowProblems();
+        }
+    }
+
     function saveAndShowProblems() {
         void form.save({
             onError: (errors) => {
@@ -164,8 +186,8 @@ function Builder({
 
     useBuilderShortcuts({
         onSave: () => {
-            if (form.isDirty && !form.processing) {
-                saveAndShowProblems();
+            if (hasUnsavedChanges && !isSaving) {
+                saveEverything();
             }
         },
         onEscape: builder.clearSelection,
@@ -174,13 +196,27 @@ function Builder({
     const sidebar = (
         <Sidebar onDone={isDesktop ? undefined : () => setIsDockOpen(false)} />
     );
+    const hasPageErrors = Object.keys(form.errors).length > 0;
+    const hasKitErrors = Object.keys(kit.errors).length > 0;
     const notices =
-        Object.keys(form.errors).length > 0 ? (
-            <SaveErrors
-                errors={form.errors}
-                onShowSection={showSection}
-                onDismiss={form.clearErrors}
-            />
+        hasPageErrors || hasKitErrors ? (
+            <>
+                {hasPageErrors && (
+                    <SaveErrors
+                        errors={form.errors}
+                        onShowSection={showSection}
+                        onDismiss={form.clearErrors}
+                    />
+                )}
+                {hasKitErrors && (
+                    <SaveErrors
+                        title={t('Your design was not saved')}
+                        errors={kit.errors}
+                        onShowSection={showSection}
+                        onDismiss={kit.clearErrors}
+                    />
+                )}
+            </>
         ) : null;
 
     return (
@@ -195,13 +231,7 @@ function Builder({
                     kit,
                     isDesktop,
                     onDeleteSection: setDeleteId,
-                    revealPanel: (panel) => {
-                        builder.openPanel(panel);
-
-                        if (!isDesktop) {
-                            setIsDockOpen(true);
-                        }
-                    },
+                    revealPanel,
                     isSheetOpen: !isDesktop && isDockOpen,
                 }}
             >
@@ -214,11 +244,18 @@ function Builder({
                             device={device}
                             onDeviceChange={setDevice}
                             isDesktop={isDesktop}
-                            hasUnsavedChanges={form.isDirty}
-                            recentlySaved={form.recentlySuccessful}
-                            isSaving={form.processing}
+                            hasUnsavedChanges={hasUnsavedChanges}
+                            recentlySaved={
+                                form.recentlySuccessful || kit.recentlySuccessful
+                            }
+                            isSaving={isSaving}
                             onPreview={() => setIsPreviewOpen(true)}
-                            onSave={saveAndShowProblems}
+                            onDesign={
+                                kit.kit === null
+                                    ? undefined
+                                    : () => revealPanel({ name: 'design' })
+                            }
+                            onSave={saveEverything}
                         />
                         <div className="flex min-h-0 flex-1">
                             {isDesktop && (
@@ -252,6 +289,7 @@ function Builder({
                 open={isPreviewOpen}
                 onOpenChange={setIsPreviewOpen}
                 draft={JSON.stringify(form.data)}
+                kit={kit.kit === null ? null : JSON.stringify(kit.kit)}
                 initialDevice={device}
                 isDesktop={isDesktop}
             />

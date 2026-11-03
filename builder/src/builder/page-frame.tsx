@@ -62,6 +62,7 @@ const FRAME_STYLES = `
  */
 export function PageFrame({
     draft,
+    kit = null,
     pickedSectionId,
     pickedItemPath,
     sectionLabels,
@@ -70,6 +71,8 @@ export function PageFrame({
 }: {
     /** The page value as JSON. */
     draft: string;
+    /** The design kit as JSON, with changes not saved yet, or null. */
+    kit?: string | null;
     pickedSectionId: string | null;
     /** The picked item's place in its section, as the page marks it. */
     pickedItemPath: string | null;
@@ -83,7 +86,7 @@ export function PageFrame({
     onPick: (pick: FramePick) => void;
 }) {
     const t = useT();
-    const { html, isUpdating, isStale } = useDraftPreview(draft);
+    const { html, isUpdating, isStale } = useDraftPreview(draft, kit);
     const frameA = useRef<HTMLIFrameElement>(null);
     const frameB = useRef<HTMLIFrameElement>(null);
     const [sources, setSources] = useState<[string | null, string | null]>([

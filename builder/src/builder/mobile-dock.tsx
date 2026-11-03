@@ -45,7 +45,7 @@ export function MobileDock({
     const { panel, selection } = builder;
     // An item's settings are a form, so they get more room. Elsewhere the
     // page stays in sight above the sheet.
-    const isTall = panel.name === 'item';
+    const isTall = panel.name === 'item' || panel.name === 'design';
     const tabs: DockTab[] = [
         {
             key: 'add',

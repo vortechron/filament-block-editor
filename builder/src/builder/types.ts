@@ -18,7 +18,8 @@ export type HomePanelName = 'add' | 'layers';
 export type SidebarPanel =
     | { name: HomePanelName }
     | { name: 'section' }
-    | { name: 'item' };
+    | { name: 'item' }
+    | { name: 'design' };
 
 /**
  * The picked section's tabs: its words and items, its simple look

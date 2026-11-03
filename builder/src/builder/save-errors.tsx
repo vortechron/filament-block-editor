@@ -13,10 +13,13 @@ export function sectionIndexOfError(key: string): number | null {
  * section says which one, and a tap opens it.
  */
 export function SaveErrors({
+    title,
     errors,
     onShowSection,
     onDismiss,
 }: {
+    /** The first line. "Your changes were not saved" when left out. */
+    title?: string;
     errors: Record<string, string>;
     onShowSection: (index: number) => void;
     onDismiss: () => void;
@@ -35,7 +38,7 @@ export function SaveErrors({
         >
             <p className="text-destructive flex items-center gap-2 font-semibold">
                 <CircleAlert className="size-4 shrink-0" />
-                {t('Your changes were not saved')}
+                {title ?? t('Your changes were not saved')}
             </p>
             <ul className="grid grid-cols-1 gap-1 pl-6 text-xs">
                 {entries.slice(0, 6).map(([key, message]) => {

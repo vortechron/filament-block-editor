@@ -16,7 +16,16 @@ const size = { kind: 'length' } as const;
 const length = { kind: 'length', allowNegative: true } as const;
 const color = { kind: 'color' } as const;
 
-const WEIGHTS = [
+/** The ways to turn letters into capitals. */
+export const TRANSFORMS = [
+    { value: 'none', label: 'As typed' },
+    { value: 'uppercase', label: 'ALL CAPITALS' },
+    { value: 'lowercase', label: 'all small letters' },
+    { value: 'capitalize', label: 'First Letter Of Each Word' },
+] as const;
+
+/** Font weights by name, 300 to 900. */
+export const WEIGHTS = [
     { value: '300', label: 'Light' },
     { value: '400', label: 'Normal' },
     { value: '500', label: 'Medium' },
@@ -83,15 +92,7 @@ export const STYLE_GROUPS: StyleGroup[] = [
             {
                 key: 'text_transform',
                 label: 'Capital letters',
-                control: {
-                    kind: 'select',
-                    options: [
-                        { value: 'none', label: 'As typed' },
-                        { value: 'uppercase', label: 'ALL CAPITALS' },
-                        { value: 'lowercase', label: 'all small letters' },
-                        { value: 'capitalize', label: 'First Letter Of Each Word' },
-                    ],
-                },
+                control: { kind: 'select', options: TRANSFORMS },
             },
             {
                 key: 'text_align',

@@ -40,8 +40,9 @@ const DRAWN_WIDTH = { desktop: 1280, tablet: 820 } as const;
 export function Canvas({ notices }: { notices: ReactNode }) {
     const t = useT();
     const { viewUrl } = useHost();
-    const { builder, form, device, isDesktop, revealPanel } =
+    const { builder, form, device, isDesktop, revealPanel, kit } =
         useBuilderContext();
+    const kitDraft = kit.kit === null ? null : JSON.stringify(kit.kit);
     const { blocks, selection } = builder;
     const showsFrame = isDesktop;
     const pageBox = useRef<HTMLDivElement>(null);
@@ -138,6 +139,7 @@ export function Canvas({ notices }: { notices: ReactNode }) {
                         ) : (
                             <PageFrame
                                 draft={JSON.stringify(form.data)}
+                                kit={kitDraft}
                                 pickedSectionId={selection.sectionId}
                                 pickedItemPath={pickedItemPath}
                                 sectionLabels={sectionLabels}

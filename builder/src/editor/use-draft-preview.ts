@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useHost } from '@/lib/host';
 import { normalizeValue } from '@/lib/page-value';
-import type { PageValue } from '@/types';
+import type { Kit, PageValue } from '@/types';
 
 /** Wait this long after the last key press before asking for a new preview. */
 const TYPING_PAUSE_MS = 450;
@@ -20,9 +20,14 @@ export type DraftPreview = {
  * to an older request is thrown away. Nothing is saved.
  *
  * `draft` is the page value as a JSON string, so a new request only
- * starts when something in it really changed.
+ * starts when something in it really changed. The same goes for `kit`,
+ * the design kit, which is sent along so its unsaved changes show.
  */
-export function useDraftPreview(draft: string): DraftPreview {
+export function useDraftPreview(
+    draft: string,
+    /** The design kit as JSON, with changes not saved yet, or null. */
+    kit: string | null = null,
+): DraftPreview {
     const { adapter } = useHost();
     const [html, setHtml] = useState<string | null>(null);
     const [isUpdating, setIsUpdating] = useState(true);
@@ -36,11 +41,17 @@ export function useDraftPreview(draft: string): DraftPreview {
                 setIsUpdating(true);
 
                 Promise.resolve()
-                    .then(() =>
-                        adapter.preview(
-                            normalizeValue(JSON.parse(draft) as PageValue),
-                        ),
-                    )
+                    .then(() => {
+                        const value = normalizeValue(
+                            JSON.parse(draft) as PageValue,
+                        );
+
+                        return kit === null
+                            ? adapter.preview(value)
+                            : adapter.preview(value, {
+                                  kit: JSON.parse(kit) as Kit,
+                              });
+                    })
                     .then((page) => {
                         if (!isCurrent) {
                             return;
@@ -73,7 +84,7 @@ export function useDraftPreview(draft: string): DraftPreview {
             isCurrent = false;
             window.clearTimeout(timer);
         };
-    }, [adapter, draft]);
+    }, [adapter, draft, kit]);
 
     return { html, isUpdating, isStale };
 }

@@ -10,6 +10,7 @@ import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/tooltip';
 import { AddPanel } from './add-panel';
+import { DesignPanel } from './kit/design-panel';
 import { useBuilderContext } from './builder-context';
 import { describeBlock } from './item-catalog';
 import { ItemPanel } from './item-panel';
@@ -51,6 +52,7 @@ export function Sidebar({
             >
                 {panel.name === 'add' && <AddPanel onAdded={onDone} />}
                 {panel.name === 'layers' && <LayersPanel onPicked={onDone} />}
+                {panel.name === 'design' && <DesignPanel />}
                 {isSection && (
                     // The section's words stay open under an item's
                     // settings, which change the item through them.
@@ -110,10 +112,21 @@ function SidebarHeader() {
     const sectionIndex = blocks.findIndex(
         (block) => block.id === selection.sectionId,
     );
-    const section = sectionIndex === -1 ? null : blocks[sectionIndex];
+    const section =
+        sectionIndex === -1 || panel.name === 'design'
+            ? null
+            : blocks[sectionIndex];
+    const goHome = () =>
+        panel.name === 'design'
+            ? builder.openPanel({ name: builder.homePanel })
+            : builder.clearSelection();
     const crumbs: { label: string; onClick?: () => void }[] = [
-        { label: t('Page'), onClick: () => builder.clearSelection() },
+        { label: t('Page'), onClick: goHome },
     ];
+
+    if (panel.name === 'design') {
+        crumbs.push({ label: t('Design') });
+    }
 
     if (section) {
         const sectionLabel = `${sectionIndex + 1}. ${sectionTitle(section, t)}`;
@@ -146,7 +159,7 @@ function SidebarHeader() {
         }
     }
 
-    const back = crumbs.at(-2)?.onClick ?? (() => builder.clearSelection());
+    const back = crumbs.at(-2)?.onClick ?? goHome;
     const current = crumbs[crumbs.length - 1];
     const trail = crumbs.slice(0, -1);
 

@@ -5,6 +5,7 @@ import {
     Eye,
     LoaderCircle,
     Monitor,
+    Palette,
     Smartphone,
     Tablet,
 } from 'lucide-react';
@@ -19,7 +20,8 @@ import type { Device } from './types';
 /**
  * The bar across the top of the page builder: back to the host's list
  * (when it gave a back link), the page title, laptop, tablet or phone view, then
- * Preview, View page (when it gave a page link) and Save.
+ * Design (when the host has a design kit), Preview, View page (when it
+ * gave a page link) and Save.
  */
 export function BuilderTopBar({
     device,
@@ -29,6 +31,7 @@ export function BuilderTopBar({
     recentlySaved,
     isSaving,
     onPreview,
+    onDesign,
     onSave,
 }: {
     device: Device;
@@ -38,6 +41,8 @@ export function BuilderTopBar({
     recentlySaved: boolean;
     isSaving: boolean;
     onPreview: () => void;
+    /** Opens the design panel. Left out, there is no design button. */
+    onDesign?: () => void;
     onSave: () => void;
 }) {
     const t = useT();
@@ -112,6 +117,21 @@ export function BuilderTopBar({
                         hasUnsavedChanges={hasUnsavedChanges}
                         recentlySaved={recentlySaved}
                     />
+                )}
+
+                {onDesign && (
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size={isDesktop ? 'sm' : 'icon'}
+                        onClick={onDesign}
+                        aria-label={t('Design')}
+                    >
+                        <Palette />
+                        {isDesktop && (
+                            <span className="hidden lg:inline">{t('Design')}</span>
+                        )}
+                    </Button>
                 )}
 
                 <Button
