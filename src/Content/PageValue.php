@@ -31,7 +31,10 @@ final class PageValue
     /**
      * A format 2 value from any older value, sections not cleaned yet. A
      * JSON string is read first; anything that is not a page is an empty
-     * page. A value from a newer version is left at VERSION.
+     * page. A version below 1, or one that is not a whole number, counts
+     * as 1; a version above VERSION counts as VERSION. So a stored or
+     * posted version can never make the steps below run more than
+     * VERSION - 1 times.
      *
      * @return array<string, mixed>
      */
@@ -49,7 +52,7 @@ final class PageValue
             $raw = ['version' => 1, 'sections' => $raw];
         }
 
-        $version = is_int($raw['version'] ?? null) ? $raw['version'] : 1;
+        $version = is_int($raw['version'] ?? null) ? max(1, min(self::VERSION, $raw['version'])) : 1;
         $value = $raw;
 
         while ($version < self::VERSION) {
@@ -87,14 +90,15 @@ final class PageValue
     {
         return [
             $attribute => ['required', 'array'],
-            "{$attribute}.version" => ['sometimes', 'integer', 'min:0', 'max:'.self::VERSION],
+            "{$attribute}.version" => ['sometimes', 'integer', 'min:1', 'max:'.self::VERSION],
             ...PageContent::rules("{$attribute}.sections"),
         ];
     }
 
     /**
      * Adds (or replaces) the step that upgrades a value of version `$from`
-     * to `$from + 1`. The step gets the value and returns the new one.
+     * to `$from + 1` (1 <= $from < VERSION; other steps never run). The
+     * step gets the value and returns the new one.
      *
      * @param  Closure(array<mixed>): array<mixed>  $step
      */

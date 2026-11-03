@@ -82,25 +82,52 @@ class PageValueTest extends TestCase
         $this->assertSame(['old'], array_column($value['sections'], 'id'));
     }
 
-    public function test_steps_run_in_order_from_the_value_version(): void
+    public function test_a_version_below_one_or_not_a_number_counts_as_one(): void
     {
-        $ran = [];
-        PageValue::registerUpgrade(0, function (array $value) use (&$ran): array {
-            $ran[] = 0;
+        $ran = 0;
+        PageValue::registerUpgrade(1, function (array $value) use (&$ran): array {
+            $ran++;
 
-            return ['sections' => $value['blocks'] ?? []];
+            return $value;
         });
 
-        $value = PageValue::upgrade(['version' => 0, 'blocks' => [$this->section()]]);
+        foreach ([0, -5, PHP_INT_MIN, '1', 1.0, null] as $version) {
+            $value = PageValue::upgrade(['version' => $version, 'sections' => [$this->section()]]);
 
-        $this->assertSame([0], $ran);
-        $this->assertSame(2, $value['version']);
-        $this->assertSame([$this->section()], $value['sections']);
+            $this->assertSame(2, $value['version']);
+            $this->assertSame([$this->section()], $value['sections']);
+        }
+
+        $this->assertSame(6, $ran);
     }
 
-    public function test_a_value_from_a_newer_version_is_not_downgraded(): void
+    public function test_a_huge_negative_version_upgrades_at_once(): void
     {
-        $this->assertSame(2, PageValue::normalize(['version' => 9, 'sections' => [$this->section()]])['version']);
+        $started = microtime(true);
+
+        $value = PageValue::normalize(['version' => PHP_INT_MIN, 'sections' => [$this->section()]]);
+
+        $this->assertLessThan(1.0, microtime(true) - $started);
+        $this->assertSame(['version' => 2, 'sections' => PageValue::normalize([$this->section()])['sections']], $value);
+    }
+
+    public function test_a_value_from_a_newer_version_is_treated_as_the_current_one_and_cleaned(): void
+    {
+        $ran = false;
+        PageValue::registerUpgrade(1, function (array $value) use (&$ran): array {
+            $ran = true;
+
+            return $value;
+        });
+
+        foreach ([3, 9, PHP_INT_MAX] as $version) {
+            $value = PageValue::normalize(['version' => $version, 'sections' => [['id' => 'a1', 'type' => 'rich', 'data' => ['padding' => 'huge']]]]);
+
+            $this->assertSame(2, $value['version']);
+            $this->assertSame('md', $value['sections'][0]['data']['padding']);
+        }
+
+        $this->assertFalse($ran);
     }
 
     public function test_the_rules_accept_a_format_two_value_with_rich_and_ref_sections(): void
