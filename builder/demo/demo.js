@@ -20,6 +20,13 @@
  * (`siteInfo`, `saveSiteInfo`); `saveSection` for templates and synced
  * sections; hidden sections drawn dimmed. `?kind=footer` shows the top bar
  * of a footer.
+ *
+ * Shop info everywhere: each shop value names its `settings` group, the
+ * "Waktu buka" own block lists `siteInfo: ['hours']`, and the map lists
+ * `['contact']`, so their panels (and the Hubungi section's) show those
+ * groups of the shop info form. The top bar's "Maklumat kedai" opens the
+ * whole form. `preview` draws with `extra.siteInfo`, so the canvas follows
+ * the form before it is saved.
  */
 import { mountPageBuilder } from '../../resources/dist/page-builder.js';
 
@@ -72,6 +79,16 @@ const ownBlocks = [
             { name: 'zoom', label: 'Zoom', type: 'number', default: 14 },
         ],
         defaults: { address: 'Jalan Merdeka, Batu Pahat', zoom: 14 },
+        siteInfo: ['contact'],
+    },
+    {
+        kind: 'opening-hours',
+        label: 'Waktu buka',
+        icon: 'clock',
+        description: 'Hari dan masa kedai dibuka, dari maklumat kedai.',
+        fields: [{ name: 'heading', label: 'Tajuk', type: 'text', default: 'Waktu buka' }],
+        defaults: { heading: 'Waktu buka' },
+        siteInfo: ['hours'],
     },
 ];
 
@@ -86,7 +103,15 @@ let shop = {
         email: 'kedai@example.com',
         address: 'No. 12, Jalan Merdeka, 83000 Batu Pahat, Johor',
     },
+    hours: { days: 'Isnin hingga Sabtu', time: '9 pagi hingga 6 petang' },
 };
+
+/** The shop info with unsaved or newly saved values over it, by group. */
+function shopWith(values) {
+    return Object.fromEntries(
+        Object.entries(shop).map(([group, fields]) => [group, { ...fields, ...(values?.[group] ?? {}) }]),
+    );
+}
 
 const siteInfoFields = {
     business: [{ name: 'name', label: 'Nama kedai', type: 'text' }],
@@ -95,21 +120,28 @@ const siteInfoFields = {
         { name: 'email', label: 'E-mel', type: 'text' },
         { name: 'address', label: 'Alamat', type: 'textarea' },
     ],
+    hours: [
+        { name: 'days', label: 'Hari', type: 'text' },
+        { name: 'time', label: 'Masa', type: 'text' },
+    ],
 };
 
 /** The values the site fills in, as Content\DynamicValues would list them. */
 function dynamicValues() {
     const digits = shop.contact.phone.replace(/\D/g, '').replace(/^0/, '60');
 
+    // `settings`: the shop info group each value comes from.
     return [
-        { key: 'site.name', label: 'Nama kedai', type: 'text', group: 'Kedai', preview: shop.business.name },
-        { key: 'site.phone', label: 'Telefon', type: 'text', group: 'Kedai', preview: shop.contact.phone },
-        { key: 'site.email', label: 'E-mel', type: 'text', group: 'Kedai', preview: shop.contact.email },
-        { key: 'site.address', label: 'Alamat', type: 'text', group: 'Kedai', preview: shop.contact.address },
-        { key: 'site.whatsapp', label: 'WhatsApp', type: 'link', group: 'Kedai', preview: `https://wa.me/${digits}` },
-        { key: 'site.phone_link', label: 'Telefon (pautan)', type: 'link', group: 'Kedai', preview: `tel:${digits}` },
-        { key: 'site.email_link', label: 'E-mel (pautan)', type: 'link', group: 'Kedai', preview: `mailto:${shop.contact.email}` },
-        { key: 'site.logo', label: 'Logo', type: 'image', group: 'Kedai', preview: shop.business.logo },
+        { key: 'site.name', label: 'Nama kedai', type: 'text', group: 'Kedai', preview: shop.business.name, settings: 'business' },
+        { key: 'site.phone', label: 'Telefon', type: 'text', group: 'Kedai', preview: shop.contact.phone, settings: 'contact' },
+        { key: 'site.email', label: 'E-mel', type: 'text', group: 'Kedai', preview: shop.contact.email, settings: 'contact' },
+        { key: 'site.whatsapp_number', label: 'Nombor WhatsApp', type: 'text', group: 'Kedai', preview: digits, settings: 'contact' },
+        { key: 'site.address', label: 'Alamat', type: 'text', group: 'Kedai', preview: shop.contact.address, settings: 'contact' },
+        { key: 'site.hours', label: 'Waktu buka', type: 'text', group: 'Kedai', preview: `${shop.hours.days}: ${shop.hours.time}`, settings: 'hours' },
+        { key: 'site.whatsapp', label: 'WhatsApp', type: 'link', group: 'Kedai', preview: `https://wa.me/${digits}`, settings: 'contact' },
+        { key: 'site.phone_link', label: 'Telefon (pautan)', type: 'link', group: 'Kedai', preview: `tel:${digits}`, settings: 'contact' },
+        { key: 'site.email_link', label: 'E-mel (pautan)', type: 'link', group: 'Kedai', preview: `mailto:${shop.contact.email}`, settings: 'contact' },
+        { key: 'site.logo', label: 'Logo', type: 'image', group: 'Kedai', preview: shop.business.logo, settings: 'business' },
     ];
 }
 
@@ -219,6 +251,7 @@ const value = {
                         { type: 'dynamic', props: { key: 'site.phone' } },
                         ...text(' atau isi borang di bawah.'),
                     ]),
+                    block('ownBlock', { kind: 'opening-hours', values: '{}' }),
                     block('form', { form: JSON.stringify(starterForm) }),
                 ],
             },
@@ -247,9 +280,19 @@ const adapter = {
         return { ok: true };
     },
     async preview(page, extra) {
-        log.push(['preview', structuredClone(page), extra?.kit ? 'with kit' : '']);
+        log.push(['preview', structuredClone(page), extra?.kit ? 'with kit' : '', extra?.siteInfo ? 'with shop info' : '']);
 
-        return renderPage(page, extra?.kit ?? kit);
+        // Draw with the unsaved shop info, never saving it, like the
+        // host's withPageBuilderSiteInfo() hook.
+        const saved = shop;
+
+        shop = shopWith(extra?.siteInfo);
+
+        try {
+            return renderPage(page, extra?.kit ?? kit);
+        } finally {
+            shop = saved;
+        }
     },
     async saveKit(next) {
         log.push(['saveKit', structuredClone(next)]);
@@ -281,7 +324,7 @@ const adapter = {
             return { ok: false, errors: { 'contact.phone': 'Nombor telefon terlalu pendek.' } };
         }
 
-        shop = { business: { ...shop.business, ...values.business }, contact: { ...shop.contact, ...values.contact } };
+        shop = shopWith(values);
 
         return { ok: true };
     },
@@ -322,8 +365,9 @@ const builder = mountPageBuilder(document.getElementById('builder'), {
         groups: [
             { key: 'business', label: 'Perniagaan', fields: siteInfoFields.business },
             { key: 'contact', label: 'Hubungi', fields: siteInfoFields.contact },
+            { key: 'hours', label: 'Waktu buka', fields: siteInfoFields.hours },
         ],
-        values: { business: { name: shop.business.name }, contact: { ...shop.contact } },
+        values: { business: { name: shop.business.name }, contact: { ...shop.contact }, hours: { ...shop.hours } },
     },
     onChange(next) {
         log.push(['change', next.sections.length]);
@@ -431,7 +475,9 @@ function renderOwnBlock(props) {
     }
 
     const values = { ...definition.defaults, ...parseValues(props.values) };
-    const rows = Object.entries(values)
+    // The shop info the block names, like its view would read it.
+    const shopRows = (definition.siteInfo ?? []).flatMap((group) => Object.entries(shop[group] ?? {}));
+    const rows = [...Object.entries(values), ...shopRows]
         .map(([key, entry]) => {
             const shown = Array.isArray(entry) ? entry.map((row) => Object.values(row).join(' ')).join(', ') : entry;
 
