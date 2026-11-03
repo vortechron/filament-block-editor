@@ -8,20 +8,22 @@ import type {
     SectionTemplate,
     SectionTemplateInput,
 } from '@/types';
+import RULES from '@/generated/rules.json';
 import { cleanAdvanced } from './advanced';
 import { withNewBlockIds } from './block-ids';
 import { cleanLock } from './locks';
 import { cleanStyleBag } from './style-bag';
 
-/** Same limit as Content\PageContent::MAX_SECTIONS. */
-export const MAX_SECTIONS = 30;
+/** Content\PageContent::MAX_SECTIONS, from the exported rules. */
+export const MAX_SECTIONS = RULES.page.max_sections;
 
-/** The page value format the builder writes. Mirrors Content\PageValue::VERSION. */
-export const PAGE_VALUE_VERSION = 2;
+/** The page value format the builder writes: Content\PageValue::VERSION. */
+export const PAGE_VALUE_VERSION = RULES.page.version;
 
-const ANCHOR_LENGTH = 40;
+/** The longest an anchor or a synced section's id may be (PageContent::MAX_NAME_LENGTH). */
+const ANCHOR_LENGTH = RULES.page.max_name_length;
 
-const REF_LENGTH = 40;
+const REF_LENGTH = RULES.page.max_name_length;
 
 export const SECTION_LAYOUTS: readonly SectionLayout[] = [
     'plain',

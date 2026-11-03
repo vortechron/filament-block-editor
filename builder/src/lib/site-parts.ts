@@ -1,3 +1,4 @@
+import RULES from '@/generated/rules.json';
 import type {
     DocumentKind,
     OwnBlockField,
@@ -5,15 +6,23 @@ import type {
     PartKey,
     SiteInfo,
 } from '@/types';
+import type { Translate } from './i18n';
 
 /**
  * The header and footer the host shows on every page, and the shop info
  * form shown with them (docs/v2-plan.md, section 10).
  */
 
-export const PART_KEYS: readonly PartKey[] = ['header', 'footer'];
+/** The parts every page shows (Enums\DocumentKind::parts()). */
+export const PART_KEYS: readonly PartKey[] = RULES.part_kinds;
 
-const KINDS: readonly DocumentKind[] = ['page', 'header', 'footer', 'section', 'card', 'single'];
+/** What the builder may edit (Enums\DocumentKind). */
+const KINDS: readonly DocumentKind[] = RULES.document_kinds;
+
+/** A part's name, like "Header", in the builder's language. */
+export function partLabel(part: PartKey, t: Translate): string {
+    return part === 'header' ? t('Header') : t('Footer');
+}
 
 export function isPartKey(value: unknown): value is PartKey {
     return (PART_KEYS as readonly unknown[]).includes(value);

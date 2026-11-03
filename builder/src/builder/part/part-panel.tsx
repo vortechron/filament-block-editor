@@ -1,6 +1,7 @@
 import { PanelBottom, PanelTop } from 'lucide-react';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
+import { partLabel } from '@/lib/site-parts';
 import type { PartKey } from '@/types';
 import { EditElsewhereLink } from '../edit-elsewhere-link';
 import { SiteInfoForm } from './site-info-form';
@@ -15,7 +16,7 @@ export function PartPanel({ part }: { part: PartKey }) {
     const { parts } = useHost();
     const known = parts.find((entry) => entry.key === part);
     const Icon = part === 'header' ? PanelTop : PanelBottom;
-    const name = part === 'header' ? t('Header') : t('Footer');
+    const name = partLabel(part, t);
 
     return (
         <div className="grid grid-cols-1 gap-4">

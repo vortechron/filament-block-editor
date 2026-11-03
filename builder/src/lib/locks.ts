@@ -1,7 +1,8 @@
+import RULES from '@/generated/rules.json';
 import type { LockKey, RichSection, Section, SectionLock } from '@/types';
 
-/** Every lock, in the order the Lock menu lists them. Mirrors the PHP side. */
-export const LOCK_KEYS: readonly LockKey[] = ['move', 'remove', 'content', 'style'];
+/** Every lock, in the order the Lock menu lists them (PageContent::LOCKS). */
+export const LOCK_KEYS: readonly LockKey[] = RULES.locks;
 
 /**
  * A lock with only its true keys, or null when nothing is locked. Same

@@ -12,6 +12,7 @@ import {
 import type { ReactNode } from 'react';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
+import { isPartKey, partLabel } from '@/lib/site-parts';
 import { cn } from '@/lib/utils';
 import { Button } from '@/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/tooltip';
@@ -48,8 +49,7 @@ export function BuilderTopBar({
 }) {
     const t = useT();
     const { title, backUrl, viewUrl, kind } = useHost();
-    const kindLabel =
-        kind === 'header' ? t('Header') : kind === 'footer' ? t('Footer') : null;
+    const kindLabel = isPartKey(kind) ? partLabel(kind, t) : null;
     const canSave = hasUnsavedChanges && !isSaving;
 
     return (

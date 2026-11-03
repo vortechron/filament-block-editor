@@ -11,7 +11,9 @@ import { Button } from '@/ui/button';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useHost } from '@/lib/host';
+import { partLabel } from '@/lib/site-parts';
 import { useBuilderContext } from './builder-context';
+import type { PartKey } from '@/types';
 import type { FrameMarks } from './frame-marks';
 import { type FramePick, PageFrame } from './page-frame';
 import { sectionKind } from './section-meta';
@@ -60,9 +62,8 @@ export function Canvas({ notices }: { notices: ReactNode }) {
                   .handleFor(selection.sectionId)
                   ?.pathOf(selection.itemId) ?? null)
             : null;
-    const partTitle = (key: 'header' | 'footer') =>
-        parts.find((part) => part.key === key)?.title ||
-        (key === 'header' ? t('Header') : t('Footer'));
+    const partTitle = (key: PartKey) =>
+        parts.find((part) => part.key === key)?.title || partLabel(key, t);
     const marks: FrameMarks = {
         sectionLabels: new Map(
             blocks.map((block, index) => [

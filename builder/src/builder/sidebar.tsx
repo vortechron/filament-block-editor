@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
+import { partLabel } from '@/lib/site-parts';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/tooltip';
 import { AddPanel } from './add-panel';
@@ -19,6 +20,8 @@ import { PartPanel } from './part/part-panel';
 import { useSectionTitle } from './section-meta';
 import { SectionPanel } from './section-panel';
 import type { HomePanelName } from './types';
+
+type Crumb = { label: string; onClick?: () => void };
 
 const HOME_TABS: { name: HomePanelName; label: string; icon: LucideIcon }[] = [
     { name: 'add', label: 'Add', icon: Plus },
@@ -129,50 +132,39 @@ function SidebarHeader() {
         panel.name === 'design'
             ? builder.openPanel({ name: builder.homePanel })
             : builder.clearSelection();
-    const crumbs: { label: string; onClick?: () => void }[] = [
-        { label: t('Page'), onClick: goHome },
-    ];
+    const itemLabel = (sectionId: string, itemId: string): string => {
+        const item = builder.handleFor(sectionId)?.getItem(itemId);
+        const described = item ? describeBlock(item.type, item.props, ownBlocks) : null;
 
-    if (panel.name === 'design') {
-        crumbs.push({ label: t('Design') });
-    }
-
-    if (panel.name === 'part') {
-        crumbs.push({
-            label: panel.part === 'header' ? t('Header') : t('Footer'),
-        });
-    }
-
-    if (section) {
-        const sectionLabel = `${sectionIndex + 1}. ${titleOf(section)}`;
-
-        crumbs.push(
-            panel.name === 'item'
-                ? {
-                      label: sectionLabel,
-                      onClick: () => builder.selectSection(section.id),
-                  }
-                : { label: sectionLabel },
-        );
-
-        if (panel.name === 'item' && selection.itemId) {
-            const item = builder
-                .handleFor(section.id)
-                ?.getItem(selection.itemId);
-            const described = item
-                ? describeBlock(item.type, item.props, ownBlocks)
-                : null;
-
-            crumbs.push({
-                label:
-                    described === null
-                        ? t('Item')
-                        : described.isOwn
-                          ? described.label
-                          : t(described.label),
-            });
+        if (described === null) {
+            return t('Item');
         }
-    }
+
+        return described.isOwn ? described.label : t(described.label);
+    };
+    const panelCrumbs: Crumb[] =
+        panel.name === 'design'
+            ? [{ label: t('Design') }]
+            : panel.name === 'part'
+              ? [{ label: partLabel(panel.part, t) }]
+              : [];
+    const isItem = panel.name === 'item';
+    const sectionCrumbs: Crumb[] = section
+        ? [
+              {
+                  label: `${sectionIndex + 1}. ${titleOf(section)}`,
+                  ...(isItem ? { onClick: () => builder.selectSection(section.id) } : {}),
+              },
+              ...(isItem && selection.itemId
+                  ? [{ label: itemLabel(section.id, selection.itemId) }]
+                  : []),
+          ]
+        : [];
+    const crumbs: Crumb[] = [
+        { label: t('Page'), onClick: goHome },
+        ...panelCrumbs,
+        ...sectionCrumbs,
+    ];
 
     const back = crumbs.at(-2)?.onClick ?? goHome;
     const current = crumbs[crumbs.length - 1];
