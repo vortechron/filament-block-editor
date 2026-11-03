@@ -37,9 +37,11 @@
     color: inherit;
 }
 
-/* Plain sections take turns with a softer band, so the page has a rhythm. */
+/* Plain sections take turns with a softer band, so the page has a rhythm.
+   nth-of-type counts only the section wrappers (divs), not the page's
+   <style data-fbe-style> in front of them. */
 .sf-page
-    > [data-block-id]:nth-child(even)
+    > [data-block-id]:nth-of-type(even)
     > .sf-rich-section:not(
         .sf-has-bg,
         .sf-layout-hero,

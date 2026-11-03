@@ -2,7 +2,11 @@
 
 namespace Vortechron\FilamentBlockEditor\BlockNote;
 
+use Illuminate\Support\Str;
 use Vortechron\FilamentBlockEditor\Blocks\BlockRegistry;
+use Vortechron\FilamentBlockEditor\Content\DynamicValues;
+use Vortechron\FilamentBlockEditor\Forms\FormDefinition;
+use Vortechron\FilamentBlockEditor\Styling\Look;
 use Vortechron\FilamentBlockEditor\Support\Urls;
 
 /**
@@ -15,6 +19,16 @@ use Vortechron\FilamentBlockEditor\Support\Urls;
  * is missing. clean() puts that back. It also keeps addresses safe: picture,
  * video, file and link addresses that are not allowed are emptied or
  * unwrapped before they are stored.
+ *
+ * A dynamic value (Content\DynamicValues) is kept: the inline content
+ * `{ "type": "dynamic", "props": { "key": "site.phone" } }`, and a
+ * reference such as `@site.whatsapp` in a link or `@entry.photo` in an
+ * image or video address. The renderer resolves and checks them.
+ *
+ * Every block may carry a `look` prop (Styling\Look): it is cleaned and
+ * stored again as compact JSON, or "" when empty. A block with a look
+ * needs a stable id for its `fbe-b-{id}` class, so one without a usable id
+ * gets one.
  */
 final class BlockNoteDocument
 {
@@ -28,6 +42,11 @@ final class BlockNoteDocument
      * Block types whose `url` prop is a picture, video, audio or file.
      */
     private const MEDIA_TYPES = ['image', 'video', 'audio', 'file', 'card'];
+
+    /**
+     * Media blocks whose address may be a dynamic value (`@entry.photo`).
+     */
+    private const DYNAMIC_MEDIA_TYPES = ['image', 'video'];
 
     /**
      * The longest an own block's kind may be.
@@ -141,7 +160,7 @@ final class BlockNoteDocument
             $block['content'] = self::cleanContent($block['content']);
         }
 
-        if (array_key_exists('props', $block) || in_array($type, [...self::MEDIA_TYPES, Blocks::GALLERY, Blocks::BUTTON, Blocks::OWN_BLOCK], true)) {
+        if (array_key_exists('props', $block) || in_array($type, [...self::MEDIA_TYPES, Blocks::GALLERY, Blocks::BUTTON, Blocks::OWN_BLOCK, Blocks::FORM], true)) {
             $block['props'] = self::cleanProps($type, is_array($block['props'] ?? null) ? $block['props'] : []);
         }
 
@@ -151,7 +170,22 @@ final class BlockNoteDocument
             $block['children'] = is_array($block['children']) ? self::cleanBlocks($block['children']) : [];
         }
 
+        // A styled block needs a stable class, and a form a stable key.
+        if (($block['props']['look'] ?? '') !== '' || $type === Blocks::FORM) {
+            $block['id'] = self::blockId($block['id'] ?? null) ?? Str::lower(Str::random(8));
+        }
+
         return $block;
+    }
+
+    /**
+     * A block id made of letters, digits, dashes and underscores, or null.
+     */
+    public static function blockId(mixed $id): ?string
+    {
+        $id = is_string($id) ? substr((string) preg_replace('/[^A-Za-z0-9_-]/', '', $id), 0, 64) : '';
+
+        return $id === '' ? null : $id;
     }
 
     /**
@@ -160,8 +194,12 @@ final class BlockNoteDocument
      */
     private static function cleanProps(mixed $type, array $props): array
     {
+        if (array_key_exists('look', $props)) {
+            $props['look'] = Look::clean($props['look']);
+        }
         if (in_array($type, self::MEDIA_TYPES, true)) {
-            $props['url'] = Urls::media($props['url'] ?? null) ?? '';
+            $url = $props['url'] ?? null;
+            $props['url'] = Urls::media($url) ?? (in_array($type, self::DYNAMIC_MEDIA_TYPES, true) ? DynamicValues::reference($url) : null) ?? '';
         }
 
         if ($type === Blocks::GALLERY) {
@@ -172,9 +210,13 @@ final class BlockNoteDocument
             $props = [
                 ...$props,
                 'text' => is_string($props['text'] ?? null) ? $props['text'] : '',
-                'url' => Urls::link($props['url'] ?? null) ?? '',
+                'url' => Urls::link($props['url'] ?? null) ?? DynamicValues::reference($props['url'] ?? null) ?? '',
                 'variant' => in_array($props['variant'] ?? null, Blocks::BUTTON_VARIANTS, true) ? $props['variant'] : Blocks::BUTTON_VARIANTS[0],
             ];
+        }
+
+        if ($type === Blocks::FORM) {
+            $props['form'] = FormDefinition::encode(FormDefinition::normalize(FormDefinition::decode($props['form'] ?? null)));
         }
 
         if ($type === Blocks::OWN_BLOCK) {
@@ -221,6 +263,16 @@ final class BlockNoteDocument
         $clean = [];
 
         foreach ($content as $item) {
+            if (is_array($item) && ($item['type'] ?? null) === 'dynamic') {
+                $key = $item['props']['key'] ?? null;
+
+                if (DynamicValues::isKey($key)) {
+                    $clean[] = ['type' => 'dynamic', 'props' => ['key' => $key]];
+                }
+
+                continue;
+            }
+
             if (! is_array($item) || ($item['type'] ?? null) !== 'link') {
                 $clean[] = $item;
 
@@ -229,7 +281,7 @@ final class BlockNoteDocument
 
             $inner = self::cleanContent($item['content'] ?? []);
 
-            if (Urls::link($item['href'] ?? null) === null) {
+            if (Urls::link($item['href'] ?? null) === null && DynamicValues::reference($item['href'] ?? null) === null) {
                 array_push($clean, ...(is_array($inner) ? $inner : []));
 
                 continue;

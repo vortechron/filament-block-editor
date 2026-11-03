@@ -530,3 +530,41 @@ type PageBuilderAdapter = {
    phone from tablet, then laptop; tablet and hover from laptop.
 10. **`content` lock for non-developers:** the section's words editor is not opened at all, so its items can not
     be picked or added to. A "Locked" ("Dikunci") note shows instead.
+
+### Track A (PHP core)
+
+- **Custom CSS is stricter than section 2 says** (security review, 3 November 2026). `url()` allows only a path on
+  this site (`/path`), not `https://`. The only at-rules allowed are `@media` and `@supports`. Every selector of
+  every rule, inside those at-rules too, must start with `selector`, so custom CSS can only reach its own element
+  and what is inside it. Braces hidden in a quote or behind a backslash, nested rules, `image-set()` and `src()`
+  are refused too. Plain declarations with no rule (`color: red`) apply to the element. A `url()` path holds only
+  plain URL characters (`A-Z a-z 0-9 . _ ~ ! $ & ( ) * + , ; = : @ % / -`, so no query string), and never starts
+  with `//`. No backslash is allowed anywhere (no CSS escapes), so nothing can hide behind one. Selectors may not use the `+` or `~` combinators, `:root`, `:host`, `:has(`, or an attribute
+  selector on `value`. Reason: custom CSS with an attribute selector and a `url()` to another site can leak data
+  from the page, such as a form's token.
+- **`Kit::css()` maps the old `--sf-*` names only for kit values that differ from the package defaults.** The
+  `--kit-*` variables are always written. The package defaults are today's look (`text` `#475569`, `radius`
+  `1.25rem`, buttons `0.75rem` and weight `800`, base size `1.0625rem`, heading weight `800`), not the example
+  values in section 3. Reason: a host may theme with `--sf-accent` on `:root` (the docs allow it). A rule on
+  `.sf-page` that always maps `--sf-accent` to the kit would override that theme and change today's look. With
+  this rule the default kit changes nothing, and once the owner changes a value, every layout follows it. The
+  button and form rules are written the same way (only what differs). Text on the primary colour
+  (`--sf-accent-ink`) is set to white or dark by the primary colour's brightness.
+- **`KitSource` is an interface with `current()` and `override(?array $kit)`.** The `Design\OverridesKit` trait
+  implements both; a host source only writes `storedKit()`. `override(null)` clears it. The builder preview sets
+  the override and clears it after drawing.
+- **`RenderContext` has a fourth argument, `?string $sectionId`, and `withSection(string $id)`.** PageRenderer sets
+  it for each section, so a form knows its `_form` key (`{sectionId}.{blockId}`). A form drawn outside a page has
+  the key `{blockId}`. `withValues()` keeps it.
+- **Smaller choices in track A:** `font_size` must be at least 0 (section 2 says "length"). `advanced.class` names
+  may not start with `fbe-` (the package's own style hooks). `hide_on` in the builder canvas dims the element
+  (opacity and a dashed outline) instead of hiding it, so it can still be picked. `Field::developerOnly()` on a
+  field inside a list throws when the list is built (a whole list may be developer only). The form's
+  `submit.align` also allows `full`; an empty button text or success message uses the page language's words at
+  draw time, so stored forms do not depend on the locale. `Kit::rules()` was added for the CMS store. The styles
+  component also links a host font's `href` when the kit uses that font. Because `<style data-fbe-style>` sits
+  inside `.sf-page` before the sections, the band on every second section now counts `:nth-of-type`.
+- **A page value's `version` is clamped** to 1 … `VERSION` before the upgrade steps run (security review). A
+  version below 1 or not a whole number counts as 1, one above `VERSION` counts as `VERSION`. So
+  `registerUpgrade()` takes `$from` from 1 to `VERSION - 1`; other steps never run. Reason: a huge negative
+  version made the upgrade loop run almost forever.

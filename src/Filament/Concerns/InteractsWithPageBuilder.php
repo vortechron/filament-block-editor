@@ -7,7 +7,11 @@ use Illuminate\Support\Facades\Validator;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Vortechron\FilamentBlockEditor\Blocks\BlockRegistry;
+use Vortechron\FilamentBlockEditor\Content\DynamicValues;
 use Vortechron\FilamentBlockEditor\Content\PageContent;
+use Vortechron\FilamentBlockEditor\Content\PageValue;
+use Vortechron\FilamentBlockEditor\Design\Kit;
+use Vortechron\FilamentBlockEditor\Design\KitSource;
 use Vortechron\FilamentBlockEditor\Support\Assets;
 use Vortechron\FilamentBlockEditor\Templates\SectionTemplates;
 
@@ -19,12 +23,16 @@ use Vortechron\FilamentBlockEditor\Templates\SectionTemplates;
  *
  * The page supplies the value, saves it and draws the preview:
  *
- *     protected function getPageBuilderValue(): array          // ['sections' => [...]]
- *     protected function savePageBuilderValue(array $value): void
+ *     protected function getPageBuilderValue(): array          // a page value of any format
+ *     protected function savePageBuilderValue(array $value): void  // ['version' => 2, 'sections' => [...]]
  *     protected function renderPageBuilderPreview(array $sections): string  // a full HTML document
+ *
+ * The optional parts (design kit, saved and synced sections, shop info,
+ * header and footer) are hooks with safe defaults: see PageBuilderHooks.
  */
 trait InteractsWithPageBuilder
 {
+    use PageBuilderHooks;
     use WithFileUploads;
 
     /**
@@ -33,12 +41,16 @@ trait InteractsWithPageBuilder
     public ?TemporaryUploadedFile $pageBuilderUpload = null;
 
     /**
-     * @return array{sections: array<mixed>}
+     * The stored page: a page value of any format (Content\PageValue):
+     * `['version' => 2, 'sections' => [...]]`, `['sections' => [...]]` or a
+     * bare list of sections. It is upgraded before the builder gets it.
+     *
+     * @return array<mixed>
      */
     abstract protected function getPageBuilderValue(): array;
 
     /**
-     * @param  array{sections: list<array<string, mixed>>}  $value  already validated and cleaned
+     * @param  array{version: int, sections: list<array<string, mixed>>}  $value  a format 2 value, already validated, cleaned and guarded
      */
     abstract protected function savePageBuilderValue(array $value): void;
 
@@ -49,6 +61,16 @@ trait InteractsWithPageBuilder
      * @param  list<array<string, mixed>>  $sections
      */
     abstract protected function renderPageBuilderPreview(array $sections): string;
+
+    /**
+     * Whether the signed-in user is a developer: they may set locks, custom
+     * CSS and developer-only fields. Everyone else's saves go through
+     * PageValue::guard(), which keeps the stored developer-only data.
+     */
+    protected function isPageBuilderDeveloper(): bool
+    {
+        return false;
+    }
 
     /**
      * Checks that the signed-in user may edit this page. It runs before
@@ -99,7 +121,7 @@ trait InteractsWithPageBuilder
         $locale = $this->getPageBuilderLocale();
 
         return array_filter([
-            'value' => ['sections' => PageContent::normalize((array) ($this->getPageBuilderValue()['sections'] ?? []))],
+            'value' => PageValue::normalize($this->getPageBuilderValue()),
             'blocks' => app(BlockRegistry::class)->definitions(),
             'templates' => SectionTemplates::all($locale),
             'locale' => $locale,
@@ -107,6 +129,9 @@ trait InteractsWithPageBuilder
             'backUrl' => $this->getPageBuilderBackUrl(),
             'viewUrl' => $this->getPageBuilderViewUrl(),
             'accent' => $this->getPageBuilderAccent(),
+            'fonts' => array_map(fn (string $key, array $font): array => ['value' => $key, ...$font], array_keys(Kit::fonts()), Kit::fonts()),
+            'dynamicValues' => app(DynamicValues::class)->definitions(),
+            ...$this->getPageBuilderHookOptions(),
         ], fn (mixed $value): bool => $value !== null);
     }
 
@@ -128,6 +153,7 @@ trait InteractsWithPageBuilder
     {
         $this->authorizePageBuilder();
 
+        $value = PageValue::upgrade($value);
         $validator = Validator::make(['sections' => $value['sections'] ?? null], PageContent::rules('sections'));
 
         if ($validator->fails()) {
@@ -137,19 +163,44 @@ trait InteractsWithPageBuilder
             ];
         }
 
-        $this->savePageBuilderValue(['sections' => PageContent::normalize($value['sections'])]);
+        $value = PageValue::normalize($value);
+
+        // Safe by default: a host that forgets the guard still never saves
+        // locks or custom CSS from someone who is not a developer.
+        if (! $this->isPageBuilderDeveloper()) {
+            $value = PageValue::guard($value, PageValue::normalize($this->getPageBuilderValue()));
+        }
+
+        $this->savePageBuilderValue($value);
 
         return ['ok' => true];
     }
 
     /**
-     * @param  array<string, mixed>  $value
+     * The page drawn with unsaved sections, and with an unsaved design kit
+     * when one is given (KitSource::override(), for this draw only).
+     *
+     * @param  array<string, mixed>  $value  a page value of any format
+     * @param  array<string, mixed>|null  $kit
      */
-    public function previewPageBuilder(array $value): string
+    public function previewPageBuilder(array $value, ?array $kit = null): string
     {
         $this->authorizePageBuilder();
 
-        return $this->renderPageBuilderPreview(PageContent::normalize((array) ($value['sections'] ?? [])));
+        $sections = PageValue::normalize($value)['sections'];
+
+        if ($kit === null) {
+            return $this->renderPageBuilderPreview($sections);
+        }
+
+        $source = app(KitSource::class);
+        $source->override($kit);
+
+        try {
+            return $this->renderPageBuilderPreview($sections);
+        } finally {
+            $source->override(null);
+        }
     }
 
     /**

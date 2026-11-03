@@ -10,6 +10,14 @@ use Illuminate\Support\Facades\Blade;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Vortechron\FilamentBlockEditor\Blocks\BlockRegistry;
+use Vortechron\FilamentBlockEditor\Blocks\CoreBlocks;
+use Vortechron\FilamentBlockEditor\Content\DynamicValues;
+use Vortechron\FilamentBlockEditor\Content\NullSectionResolver;
+use Vortechron\FilamentBlockEditor\Content\SectionResolver;
+use Vortechron\FilamentBlockEditor\Design\DefaultKitSource;
+use Vortechron\FilamentBlockEditor\Design\KitSource;
+use Vortechron\FilamentBlockEditor\Forms\FormEndpoint;
+use Vortechron\FilamentBlockEditor\Forms\NullFormEndpoint;
 
 class FilamentBlockEditorServiceProvider extends PackageServiceProvider
 {
@@ -51,8 +59,29 @@ class FilamentBlockEditorServiceProvider extends PackageServiceProvider
 
     public function packageRegistered(): void
     {
-        // One registry for the whole app: hosts register their own blocks at boot.
-        $this->app->singleton(BlockRegistry::class);
+        // One registry for the whole app: hosts register their own blocks at
+        // boot. The package's core blocks come first, unless switched off.
+        $this->app->singleton(BlockRegistry::class, function (): BlockRegistry {
+            $registry = new BlockRegistry;
+
+            if (config('filament-block-editor.core_blocks', true)) {
+                CoreBlocks::register($registry);
+            }
+
+            return $registry;
+        });
+
+        // One registry of dynamic values (site.phone, ...): hosts register them at boot.
+        $this->app->singleton(DynamicValues::class);
+
+        // A host binds its own source (a stored kit); the override lasts one request.
+        $this->app->scopedIf(KitSource::class, DefaultKitSource::class);
+
+        // Hosts that store synced sections bind their own.
+        $this->app->bindIf(SectionResolver::class, NullSectionResolver::class);
+
+        // Hosts that save form submissions bind their own.
+        $this->app->bindIf(FormEndpoint::class, NullFormEndpoint::class);
     }
 
     public function packageBooted(): void

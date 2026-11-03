@@ -3,7 +3,11 @@
 namespace Vortechron\FilamentBlockEditor\BlockNote;
 
 use Vortechron\FilamentBlockEditor\Blocks\BlockRegistry;
+use Vortechron\FilamentBlockEditor\Content\DynamicValues;
+use Vortechron\FilamentBlockEditor\Forms\FormDefinition;
+use Vortechron\FilamentBlockEditor\Forms\FormRenderer;
 use Vortechron\FilamentBlockEditor\Rendering\RenderContext;
+use Vortechron\FilamentBlockEditor\Styling\StyleSheet;
 use Vortechron\FilamentBlockEditor\Support\Urls;
 
 /**
@@ -17,6 +21,15 @@ use Vortechron\FilamentBlockEditor\Support\Urls;
  * (Urls::media). Unknown block types are skipped. The package's own blocks
  * (button, gallery) are drawn here; an `ownBlock` is drawn by the app's
  * Blocks\BlockRegistry.
+ *
+ * Dynamic values (Content\DynamicValues) are resolved here: dynamic text
+ * is drawn as its escaped value (in the builder inside
+ * `<span class="bn-dynamic" data-dynamic="{key}">`, with the value's label
+ * when it is empty), and `@key` links and pictures are resolved, then
+ * checked by the same address rules.
+ *
+ * A block's `look` prop (BlockLook) adds its class and its rules to the
+ * page's StyleSheet; drawn on its own, render() puts the <style> in front.
  *
  * Keep the numbers below in step with the editor kit (@vortechron/blocknote-kit).
  */
@@ -92,7 +105,7 @@ final class BlockNoteRenderer
     public const TYPES = [
         'paragraph', 'heading', 'quote', 'codeBlock', 'bulletListItem', 'numberedListItem', 'checkListItem',
         'toggleListItem', 'divider', 'image', 'video', 'audio', 'file', 'table', 'spacer', 'card', 'columnList', 'column',
-        Blocks::GALLERY, Blocks::BUTTON, Blocks::OWN_BLOCK,
+        Blocks::GALLERY, Blocks::BUTTON, Blocks::OWN_BLOCK, Blocks::FORM,
     ];
 
     /**
@@ -127,7 +140,7 @@ final class BlockNoteRenderer
         $this->forBuilder = $this->context->forBuilder;
 
         try {
-            return $this->renderBlocks($blocks);
+            return StyleSheet::collect(fn (): string => $this->renderBlocks($blocks));
         } finally {
             $this->context = new RenderContext;
             $this->forBuilder = false;
@@ -310,25 +323,24 @@ final class BlockNoteRenderer
         // Columns and cards hold their blocks in `children`, so they skip
         // the indent drawn below.
         if ($type === 'columnList') {
-            return $this->wrap($this->columnList($children, $path), $props, $insideColumn);
+            return $this->wrap($this->own($this->columnList($children, $path), $block), $props, $insideColumn);
         }
 
         if ($type === 'card') {
-            return $this->wrap($this->card($props, $content, $children, $insideColumn, $path), $props, $insideColumn);
+            return $this->wrap($this->own($this->card($props, $content, $children, $insideColumn, $path), $block), $props, $insideColumn);
         }
 
-        $style = $this->styleAttribute($props);
+        $style = $this->styleAttribute(BlockLook::inlineProps($props));
 
         if ($type === 'toggleListItem' || ($type === 'heading' && filter_var($props['isToggleable'] ?? false, FILTER_VALIDATE_BOOL))) {
             $isHeading = $type === 'heading';
             $summary = $isHeading ? $this->heading($props, $content, $style) : $this->inline($content);
 
-            return $this->wrap(
+            return $this->wrap($this->own(
                 '<details class="bn-toggle"><summary'.($isHeading ? '' : $style).'>'.$summary.'</summary>'
                     .'<div>'.$this->renderBlocks($children, $insideColumn, $path).'</div></details>',
-                $props,
-                $insideColumn,
-            );
+                $block,
+            ), $props, $insideColumn);
         }
 
         $html = match ($type) {
@@ -346,14 +358,27 @@ final class BlockNoteRenderer
             Blocks::BUTTON => $this->button($props),
             Blocks::GALLERY => $this->gallery($props),
             Blocks::OWN_BLOCK => $this->ownBlock($block, $props),
+            Blocks::FORM => $this->form($block, $props),
             default => '',
         };
+
+        $html = $this->own($html, $block);
 
         if ($html !== '' && $children !== []) {
             $html .= '<div class="bn-indent">'.$this->renderBlocks($children, $insideColumn, $path).'</div>';
         }
 
         return $this->wrap($html, $props, $insideColumn);
+    }
+
+    /**
+     * The block's own element with its look (BlockLook).
+     *
+     * @param  array<mixed>  $block
+     */
+    private function own(string $html, array $block): string
+    {
+        return BlockLook::apply($html, $block, $this->context);
     }
 
     /**
@@ -493,7 +518,7 @@ final class BlockNoteRenderer
 
             $path = self::pathOf($item);
 
-            $html .= $this->markItem('<li'.$this->styleAttribute($props).'>', $path)
+            $html .= $this->markItem($this->own('<li'.$this->styleAttribute(BlockLook::inlineProps($props)).'>', $item), $path)
                 .$mark
                 .$this->inline($item['content'] ?? [])
                 .($children === [] ? '' : $this->renderBlocks($children, parentPath: $path))
@@ -518,7 +543,7 @@ final class BlockNoteRenderer
      */
     private function image(array $props): string
     {
-        $url = Urls::media($props['url'] ?? null);
+        $url = $this->media($props['url'] ?? null);
 
         if ($url === null) {
             return $this->emptyMedia('photo');
@@ -539,7 +564,7 @@ final class BlockNoteRenderer
      */
     private function video(array $props): string
     {
-        $url = Urls::media($props['url'] ?? null);
+        $url = $this->media($props['url'] ?? null);
 
         if ($url === null) {
             return $this->emptyMedia('video');
@@ -613,7 +638,7 @@ final class BlockNoteRenderer
 
         $variant = in_array($props['variant'] ?? null, Blocks::BUTTON_VARIANTS, true) ? $props['variant'] : Blocks::BUTTON_VARIANTS[0];
         $class = 'bn-button bn-button-'.$variant;
-        $url = Urls::link($props['url'] ?? null);
+        $url = $this->link($props['url'] ?? null);
 
         return $url === null
             ? '<span class="'.$class.'">'.e($text).'</span>'
@@ -651,6 +676,20 @@ final class BlockNoteRenderer
 
         return ($this->registry ?? app(BlockRegistry::class))
             ->render($kind, Blocks::decodeValues($props['values'] ?? null), $this->context, $block);
+    }
+
+    /**
+     * A form anyone builds in the editor (Forms\FormRenderer). It needs a
+     * block id for its key; BlockNoteDocument::clean() gives every form one.
+     *
+     * @param  array<mixed>  $block
+     * @param  array<mixed>  $props
+     */
+    private function form(array $block, array $props): string
+    {
+        $id = BlockNoteDocument::blockId($block['id'] ?? null);
+
+        return $id === null ? '' : app(FormRenderer::class)->render(FormDefinition::fromProps($props), $id, $this->context);
     }
 
     private function table(mixed $content): string
@@ -708,8 +747,14 @@ final class BlockNoteRenderer
                 continue;
             }
 
+            if (($item['type'] ?? null) === 'dynamic') {
+                $html .= $this->dynamic($item);
+
+                continue;
+            }
+
             if (($item['type'] ?? null) === 'link') {
-                $url = Urls::link($item['href'] ?? null);
+                $url = $this->link($item['href'] ?? null);
                 $inner = $this->inline($item['content'] ?? []);
                 $html .= $url === null ? $inner : '<a href="'.e($url).'" target="_blank" rel="noopener">'.$inner.'</a>';
 
@@ -720,6 +765,46 @@ final class BlockNoteRenderer
         }
 
         return $html;
+    }
+
+    /**
+     * A dynamic value in the text, escaped. Visitors get nothing when it is
+     * empty; the builder marks it, and shows its label when it is empty.
+     *
+     * @param  array<mixed>  $item
+     */
+    private function dynamic(array $item): string
+    {
+        $key = $item['props']['key'] ?? null;
+
+        if (! DynamicValues::isKey($key)) {
+            return '';
+        }
+
+        $values = app(DynamicValues::class);
+        $value = $values->resolve($key, $this->context);
+
+        if (! $this->forBuilder) {
+            return $value === null ? '' : nl2br(e($value), false);
+        }
+
+        return '<span class="bn-dynamic" data-dynamic="'.e($key).'">'.nl2br(e($value ?? $values->label($key) ?? $key), false).'</span>';
+    }
+
+    /**
+     * A link address, its dynamic value resolved, through Urls::link().
+     */
+    private function link(mixed $url): ?string
+    {
+        return app(DynamicValues::class)->link($url, $this->context);
+    }
+
+    /**
+     * A picture or video address, its dynamic value resolved, through Urls::media().
+     */
+    private function media(mixed $url): ?string
+    {
+        return app(DynamicValues::class)->media($url, $this->context);
     }
 
     /**

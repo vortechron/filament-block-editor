@@ -73,7 +73,8 @@ final class BlockRegistry
 
     /**
      * The block's HTML, inside `<div class="bn-own-block" data-own-block="{kind}">`.
-     * Values are cleaned by the definition first. An unknown kind draws
+     * Values are cleaned by the definition first, and their dynamic links
+     * and pictures resolved (Field::resolve()). An unknown kind draws
      * nothing for visitors, and a "missing block" placeholder in the builder.
      *
      * @param  array<mixed>  $values
@@ -87,7 +88,7 @@ final class BlockRegistry
             return $context->forBuilder ? $this->missing($kind) : '';
         }
 
-        $html = $definition->render($definition->clean($values), $block, $context);
+        $html = $definition->render(Field::resolveFields($definition->getFields(), $definition->clean($values), $context), $block, $context);
 
         if (trim($html) === '' && ! $context->forBuilder) {
             return '';

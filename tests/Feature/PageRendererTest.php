@@ -52,13 +52,27 @@ class PageRendererTest extends TestCase
             $this->section('offer1', [Blocks::heading(2, 'Promosi Raya sudah tamat')], hidden: true),
         ];
 
-        foreach ([new RenderContext, new RenderContext(isPreview: true), new RenderContext(forBuilder: true, isPreview: true)] as $context) {
+        foreach ([new RenderContext, new RenderContext(isPreview: true)] as $context) {
             $html = $this->render($sections, $context);
 
             $this->assertStringContainsString('Kulit cerah dalam 7 hari', $html);
             $this->assertStringNotContainsString('Promosi Raya sudah tamat', $html);
             $this->assertStringNotContainsString('data-block-id="offer1"', $html);
+            $this->assertStringNotContainsString('data-hidden', $html);
         }
+    }
+
+    public function test_the_builder_canvas_draws_a_hidden_section_marked_hidden(): void
+    {
+        $html = $this->render([
+            $this->section('hero1', [Blocks::heading(1, 'Kulit cerah dalam 7 hari')]),
+            $this->section('offer1', [Blocks::heading(2, 'Promosi Raya sudah tamat')], ['anchor' => 'promosi'], hidden: true),
+        ], new RenderContext(forBuilder: true, isPreview: true));
+
+        $this->assertSame(['hero1', 'offer1'], array_map(fn ($e) => $e->getAttribute('data-block-id'), $this->select($html, '[data-block-id]')));
+        $this->assertFalse($this->first($html, '[data-block-id="hero1"]')->hasAttribute('data-hidden'));
+        $this->assertTrue($this->first($html, '[data-block-id="offer1"]')->hasAttribute('data-hidden'));
+        $this->assertSame(['Promosi Raya sudah tamat'], $this->texts($html, '[data-block-id="offer1"][data-hidden] h2'));
     }
 
     public function test_it_normalizes_the_sections_it_is_given(): void
@@ -297,6 +311,88 @@ class PageRendererTest extends TestCase
 
         $this->assertStringNotContainsString('data-item', $html);
         $this->assertStringNotContainsString('bn-media-empty', $html);
+    }
+
+    public function test_it_draws_a_page_value_of_any_format_the_same(): void
+    {
+        $sections = [$this->section('one', [Blocks::heading(2, 'Satu')])];
+        $bare = $this->render($sections);
+
+        $this->assertStringContainsString('Satu', $bare);
+        $this->assertSame($bare, app(PageRenderer::class)->render(['sections' => $sections], new RenderContext));
+        $this->assertSame($bare, app(PageRenderer::class)->render(['version' => 2, 'sections' => $sections], new RenderContext));
+    }
+
+    public function test_a_section_with_style_gets_its_class_and_the_page_one_style_tag_before_the_sections(): void
+    {
+        $html = $this->render([
+            $this->section('st1', [Blocks::paragraph('A')], ['style' => ['desktop' => ['padding_top' => '24px'], 'phone' => ['padding_top' => '12px']]]),
+            $this->section('st2', [Blocks::paragraph('B')], ['advanced' => ['class' => 'price-card wide', 'hide_on' => ['tablet']]]),
+            $this->section('plain', [Blocks::paragraph('C')]),
+        ]);
+
+        $this->assertSame(1, substr_count($html, '<style'));
+        $this->assertStringStartsWith('<style data-fbe-style>', $html);
+        $this->assertStringContainsString('.sf-page .fbe-s-st1{padding-top:24px}', $html);
+        $this->assertStringContainsString('@media (max-width: 767px){.sf-page .fbe-s-st1{padding-top:12px}}', $html);
+        $this->assertStringContainsString('@media (min-width: 768px) and (max-width: 1024px){.sf-page .fbe-s-st2{display:none}}', $html);
+        $this->assertSame('sf-rich-section sf-layout-plain fbe-s-st1', $this->first($html, '[data-block-id="st1"] section')->getAttribute('class'));
+        $this->assertSame('sf-rich-section sf-layout-plain fbe-s-st2 price-card wide', $this->first($html, '[data-block-id="st2"] section')->getAttribute('class'));
+        $this->assertSame('sf-rich-section sf-layout-plain', $this->first($html, '[data-block-id="plain"] section')->getAttribute('class'));
+    }
+
+    public function test_section_and_block_rules_share_the_one_style_tag_of_the_page(): void
+    {
+        $block = ['id' => 'blk1', 'type' => 'paragraph', 'props' => ['look' => '{"style":{"desktop":{"opacity":"0.5"}}}'], 'content' => [$this->text('A')], 'children' => []];
+
+        $html = $this->render([
+            $this->section('s1', [$block], ['layout' => 'cards', 'style' => ['desktop' => ['padding_top' => '4px']]]),
+            $this->section('s2', [Blocks::heading(3, 'Kad'), $block]),
+        ]);
+
+        $this->assertSame(1, substr_count($html, '<style'));
+        $this->assertStringStartsWith('<style data-fbe-style>.sf-page .fbe-s-s1{padding-top:4px}.sf-page .fbe-b-blk1{opacity:0.5}', $html);
+        $this->assertCount(2, $this->select($html, 'p.fbe-b-blk1'));
+    }
+
+    public function test_a_page_with_no_style_has_no_style_tag(): void
+    {
+        $html = $this->render([$this->section('plain', [Blocks::paragraph('C')], ['background' => 'color', 'background_color' => '#ffeecc'])]);
+
+        $this->assertStringNotContainsString('<style', $html);
+        $this->assertStringNotContainsString('fbe-s-', $html);
+    }
+
+    public function test_a_style_background_colour_wins_over_the_preset_one(): void
+    {
+        $html = $this->render([$this->section('bg1', [Blocks::paragraph('A')], [
+            'background' => 'color',
+            'background_color' => '#ffeecc',
+            'style' => ['phone' => ['background_color' => '#000000']],
+        ])]);
+
+        $section = $this->first($html, 'section');
+
+        $this->assertStringNotContainsString('background-color', $section->getAttribute('style'));
+        $this->assertStringContainsString('.sf-page .fbe-s-bg1{background-color:#ffeecc}', $html);
+        $this->assertStringContainsString('@media (max-width: 767px){.sf-page .fbe-s-bg1{background-color:#000000}}', $html);
+        $this->assertStringContainsString('sf-has-bg', $section->getAttribute('class'));
+    }
+
+    public function test_a_style_text_alignment_wins_over_the_align_preset(): void
+    {
+        $html = $this->render([$this->section('al1', [Blocks::paragraph('A')], ['align' => 'center', 'style' => ['phone' => ['text_align' => 'left']]])]);
+
+        $this->assertStringNotContainsString('sf-align-center', $this->first($html, 'section')->getAttribute('class'));
+        $this->assertStringContainsString('.sf-page .fbe-s-al1{text-align:center}', $html);
+        $this->assertStringContainsString('{.sf-page .fbe-s-al1{text-align:left}}', $html);
+    }
+
+    public function test_section_custom_css_is_drawn_with_selector_replaced(): void
+    {
+        $html = $this->render([$this->section('css1', [Blocks::paragraph('A')], ['advanced' => ['css' => 'selector .bn-button{letter-spacing:.1em}']])]);
+
+        $this->assertStringContainsString('.sf-page .fbe-s-css1 .bn-button{letter-spacing:.1em}', $html);
     }
 
     public function test_a_page_without_sections_is_empty(): void

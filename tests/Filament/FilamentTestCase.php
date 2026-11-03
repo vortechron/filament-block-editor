@@ -21,6 +21,7 @@ use RyanChandler\BladeCaptureDirective\BladeCaptureDirectiveServiceProvider;
 use Vortechron\FilamentBlockEditor\FilamentBlockEditorServiceProvider;
 use Vortechron\FilamentBlockEditor\Tests\TestCase;
 use Workbench\App\Filament\Pages\DemoBuilder;
+use Workbench\App\Filament\Pages\FullDemoBuilder;
 use Workbench\App\Models\User;
 use Workbench\App\Providers\Filament\AdminPanelProvider;
 use Workbench\App\Providers\WorkbenchServiceProvider;
@@ -39,6 +40,8 @@ abstract class FilamentTestCase extends TestCase
 
         DemoBuilder::$saved = null;
         DemoBuilder::$denied = false;
+        DemoBuilder::$developer = false;
+        FullDemoBuilder::forgetCalls();
     }
 
     protected function getPackageProviders($app): array

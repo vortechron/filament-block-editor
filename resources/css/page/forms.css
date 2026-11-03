@@ -1,0 +1,160 @@
+/*
+ * The form block (Forms\FormRenderer, resources/views/form.blade.php).
+ * Its look follows the design kit (Design\KitCss): corners from
+ * --kit-form-radius, lines from --kit-color-border, focus and the button
+ * from the page accent. The "outline" style with labels above is drawn
+ * here; the kit adds the "filled" and "underline" styles and hidden labels.
+ */
+
+.fbe-form {
+    margin: 1.25rem 0;
+    text-align: left;
+}
+
+.fbe-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem 1.25rem;
+}
+
+.fbe-field {
+    grid-column: span 2;
+    min-width: 0;
+}
+
+/* Two half-width fields share a row, except on a narrow screen. */
+@container (width >= 36rem) {
+    .fbe-field-half {
+        grid-column: span 1;
+    }
+}
+
+.fbe-form fieldset {
+    margin: 0;
+    padding: 0;
+    border: 0;
+}
+
+.fbe-label {
+    display: block;
+    margin-bottom: 0.375rem;
+    color: var(--sf-heading, var(--sf-ink));
+    font-size: 0.9375rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.fbe-required {
+    color: #dc2626;
+}
+
+.fbe-input {
+    display: block;
+    width: 100%;
+    min-height: 2.875rem;
+    padding: 0.625rem 0.875rem;
+    border: 1.5px solid var(--kit-color-border, #e2e8f0);
+    border-radius: var(--kit-form-radius, 0.75rem);
+    background: var(--kit-color-background, #ffffff);
+    color: var(--sf-ink, #0f172a);
+    font: inherit;
+    font-size: 1rem;
+    line-height: 1.5;
+}
+
+textarea.fbe-input {
+    resize: vertical;
+}
+
+.fbe-input:focus {
+    border-color: var(--sf-accent);
+    outline: 3px solid var(--sf-accent-soft, rgb(37 99 235 / 0.3));
+    outline-offset: 0;
+}
+
+.fbe-input::placeholder {
+    color: var(--kit-color-muted, #64748b);
+    opacity: 1;
+}
+
+.fbe-option,
+.fbe-consent-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-top: 0.375rem;
+    color: var(--sf-words, var(--sf-text));
+    font-size: 1rem;
+    line-height: 1.5;
+    cursor: pointer;
+}
+
+.fbe-option input,
+.fbe-consent-label input {
+    flex: none;
+    width: 1.125rem;
+    height: 1.125rem;
+    margin-top: 0.175rem;
+    accent-color: var(--sf-accent);
+}
+
+.fbe-field-error {
+    margin: 0.375rem 0 0;
+    color: #dc2626;
+    font-size: 0.875rem;
+}
+
+/* The honeypot: people never see it, bots fill it in. */
+.fbe-hp {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
+.fbe-submit {
+    display: flex;
+    margin-top: 1.25rem;
+}
+
+.fbe-submit .bn-button {
+    margin: 0;
+}
+
+.fbe-submit-center {
+    justify-content: center;
+}
+
+.fbe-submit-right {
+    justify-content: flex-end;
+}
+
+.fbe-submit-full .bn-button {
+    width: 100%;
+}
+
+.fbe-submit .bn-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+}
+
+.fbe-form-success {
+    margin: 0;
+    padding: 1rem 1.25rem;
+    border-radius: var(--kit-form-radius, 0.75rem);
+    background: var(--sf-accent-tint, #eff6ff);
+    color: var(--sf-ink, #0f172a);
+    font-weight: 600;
+}
+
+/* Only the builder shows it (RenderContext::forBuilder). */
+.fbe-form-note {
+    margin: 0.75rem 0 0;
+    padding: 0.5rem 0.75rem;
+    border: 1px dashed #f59e0b;
+    border-radius: 0.5rem;
+    background: #fffbeb;
+    color: #92400e;
+    font: 600 0.875rem/1.4 system-ui, sans-serif;
+}

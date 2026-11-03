@@ -12,6 +12,15 @@ use Vortechron\FilamentBlockEditor\Tests\TestCase;
 
 class BlockRegistryTest extends TestCase
 {
+    /**
+     * The host's own blocks only: the core blocks are tested in CoreBlocksTest.
+     */
+    protected function defineEnvironment($app): void
+    {
+        parent::defineEnvironment($app);
+        $app['config']->set('filament-block-editor.core_blocks', false);
+    }
+
     protected function setUp(): void
     {
         parent::setUp();

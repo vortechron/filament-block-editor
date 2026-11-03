@@ -2,6 +2,7 @@
 
 namespace Vortechron\FilamentBlockEditor\Tests\Unit;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use Vortechron\FilamentBlockEditor\BlockNote\BlockNoteDocument;
 use Vortechron\FilamentBlockEditor\BlockNote\Blocks;
 use Vortechron\FilamentBlockEditor\Tests\TestCase;
@@ -169,6 +170,60 @@ class BlockNoteDocumentTest extends TestCase
         ];
 
         $this->assertSame($document, BlockNoteDocument::clean($document));
+    }
+
+    public function test_the_look_prop_is_cleaned_and_stored_again_as_compact_json(): void
+    {
+        $look = json_encode([
+            'style' => ['desktop' => ['padding_top' => '24px', 'color' => '</style><script>'], 'hover' => ['opacity' => '0.5', 'padding_top' => '1px']],
+            'advanced' => ['class' => 'wide', 'css' => 'selector { color: red; } </style>', 'hide_on' => ['phone'], 'extra' => 1],
+            'evil' => true,
+        ]);
+
+        $clean = BlockNoteDocument::clean([['id' => 'b1', 'type' => 'paragraph', 'props' => ['look' => $look], 'content' => [], 'children' => []]]);
+
+        $this->assertSame(
+            '{"style":{"desktop":{"padding_top":"24px"},"hover":{"opacity":"0.5"}},"advanced":{"class":"wide","hide_on":["phone"]}}',
+            $clean[0]['props']['look'],
+        );
+        $this->assertSame('b1', $clean[0]['id']);
+    }
+
+    /**
+     * @return array<string, array{0: mixed}>
+     */
+    public static function emptyLooks(): array
+    {
+        return [
+            'empty' => [''],
+            'not json' => ['{nope'],
+            'a list' => ['[1,2]'],
+            'nothing valid' => ['{"style":{"desktop":{"padding_top":"huge"}},"advanced":{"class":"1x"}}'],
+            'not a string' => [['style' => []]],
+            'null' => [null],
+        ];
+    }
+
+    #[DataProvider('emptyLooks')]
+    public function test_a_look_with_nothing_valid_in_it_is_an_empty_string(mixed $look): void
+    {
+        $clean = BlockNoteDocument::clean([['id' => 'b1', 'type' => 'heading', 'props' => ['level' => 2, 'look' => $look], 'content' => [], 'children' => []]]);
+
+        $this->assertSame('', $clean[0]['props']['look']);
+    }
+
+    public function test_a_block_with_a_look_and_no_usable_id_gets_an_id_so_its_class_is_stable(): void
+    {
+        $look = '{"style":{"desktop":{"opacity":"0.5"}}}';
+        $clean = BlockNoteDocument::clean([
+            ['type' => 'paragraph', 'props' => ['look' => $look], 'content' => [], 'children' => []],
+            ['id' => '"><b>', 'type' => 'paragraph', 'props' => ['look' => $look], 'content' => [], 'children' => []],
+            ['type' => 'paragraph', 'props' => ['look' => ''], 'content' => [], 'children' => []],
+        ]);
+
+        $this->assertMatchesRegularExpression('/^[a-z0-9]{8}$/', $clean[0]['id']);
+        $this->assertSame('b', $clean[1]['id']);
+        $this->assertArrayNotHasKey('id', $clean[2]);
     }
 
     public function test_a_heading_level_stays_between_one_and_four(): void

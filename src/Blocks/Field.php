@@ -4,6 +4,8 @@ namespace Vortechron\FilamentBlockEditor\Blocks;
 
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use Vortechron\FilamentBlockEditor\Content\DynamicValues;
+use Vortechron\FilamentBlockEditor\Rendering\RenderContext;
 use Vortechron\FilamentBlockEditor\Support\Urls;
 
 /**
@@ -36,6 +38,8 @@ final class Field
     private int|float|null $min = null;
 
     private int|float|null $max = null;
+
+    private bool $developerOnly = false;
 
     private function __construct(public readonly string $name, public readonly string $type)
     {
@@ -132,12 +136,22 @@ final class Field
     }
 
     /**
-     * The fields of each item of a list.
+     * The fields of each item of a list. A field inside a list may not be
+     * developerOnly(): the guard keeps developer-only values by block, not
+     * by list row. Make the whole list developer only instead.
      *
      * @param  list<Field>  $fields
+     *
+     * @throws InvalidArgumentException when one of the fields is developer only
      */
     public function fields(array $fields): self
     {
+        foreach ($fields as $field) {
+            if ($field instanceof self && $field->developerOnly) {
+                throw new InvalidArgumentException("The [{$field->name}] field is inside the [{$this->name}] list, so it cannot be developerOnly(). Make the whole list developerOnly() instead.");
+            }
+        }
+
         $this->fields = array_values($fields);
 
         return $this;
@@ -165,6 +179,25 @@ final class Field
     }
 
     /**
+     * Only developers may see and change this field. The builder hides it
+     * from everyone else, and Content\PageValue::guard() keeps its stored
+     * value when someone else saves (a new block gets the default). Only a
+     * top-level field of a block may be developer only, a whole list
+     * included; one inside a list is refused (see fields()).
+     */
+    public function developerOnly(bool $developerOnly = true): self
+    {
+        $this->developerOnly = $developerOnly;
+
+        return $this;
+    }
+
+    public function isDeveloperOnly(): bool
+    {
+        return $this->developerOnly;
+    }
+
+    /**
      * What the builder gets for this field.
      *
      * @return array<string, mixed>
@@ -183,6 +216,7 @@ final class Field
             ...($this->type === 'number' && $this->min !== null ? ['min' => $this->min] : []),
             ...($this->type === 'number' && $this->max !== null ? ['max' => $this->max] : []),
             ...($default !== null ? ['default' => $default] : []),
+            ...($this->developerOnly ? ['developerOnly' => true] : []),
         ];
     }
 
@@ -215,10 +249,41 @@ final class Field
             'select' => $this->cleanSelect($value) ?? $fallback(),
             'toggle' => is_bool($value) || is_scalar($value) ? filter_var($value, FILTER_VALIDATE_BOOLEAN) : $fallback(),
             'number' => $this->cleanNumber($value) ?? $fallback(),
-            'image' => Urls::media($value) ?? $fallback(),
-            'link' => Urls::link($value) ?? $fallback(),
+            'image' => Urls::media($value) ?? DynamicValues::reference($value) ?? $fallback(),
+            'link' => Urls::link($value) ?? DynamicValues::reference($value) ?? $fallback(),
             'list' => is_array($value) ? $this->cleanList($value) : $fallback(),
         };
+    }
+
+    /**
+     * A cleaned value with its dynamic values resolved for drawing: an
+     * `@key` link or picture becomes the value it points at (checked by
+     * the address rules, or null), in lists too.
+     */
+    public function resolve(mixed $value, RenderContext $context): mixed
+    {
+        return match ($this->type) {
+            'image' => app(DynamicValues::class)->media($value, $context),
+            'link' => app(DynamicValues::class)->link($value, $context),
+            'list' => is_array($value) ? array_map(fn (mixed $item): mixed => is_array($item) ? self::resolveFields($this->fields, $item, $context) : $item, $value) : $value,
+            default => $value,
+        };
+    }
+
+    /**
+     * @param  list<Field>  $fields
+     * @param  array<string, mixed>  $values  cleaned values
+     * @return array<string, mixed>
+     */
+    public static function resolveFields(array $fields, array $values, RenderContext $context): array
+    {
+        foreach ($fields as $field) {
+            if (array_key_exists($field->name, $values)) {
+                $values[$field->name] = $field->resolve($values[$field->name], $context);
+            }
+        }
+
+        return $values;
     }
 
     private function scalarText(mixed $value): ?string

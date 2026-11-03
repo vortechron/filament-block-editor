@@ -16,10 +16,9 @@
 @use('Vortechron\FilamentBlockEditor\Rendering\RenderContext')
 @php
     $context = $context instanceof RenderContext ? $context : new RenderContext;
+    // A list of sections, or a whole page value of any format, as an array or JSON.
     $sections = is_string($sections) ? json_decode($sections, true) : $sections;
-    // The whole page value ({"sections": [...]}) is fine too.
-    $sections = is_array($sections) ? (is_array($sections['sections'] ?? null) ? $sections['sections'] : $sections) : [];
-    $html = app(PageRenderer::class)->render($sections, $context);
+    $html = app(PageRenderer::class)->render(is_array($sections) ? $sections : [], $context);
 @endphp
 <div {{ $attributes->class(['sf-page']) }} @if ($context->isPreview) data-preview @endif>{!! $html !!}</div>
 @if ($script && str_contains($html, 'data-gallery-controls'))

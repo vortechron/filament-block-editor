@@ -16,6 +16,7 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use Vortechron\FilamentBlockEditor\FilamentBlockEditorPlugin;
 use Workbench\App\Filament\Pages\DemoBuilder;
+use Workbench\App\Filament\Pages\FullDemoBuilder;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -26,7 +27,7 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
-            ->pages([DemoBuilder::class])
+            ->pages([DemoBuilder::class, FullDemoBuilder::class])
             ->plugin(FilamentBlockEditorPlugin::make())
             ->middleware([
                 EncryptCookies::class,
