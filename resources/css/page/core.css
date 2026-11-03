@@ -1,0 +1,323 @@
+/*
+ * The core blocks (Blocks\CoreBlocks, resources/views/core/*): FAQ, map,
+ * icon list, pricing and testimonials. They follow the page tokens and the
+ * design kit (--sf-accent, --sf-ink, --sf-radius, --kit-color-*,
+ * --kit-shadow-*), so a section's own corners and colours reach them too.
+ */
+
+.fbe-core-heading,
+.fbe-plan-name,
+.fbe-icons-item h3 {
+    margin: 0 0 0.75rem;
+    color: var(--sf-heading, var(--sf-ink));
+    font-family: var(--sf-heading-font);
+    font-weight: var(--sf-heading-weight);
+    letter-spacing: var(--sf-heading-tracking);
+    line-height: 1.2;
+}
+
+.fbe-faq .fbe-core-heading {
+    margin-top: 0;
+    margin-bottom: 1.25rem;
+    font-size: clamp(1.5rem, 1.2rem + 1.4vw, 2.25rem);
+    text-align: center;
+}
+
+.fbe-icon {
+    display: block;
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
+/* ---------- FAQ ---------- */
+
+/* Rules below that also meet the text styles (.sf-rich p, ul, blockquote,
+   figure) carry the block's own class first, so they win inside a section
+   of mixed blocks too. */
+
+.fbe-faq {
+    max-width: 48rem;
+    margin-inline: auto;
+}
+
+.fbe-faq-item {
+    border-bottom: 1px solid var(--kit-color-border, #e2e8f0);
+}
+
+.fbe-faq-item summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 1rem 0;
+    color: var(--sf-heading, var(--sf-ink));
+    font-size: 1.0625rem;
+    font-weight: 700;
+    list-style: none;
+    cursor: pointer;
+}
+
+.fbe-faq-item summary::-webkit-details-marker {
+    display: none;
+}
+
+.fbe-faq-item summary::after {
+    content: '+';
+    flex: none;
+    color: var(--sf-accent);
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.fbe-faq-item[open] summary::after {
+    content: '−';
+}
+
+.fbe-faq-answer {
+    padding: 0 0 1rem;
+    color: var(--sf-words, var(--sf-text));
+    line-height: 1.7;
+}
+
+/* ---------- Map ---------- */
+
+.fbe-map-frame {
+    display: block;
+    width: 100%;
+    height: 22.5rem;
+    border: 0;
+    border-radius: var(--sf-radius);
+}
+
+.fbe-map-sm .fbe-map-frame {
+    height: 15rem;
+}
+
+.fbe-map-lg .fbe-map-frame {
+    height: 30rem;
+}
+
+.fbe-map .fbe-map-address {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1rem;
+    margin: 0.75rem 0 0;
+    color: var(--sf-words, var(--sf-text));
+}
+
+.fbe-map-address a {
+    color: var(--sf-accent);
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+/* ---------- Icon list ---------- */
+
+.fbe-icons {
+    display: grid;
+    grid-template-columns: repeat(var(--fbe-columns, 3), minmax(0, 1fr));
+    gap: 1.25rem;
+}
+
+.fbe-icons-1 {
+    --fbe-columns: 1;
+}
+
+.fbe-icons-2 {
+    --fbe-columns: 2;
+}
+
+.fbe-icons-4 {
+    --fbe-columns: 4;
+}
+
+@container (width < 48rem) {
+    .fbe-icons {
+        --fbe-columns: 1 !important;
+    }
+}
+
+.fbe-icons-item {
+    display: flex;
+    gap: 0.875rem;
+    align-items: flex-start;
+}
+
+.fbe-icons-boxed .fbe-icons-item {
+    padding: 1.25rem;
+    border: var(--sf-card-line);
+    border-radius: var(--sf-radius);
+    background: var(--sf-card);
+    box-shadow: var(--kit-shadow-sm);
+}
+
+.fbe-icons-mark {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: calc(var(--sf-radius) * 0.6);
+    background: var(--sf-accent-tint);
+    color: var(--sf-accent);
+}
+
+.fbe-icons-item h3 {
+    margin-bottom: 0.25rem;
+    font-size: 1.125rem;
+}
+
+.fbe-icons .fbe-icons-item p {
+    margin: 0;
+    color: var(--sf-words, var(--sf-text));
+    line-height: 1.6;
+}
+
+/* ---------- Pricing ---------- */
+
+.fbe-plans {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+    gap: 1.25rem;
+    align-items: stretch;
+}
+
+.fbe-plan {
+    display: flex;
+    flex-direction: column;
+    padding: 1.75rem 1.5rem;
+    border: var(--sf-card-line);
+    border-radius: var(--sf-radius);
+    background: var(--sf-card);
+    box-shadow: var(--kit-shadow-sm);
+    color: var(--sf-text);
+}
+
+.fbe-plan-highlight {
+    border: 2px solid var(--sf-accent);
+    box-shadow: var(--kit-shadow-lg);
+}
+
+.fbe-plan .fbe-plan-name {
+    margin-top: 0;
+    font-size: 1.25rem;
+}
+
+.fbe-plan .fbe-plan-price {
+    margin: 0 0 1.25rem;
+    color: var(--sf-ink);
+    font-size: 2.25rem;
+    font-weight: 800;
+    line-height: 1.1;
+}
+
+.fbe-plan-price small {
+    margin-left: 0.25rem;
+    color: var(--kit-color-muted, #64748b);
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+.fbe-plan .fbe-plan-features {
+    flex: 1;
+    margin: 0 0 1.5rem;
+    padding: 0;
+    list-style: none;
+}
+
+.fbe-plan .fbe-plan-features li {
+    display: flex;
+    gap: 0.5rem;
+    align-items: flex-start;
+    margin-top: 0.5rem;
+}
+
+.fbe-plan-features .fbe-icon {
+    flex: none;
+    width: 1.125rem;
+    height: 1.125rem;
+    margin-top: 0.2rem;
+    color: var(--sf-accent);
+}
+
+.fbe-plan .bn-button {
+    width: 100%;
+    margin: 0;
+}
+
+.fbe-pricing .fbe-pricing-note {
+    margin: 1.25rem 0 0;
+    color: var(--kit-color-muted, #64748b);
+    font-size: 0.9375rem;
+    text-align: center;
+}
+
+/* ---------- Testimonials ---------- */
+
+.fbe-testimonials {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 1.25rem;
+}
+
+.fbe-testimonials .fbe-testimonial {
+    display: flex;
+    flex-direction: column;
+    gap: 0.875rem;
+    margin: 0;
+    padding: 1.5rem;
+    border: var(--sf-card-line);
+    border-radius: var(--sf-radius);
+    background: var(--sf-card);
+    box-shadow: var(--sf-card-shadow);
+    color: var(--sf-text);
+}
+
+.fbe-testimonial .fbe-stars {
+    margin: 0;
+    color: #f59e0b;
+    letter-spacing: 0.1em;
+}
+
+.fbe-stars span {
+    color: var(--kit-color-border, #e2e8f0);
+}
+
+.fbe-testimonial blockquote {
+    flex: 1;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    font-style: normal;
+    color: var(--sf-ink);
+    font-size: 1.0625rem;
+    line-height: 1.65;
+}
+
+.fbe-testimonial-by {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.fbe-testimonial-by img {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 9999px;
+    object-fit: cover;
+}
+
+.fbe-testimonial-by span {
+    display: flex;
+    flex-direction: column;
+}
+
+.fbe-testimonial-by strong {
+    color: var(--sf-ink);
+}
+
+.fbe-testimonial-by small {
+    color: var(--kit-color-muted, #64748b);
+    font-size: 0.875rem;
+}

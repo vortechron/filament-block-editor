@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Blade;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 use Vortechron\FilamentBlockEditor\Blocks\BlockRegistry;
+use Vortechron\FilamentBlockEditor\Blocks\CoreBlocks;
 use Vortechron\FilamentBlockEditor\Content\DynamicValues;
 use Vortechron\FilamentBlockEditor\Content\NullSectionResolver;
 use Vortechron\FilamentBlockEditor\Content\SectionResolver;
@@ -58,8 +59,17 @@ class FilamentBlockEditorServiceProvider extends PackageServiceProvider
 
     public function packageRegistered(): void
     {
-        // One registry for the whole app: hosts register their own blocks at boot.
-        $this->app->singleton(BlockRegistry::class);
+        // One registry for the whole app: hosts register their own blocks at
+        // boot. The package's core blocks come first, unless switched off.
+        $this->app->singleton(BlockRegistry::class, function (): BlockRegistry {
+            $registry = new BlockRegistry;
+
+            if (config('filament-block-editor.core_blocks', true)) {
+                CoreBlocks::register($registry);
+            }
+
+            return $registry;
+        });
 
         // One registry of dynamic values (site.phone, ...): hosts register them at boot.
         $this->app->singleton(DynamicValues::class);
