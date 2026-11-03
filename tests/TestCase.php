@@ -23,5 +23,7 @@ abstract class TestCase extends Orchestra
         $app['config']->set('app.key', 'base64:'.base64_encode(str_repeat('a', 32)));
         $app['config']->set('app.locale', 'ms');
         $app['config']->set('app.fallback_locale', 'en');
+        // Testbench's default cookie session needs a real request; tests start sessions by hand.
+        $app['config']->set('session.driver', 'array');
     }
 }
