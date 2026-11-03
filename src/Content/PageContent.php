@@ -29,7 +29,8 @@ use Vortechron\FilamentBlockEditor\Support\Urls;
  *     ['id' => 'k9x8', 'type' => 'ref', 'ref' => 12]
  *
  * normalize() is the only way content should reach your storage. It keeps
- * known fields and drops anything else.
+ * known fields and drops anything else, and gives a block whose id is
+ * already used earlier on the page a new one (UniqueBlockIds).
  */
 final class PageContent
 {
@@ -128,7 +129,7 @@ final class PageContent
             }
         }
 
-        return $normalized;
+        return UniqueBlockIds::apply($normalized);
     }
 
     /**

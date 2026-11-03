@@ -352,7 +352,9 @@ class PageRendererTest extends TestCase
 
         $this->assertSame(1, substr_count($html, '<style'));
         $this->assertStringStartsWith('<style data-fbe-style>.sf-page .fbe-s-s1{padding-top:4px}.sf-page .fbe-b-blk1{opacity:0.5}', $html);
-        $this->assertCount(2, $this->select($html, 'p.fbe-b-blk1'));
+        // The same block id in s2 is a copy: it gets an id of its own, and its own rule.
+        $this->assertCount(1, $this->select($html, 'p.fbe-b-blk1'));
+        $this->assertSame(2, substr_count($html, '{opacity:0.5}'));
     }
 
     public function test_a_page_with_no_style_has_no_style_tag(): void

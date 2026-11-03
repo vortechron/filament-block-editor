@@ -1,3 +1,4 @@
+import { withNewSectionBlockIds } from '@/lib/block-ids';
 import { newSectionId } from '@/lib/page-value';
 import type { RichDocument, RichSection, Section } from '@/types';
 
@@ -15,8 +16,12 @@ export function blockTitle(block: RichSection): string {
     );
 }
 
+/**
+ * A copy of a section under a new id, every block in it under a new id
+ * too (lib/block-ids.ts).
+ */
 export function duplicateBlock<T extends Section>(block: T): T {
-    return { ...structuredClone(block), id: newSectionId() };
+    return { ...withNewSectionBlockIds(structuredClone(block)), id: newSectionId() };
 }
 
 /**

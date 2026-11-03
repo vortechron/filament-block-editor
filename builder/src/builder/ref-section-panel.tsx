@@ -11,9 +11,9 @@ import { useState } from 'react';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
 import { withoutDeveloperData } from '@/lib/locks';
-import { newSectionId } from '@/lib/page-value';
 import { findSynced } from '@/lib/synced-sections';
 import type { RefSection, RichSection } from '@/types';
+import { duplicateBlock } from '../editor/block-meta';
 import { ConfirmDialog } from '../editor/confirm-dialog';
 import { ActionButton } from './action-button';
 import { useBuilderContext } from './builder-context';
@@ -44,8 +44,7 @@ export function RefSectionPanel({
         const copy = developer ? section : withoutDeveloperData(section);
 
         builder.replaceSection(block.id, {
-            ...structuredClone(copy),
-            id: newSectionId(),
+            ...duplicateBlock(copy),
             ...(isHidden ? { hidden: true as const } : {}),
         });
     }

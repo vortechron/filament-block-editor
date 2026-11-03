@@ -84,7 +84,7 @@ const SYNCED = [
             lock: { move: true as const },
             data: {
                 layout: 'banner' as const,
-                document: [{ type: 'heading', props: { level: 2 }, content: 'Jom singgah' }],
+                document: [{ id: 'jom00001', type: 'heading', props: { level: 2 }, content: 'Jom singgah' }],
             },
         },
     },
@@ -135,6 +135,8 @@ describe('a synced section the host knows', () => {
         expect(copy.id).not.toBe('orig0001');
         expect(copy.type === 'rich' && copy.data.layout).toBe('banner');
         expect(copy.type === 'rich' && copy.data.document[0]).toMatchObject({ content: 'Jom singgah' });
+        // Its blocks get new ids too, so their styles and form keys are its own.
+        expect(copy.type === 'rich' && copy.data.document[0].id).not.toBe('jom00001');
         // A copy made by someone who is not a developer has no locks.
         expect('lock' in copy).toBe(false);
         // The copy is picked, so its words open.

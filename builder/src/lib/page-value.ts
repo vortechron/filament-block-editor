@@ -9,6 +9,7 @@ import type {
     SectionTemplateInput,
 } from '@/types';
 import { cleanAdvanced } from './advanced';
+import { withNewBlockIds } from './block-ids';
 import { cleanLock } from './locks';
 import { cleanStyleBag } from './style-bag';
 
@@ -261,12 +262,15 @@ export function normalizeTemplates(
 
 /**
  * A new section from a ready-made template. The data is copied, so editing
- * the section never changes the template.
+ * the section never changes the template, and every block gets a new id,
+ * so a template added twice never shares a block id.
  */
 export function sectionFromTemplate(template: SectionTemplate): RichSection {
+    const data = structuredClone(template.data);
+
     return {
         id: newSectionId(),
         type: 'rich',
-        data: structuredClone(template.data),
+        data: { ...data, document: withNewBlockIds(data.document) },
     };
 }

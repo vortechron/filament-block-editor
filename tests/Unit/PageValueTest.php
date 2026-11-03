@@ -130,6 +130,25 @@ class PageValueTest extends TestCase
         $this->assertFalse($ran);
     }
 
+    public function test_a_block_id_seen_twice_on_a_page_gets_a_new_id_and_the_first_keeps_its_own(): void
+    {
+        $block = fn (string $id, array $children = []): array => ['id' => $id, 'type' => 'paragraph', 'props' => ['look' => '{"style":{"desktop":{"color":"#ff0000"}}}'], 'content' => [], 'children' => $children];
+
+        $value = PageValue::normalize(['version' => 2, 'sections' => [
+            ['id' => 's1', 'type' => 'rich', 'data' => ['document' => [$block('b1'), $block('cols', [$block('b2')])]]],
+            ['id' => 's2', 'type' => 'rich', 'data' => ['document' => [$block('b1'), $block('b3', [$block('b2')])]]],
+        ]]);
+
+        [$first, $second] = $value['sections'];
+        $copy = $second['data']['document'];
+
+        $this->assertSame(['b1', 'cols', 'b2'], [$first['data']['document'][0]['id'], $first['data']['document'][1]['id'], $first['data']['document'][1]['children'][0]['id']]);
+        $this->assertSame('b3', $copy[1]['id']);
+        $this->assertNotContains($copy[0]['id'], ['b1', 'cols', 'b2', 'b3']);
+        $this->assertNotContains($copy[1]['children'][0]['id'], ['b1', 'cols', 'b2', 'b3', $copy[0]['id']]);
+        $this->assertSame($value, PageValue::normalize($value));
+    }
+
     public function test_the_rules_accept_a_format_two_value_with_rich_and_ref_sections(): void
     {
         $value = ['version' => 2, 'sections' => [$this->section(), ['id' => 'r1', 'type' => 'ref', 'ref' => 12]]];
