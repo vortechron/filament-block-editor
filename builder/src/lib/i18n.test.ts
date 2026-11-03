@@ -6,6 +6,7 @@ import { ACTION_LABELS } from '@/builder/form/form-actions';
 import { FIELD_TYPE_LABELS } from '@/builder/form/form-field-editor';
 import { GROUP_LABELS } from '@/builder/item-catalog';
 import { LAYOUT_LABELS } from '@/builder/section-thumbs';
+import { KIT_SLASH_TEXTS } from '@/editor/slash-menu';
 import ms from '@/lang/ms';
 import { translate } from './i18n';
 
@@ -52,7 +53,10 @@ function sourceTexts(): string[] {
             const path = join(dir, name);
 
             if (statSync(path).isDirectory()) {
-                walk(path);
+                // The dictionaries themselves are not texts to translate.
+                if (name !== 'lang') {
+                    walk(path);
+                }
             } else if (/\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name)) {
                 files.push(path);
             }
@@ -85,6 +89,7 @@ function sourceTexts(): string[] {
         LAYOUT_LABELS,
         ACTION_LABELS,
         FIELD_TYPE_LABELS,
+        KIT_SLASH_TEXTS,
     ]) {
         Object.values(map).forEach((text) => texts.add(text));
     }

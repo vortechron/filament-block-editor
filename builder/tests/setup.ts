@@ -1,3 +1,10 @@
+import { configure } from '@testing-library/react';
+
+// The section editor (BlockNote) loads on its own the first time a test
+// opens it. With every test file running at once that can take over a
+// second, so the find* queries wait longer than their default.
+configure({ asyncUtilTimeout: 4000 });
+
 /**
  * What jsdom lacks and the builder uses: media queries (a laptop-wide
  * screen), ResizeObserver and scrolling.
