@@ -2,6 +2,7 @@
 
 namespace Vortechron\FilamentBlockEditor\Filament\Concerns;
 
+use Closure;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
 use ReflectionClass;
@@ -76,6 +77,27 @@ trait PageBuilderHooks
      * @param  array<string, array<string, mixed>>  $values  by group
      */
     protected function savePageBuilderSiteInfo(array $values): void {}
+
+    /**
+     * Draws the builder's preview with shop info that is not saved yet, so
+     * the canvas follows the shop info form while the owner types. Call
+     * `$draw()` while your settings (or the dynamic values that read them)
+     * show `$values`, then put them back. For example:
+     *
+     *     return app(DynamicValues::class)->drawWith(['site.phone' => $values['contact']['phone'] ?? null], $draw);
+     *
+     * `$values` come straight from the builder, by group
+     * (`['contact' => ['phone' => ...]]`): clean them yourself, and never
+     * save them here (savePageBuilderSiteInfo() saves). Access was checked
+     * before this runs. The default ignores them.
+     *
+     * @param  array<string, array<mixed>>  $values  by group
+     * @param  Closure(): string  $draw
+     */
+    protected function withPageBuilderSiteInfo(array $values, Closure $draw): string
+    {
+        return $draw();
+    }
 
     /**
      * The synced sections a page can use:

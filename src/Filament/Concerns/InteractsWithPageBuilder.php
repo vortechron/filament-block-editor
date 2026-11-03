@@ -178,19 +178,25 @@ trait InteractsWithPageBuilder
     }
 
     /**
-     * The page drawn with unsaved sections, and with an unsaved design kit
-     * when one is given (KitSource::override(), for this draw only). The
-     * host's render values apply to this draw too (DynamicValues::drawWith()).
+     * The page drawn with unsaved sections, with an unsaved design kit
+     * when one is given (KitSource::override(), for this draw only), and
+     * with unsaved shop info when it is given (withPageBuilderSiteInfo(),
+     * never saved). The host's render values apply to this draw too
+     * (DynamicValues::drawWith()).
      *
      * @param  array<string, mixed>  $value  a page value of any format
      * @param  array<string, mixed>|null  $kit
+     * @param  array<string, mixed>|null  $siteInfo  the shop info form's values, by group
      */
-    public function previewPageBuilder(array $value, ?array $kit = null): string
+    public function previewPageBuilder(array $value, ?array $kit = null, ?array $siteInfo = null): string
     {
         $this->authorizePageBuilder();
 
         $sections = PageValue::normalize($value)['sections'];
-        $draw = fn (): string => app(DynamicValues::class)->drawWith($this->getPageBuilderRenderValues(), fn (): string => $this->renderPageBuilderPreview($sections));
+        $drawPage = fn (): string => app(DynamicValues::class)->drawWith($this->getPageBuilderRenderValues(), fn (): string => $this->renderPageBuilderPreview($sections));
+        $draw = $siteInfo === null
+            ? $drawPage
+            : fn (): string => $this->withPageBuilderSiteInfo(array_filter($siteInfo, is_array(...)), $drawPage);
 
         if ($kit === null) {
             return $draw();

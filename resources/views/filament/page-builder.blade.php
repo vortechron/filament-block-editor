@@ -22,7 +22,7 @@
                 ...options,
                 adapter: {
                     save: (value) => wire.savePageBuilder(value),
-                    preview: (value, extra) => wire.previewPageBuilder(value, extra?.kit ?? null),
+                    preview: (value, extra) => wire.previewPageBuilder(value, extra?.kit ?? null, extra?.siteInfo ?? null),
                     ...(supports.saveKit ? { saveKit: (kit) => wire.saveKitFromPageBuilder(kit) } : {}),
                     ...(supports.saveSection ? { saveSection: (section, meta) => wire.saveSectionFromPageBuilder(section, meta?.title ?? '', meta?.synced ?? false) } : {}),
                     ...(supports.saveSiteInfo ? { saveSiteInfo: (values) => wire.saveSiteInfoFromPageBuilder(values) } : {}),

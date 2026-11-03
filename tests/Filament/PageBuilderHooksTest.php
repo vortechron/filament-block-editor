@@ -200,7 +200,7 @@ class PageBuilderHooksTest extends FilamentTestCase
             'saveKitFromPageBuilder' => [Kit::defaults()],
             'saveSectionFromPageBuilder' => [['type' => 'rich', 'data' => []], 'Hero', false],
             'saveSiteInfoFromPageBuilder' => [[]],
-            'previewPageBuilder' => [['sections' => []], ['colors' => ['primary' => '#000000']]],
+            'previewPageBuilder' => [['sections' => []], ['colors' => ['primary' => '#000000']], ['contact' => ['email' => 'baru@kedai.my']]],
         ] as $method => $arguments) {
             // A refused call leaves the test component unusable, so each gets its own.
             FullDemoBuilder::$denied = false;
@@ -227,6 +227,39 @@ class PageBuilderHooksTest extends FilamentTestCase
         $this->assertSame(Kit::defaults(), app(KitSource::class)->current());
     }
 
+    public function test_the_preview_draws_with_unsaved_shop_info_through_the_hosts_hook_and_never_saves_it(): void
+    {
+        $this->signIn();
+        app(DynamicValues::class)->register('site.email', 'Emel', fn (): string => 'lama@kedai.my', settings: 'contact');
+        $document = [['type' => 'paragraph', 'content' => [['type' => 'dynamic', 'props' => ['key' => 'site.email']]]]];
+        $value = ['version' => 2, 'sections' => [['id' => 'p1', 'type' => 'rich', 'data' => ['document' => $document]]]];
+        $component = Livewire::test(FullDemoBuilder::class);
+
+        $html = $component->call('previewPageBuilder', $value, null, ['contact' => ['email' => 'baru@kedai.my'], 'junk' => 'x'])->effects['returns'][0];
+
+        $this->assertStringContainsString('baru@kedai.my', $html);
+        $this->assertSame([['contact' => ['email' => 'baru@kedai.my']]], FullDemoBuilder::$calls['previewSiteInfo']);
+        $this->assertArrayNotHasKey('siteInfo', FullDemoBuilder::$calls);
+
+        // Without shop info, the hook is not called and the stored value is drawn.
+        $plain = $component->call('previewPageBuilder', $value)->effects['returns'][0];
+
+        $this->assertStringContainsString('lama@kedai.my', $plain);
+        $this->assertCount(1, FullDemoBuilder::$calls['previewSiteInfo']);
+    }
+
+    public function test_by_default_the_preview_ignores_unsaved_shop_info(): void
+    {
+        $this->signIn();
+        $value = ['version' => 2, 'sections' => [['id' => 'p1', 'type' => 'rich', 'data' => ['document' => []]]]];
+        $component = Livewire::test(DemoBuilder::class);
+
+        $this->assertSame(
+            $component->call('previewPageBuilder', $value)->effects['returns'][0],
+            $component->call('previewPageBuilder', $value, null, ['contact' => ['email' => 'baru@kedai.my']])->effects['returns'][0],
+        );
+    }
+
     public function test_the_value_saved_from_an_old_host_is_format_two(): void
     {
         $this->signIn();
@@ -249,5 +282,6 @@ class PageBuilderHooksTest extends FilamentTestCase
         $this->assertStringContainsString('saveSiteInfoFromPageBuilder', $full);
         $this->assertStringContainsString('\\u0022saveKit\\u0022:false', $plain);
         $this->assertStringContainsString('\\u0022saveKit\\u0022:true', $full);
+        $this->assertStringContainsString('wire.previewPageBuilder(value, extra?.kit ?? null, extra?.siteInfo ?? null)', $plain);
     }
 }

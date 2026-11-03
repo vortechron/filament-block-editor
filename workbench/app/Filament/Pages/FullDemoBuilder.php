@@ -2,8 +2,10 @@
 
 namespace Workbench\App\Filament\Pages;
 
+use Closure;
 use Illuminate\Validation\ValidationException;
 use Vortechron\FilamentBlockEditor\Blocks\Field;
+use Vortechron\FilamentBlockEditor\Content\DynamicValues;
 use Vortechron\FilamentBlockEditor\Filament\Pages\PageBuilderPage;
 use Vortechron\FilamentBlockEditor\Rendering\RenderContext;
 
@@ -89,6 +91,16 @@ class FullDemoBuilder extends PageBuilderPage
         }
 
         self::$calls['siteInfo'] = $values;
+    }
+
+    /**
+     * Draws the preview with the unsaved shop info, without saving it.
+     */
+    protected function withPageBuilderSiteInfo(array $values, Closure $draw): string
+    {
+        self::$calls['previewSiteInfo'][] = $values;
+
+        return app(DynamicValues::class)->drawWith(['site.email' => $values['contact']['email'] ?? null], $draw);
     }
 
     protected function getPageBuilderSyncedSections(): array
