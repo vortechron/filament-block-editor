@@ -15,11 +15,17 @@ export function ImageField({
     label,
     url,
     hint,
+    allowShopPictures = false,
     onChange,
 }: {
     label: string;
     url: string | null;
     hint?: string;
+    /**
+     * Offer the site's own pictures, stored as `@key`. Only where the page
+     * resolves them: own block image fields (docs/v2-plan.md, section 6).
+     */
+    allowShopPictures?: boolean;
     onChange: (url: string | null) => void;
 }) {
     const t = useT();
@@ -53,7 +59,7 @@ export function ImageField({
         }
     }
 
-    if (url !== null && isDynamicRef(url)) {
+    if (allowShopPictures && url !== null && isDynamicRef(url)) {
         return (
             <div className="grid grid-cols-1 gap-1.5">
                 <Label>{label}</Label>
@@ -71,7 +77,7 @@ export function ImageField({
         <div className="grid grid-cols-1 gap-1.5">
             <div className="flex min-h-7 items-center justify-between gap-2">
                 <Label htmlFor={inputId}>{label}</Label>
-                <DynamicPicker type="image" onPick={onChange} />
+                {allowShopPictures && <DynamicPicker type="image" onPick={onChange} />}
             </div>
             <div className="flex items-center gap-3">
                 <div className="bg-secondary text-muted-foreground flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-md border">

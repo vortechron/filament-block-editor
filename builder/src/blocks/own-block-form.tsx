@@ -162,6 +162,7 @@ function OwnField({
                 <ImageField
                     label={label}
                     hint={hint}
+                    allowShopPictures
                     url={text === '' ? null : text}
                     onChange={onChange}
                 />
