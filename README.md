@@ -25,7 +25,7 @@ It started as the page builder of [NakJual](https://nakjual.com) and is made gen
 
 ```bash
 composer config repositories.vortechron-block-editor vcs https://github.com/vortechron/filament-block-editor.git
-composer require vortechron/filament-block-editor:^1.0
+composer require vortechron/filament-block-editor:^2.0
 php artisan filament:assets   # with Filament
 # or, without Filament:
 php artisan vendor:publish --tag=filament-block-editor-assets
@@ -200,6 +200,20 @@ The package registers five blocks for every site: FAQ (`fbe-faq`), map (`fbe-map
 (`fbe-icon-list`), pricing (`fbe-pricing`) and testimonials (`fbe-testimonials`). Anyone can also build a
 form in the editor (the `form` block); your app saves the submissions through a `FormEndpoint`. Turn the
 ready-made blocks off with `'core_blocks' => false`. More in [docs/php.md](docs/php.md#core-blocks).
+
+## What changed in 2.0
+
+2.0 is page format 2 (the full plan is [docs/v2-plan.md](docs/v2-plan.md)). Old pages need no data move: a
+page value without a `version` is upgraded when it is read.
+
+- Every page value has `version: 2`. Sections can be synced (`type: "ref"`) and locked (`lock`).
+- Styles are data: a style bag per section and per block (desktop, tablet, phone, hover), plus class names,
+  hide on a device, and developer-only custom CSS.
+- A design kit (site colours, fonts, buttons, forms) as CSS variables, edited in the builder.
+- Dynamic values (shop name, phone, links) in text, links and pictures; a form block; five ready-made blocks.
+- Header and footer parts, shop info and synced sections in the builder, through new Filament hooks.
+- Visible changes: every block carries a `look` prop, and the band on every second section counts with
+  `:nth-of-type`.
 
 ## What changed from 0.1
 
