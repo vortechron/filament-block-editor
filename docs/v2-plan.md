@@ -617,3 +617,56 @@ type PageBuilderAdapter = {
     empty module (`bin/build.js`): they were about 500 kB, a quarter of `page-builder.js`. Owners type emoji with
     their phone's or computer's own emoji keyboard. To bring it back, remove `emojiPicker={false}` in
     `page-block-editor.tsx`, the emoji filter in `slash-menu.ts` and the plugin in `bin/build.js`.
+
+### Review fixes, 3 November 2026
+
+1. **One rule table, from PHP.** `Support\BuilderRules::all()` collects every limit and word list both sides
+   check (style keys and value kinds, `StyleBag::NON_NEGATIVE`, hover keys, length units and maximums, the class
+   name rule and `fbe-` prefix, form limits, lock keys, kit lists and `Kit::PACKAGE_DEFAULTS`,
+   `Enums\DocumentKind`, the dynamic key rule). `php84 bin/export-rules.php` writes it to
+   `builder/src/generated/rules.json` plus `rules.d.json.ts` (its exact literal type, read by TypeScript through
+   `allowArbitraryExtensions`). The builder's cleaners import their limits from it; `BuilderRulesTest` fails when
+   the committed files drift.
+2. **Shared cases.** Rules a table can not hold have input → output cases in `tests/fixtures/shared/`
+   (`style-values`, `class-names`, `custom-css`, `links`, `forms`), run by PHPUnit (`SharedFixturesTest`) and
+   Vitest (`builder/tests/shared-fixtures.test.ts`). A form case lists only what both must give: the builder
+   still leaves `placeholder` off fields that show none (B2 1), keeps an action with an empty `url` while the
+   owner types (B2 3) and does not trim typed text.
+3. **Custom CSS in the builder** is a port of `Styling\CustomCss` (Track A's stricter rules: `url()` only with a
+   `/path`, only `@media` and `@supports`, every selector starts with `selector`, no backslash, `+`, `~`,
+   `:root`, `:host`, `:has(` or `[value`). The field now says why a value is not saved, instead of the old note
+   that allowed `https://`.
+4. **Block ids are unique on a page.** A copied section (duplicate, a template added, Putuskan) gives every block
+   in it a new id, through columns and children. `PageContent::normalize()` (so `PageValue::normalize()`) keeps
+   the first block with an id and gives any later one with the same id a new id (`Content\UniqueBlockIds`).
+5. **Style values are stored one way.** Both sides store `.5rem` as `0.5rem`, an opacity of `.5` as `0.5`, `24PX`
+   as `24px`, and a kit colour in lower case (`kit:Gold` is `kit:gold`). `font_size` may not be negative on
+   either side, and a class name may not start with `fbe-` in the builder either.
+6. **The kit.** The Filament layer always sends `kit` (the current kit) and the new option `kitDefaults`
+   (`Kit::defaults()`, with the host's config). The builder uses them for its colour and font pickers always, and
+   shows the design panel only when `adapter.saveKit` exists (section 10's `kit` note). `DEFAULT_KIT` is
+   `Kit::PACKAGE_DEFAULTS` from the rules, and `normalizeKit()` fills gaps from `kitDefaults`, keeps sizes in px,
+   rem or em, and drops a custom colour with no colour code, like `Design\Kit`.
+7. **A `style` lock covers item styles** (section 4, point 4). Under it `PageGuard` puts back each block's stored
+   `look` by id, and a new block in that section gets no look. The builder hides the item Style and Advanced tabs
+   from non-developers in such a section.
+8. **A `remove` lock keeps the stored hidden state** (section 4, point 2 says "unhides it"). A section locked
+   against removal can not be hidden or shown by a non-developer: one the developer hid stays hidden (also when
+   it was removed and comes back), one that was shown stays shown. Reason: hiding is a soft removal, and the
+   developer's choice to hide a locked section must survive someone else's save.
+9. **Forms, same limits on both sides.** PHP now keeps a form name of 200 characters and button text of 80,
+   clamps textarea rows to 2–10, drops a field of an unknown type (it turned it into `text`) and makes field ids
+   unique. The builder keeps an `@key` redirect. `Urls::linkOrReference()` / `mediaOrReference()` are the one
+   "link or `@key`" rule in PHP; `linkOrReference()` in `builder/src/blocks/button-url.ts` in the builder. The
+   builder's link check stays stricter than `Urls::link()` about spaces and a bare `https://`; it never sends
+   what PHP drops.
+10. **Builder refusals are translated** (`resources/lang/{en,ms}/builder.php`), as is the synced section `ref` rule.
+11. **Two more hooks for the CMS** (`PageBuilderHooks`): `getPageBuilderDynamicValues()` adds definitions for one
+    builder after the registered ones (same key: the hook wins); `getPageBuilderRenderValues()` gives the values
+    of the page being built. They read the previews in `dynamicValues`, and `previewPageBuilder()` draws inside
+    `DynamicValues::drawWith()` with them, so a host's own `RenderContext` gets them too.
+    `getPageBuilderPreviewContext()` returns `RenderContext(forBuilder: true, isPreview: true)` with them in it.
+    `DynamicValues::definitions()` takes an optional `RenderContext`.
+12. **Smaller choices.** A saved or synced section's title is at most `PageContent::MAX_TITLE_LENGTH` (120) on
+    both sides (the builder had 100). `BlockNoteRenderer` is split into `InlineContent`, `MediaBlocks` and
+    `PackageBlocks`; its public API and HTML are unchanged.

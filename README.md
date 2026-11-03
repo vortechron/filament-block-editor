@@ -210,11 +210,16 @@ library models and screens, and block presets are gone. No project used 0.1.
 
 ```bash
 composer install && npm install
+php bin/export-rules.php   # after changing a limit in PHP: the builder's rules (builder/src/generated)
 npm run build        # builder, its stylesheet and the public page.css into resources/dist
 npm test             # builder tests (Vitest)
 vendor/bin/phpunit   # PHP tests
 vendor/bin/pint --test
 ```
+
+The builder's limits come from PHP (`Support\BuilderRules`), and `tests/fixtures/shared` holds cases both
+test suites run, so the two sides clean every value the same way. See
+[docs/php.md](docs/php.md#the-rules-the-builder-checks).
 
 `builder/demo/index.html` mounts the built bundle with an in-memory adapter for a quick look in a browser. The
 workbench has a sample page at `/` (`composer serve`) and a demo builder at `/admin/demo-builder`.

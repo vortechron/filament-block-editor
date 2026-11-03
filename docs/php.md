@@ -63,6 +63,10 @@ A **synced section** points at a section kept somewhere else (see "Synced sectio
 
 - `normalize()` keeps known fields and drops anything else. An empty `style` or `advanced` is left
   out, so a section with no custom look is the same as in format 1.
+- Block ids are unique on a page: a block's style, `hide_on`, a form's key and the guard find a block
+  by its id. `normalize()` keeps the first block with an id (in page order, through columns and
+  children) and gives any later block with the same id a new one (`Content\UniqueBlockIds`). The
+  builder gives every block of a copied section a new id too.
 - `anchor` is a slug (`^[a-z0-9]+(?:-[a-z0-9]+)*$`, 40 characters at most). Capitals become lower case
   and spaces become dashes. Anything else is `null`.
 - `ref` is a positive number, or an id of letters, digits, dashes and underscores (40 at most).
@@ -205,7 +209,9 @@ Every section and every block can carry an open-ended look per device, as data, 
   `line_height`, `text_transform`, `text_align`, `border_width`, `border_style`, `radius`, `shadow`, `opacity`.
   The full value grammar is in `v2-plan.md` section 2.
 - A length is `0` or a number with a unit `px rem em % vw vh` (at most 2000px, 200rem/em, 100%/vw/vh).
-  A colour is `#rgb`, `#rrggbb`, `#rrggbbaa`, `transparent` or `kit:<key>`. A font is `kit:heading`,
+  It is stored in lower case with a leading zero: `.5REM` is `0.5rem`, an opacity of `.5` is `0.5`.
+  Only margins and letter spacing may be below zero (`StyleBag::NON_NEGATIVE`). A colour is `#rgb`,
+  `#rrggbb`, `#rrggbbaa`, `transparent` or `kit:<key>`, stored in lower case. A font is `kit:heading`,
   `kit:body`, a section font or one of your fonts. Anything else is dropped.
 - `Styling\StyleBag::clean()`, `Styling\Advanced::clean()` and `Styling\CustomCss::clean()` do the
   cleaning; `PageContent::normalize()` and `BlockNoteDocument::clean()` call them.
@@ -270,6 +276,9 @@ $this->app->scoped(KitSource::class, MyKitSource::class);
 
 - `app(KitSource::class)->override($kit)` draws with an unsaved kit until `override(null)`. The
   builder's preview uses it.
+- The Filament builder always sends the current kit (`kit`) and `Kit::defaults()` (`kitDefaults`): the
+  builder's colour and font pickers use them, and a saved kit's gaps are filled from `kitDefaults`.
+  The design panel shows only when the page overrides `savePageBuilderKit()`.
 
 ## Your own blocks
 
@@ -336,9 +345,11 @@ if (! $user->isDeveloper()) {
 }
 ```
 
-- Section locks: `move` (stays at its place), `remove` (cannot be deleted or hidden), `content` (its
-  document stays), `style` (its look fields, `style` and `advanced` stay). A section with any lock
-  also keeps its type.
+- Section locks: `move` (stays at its place), `remove` (cannot be deleted or hidden: a missing one
+  comes back with its stored hidden state, and a non-developer can not hide or show it), `content`
+  (its document stays), `style` (its look fields, `style` and `advanced` stay, and so does the stored
+  `look` of every block in it; a new block there gets no look). A section with any lock also keeps
+  its type.
 - Developer-only data: every `lock`, every `advanced.css` (of sections and of blocks, through columns,
   cards and indents), own block fields marked `->developerOnly()`, and a form's `webhook` action. A
   new element loses it; an element that was stored gets its stored value back.
@@ -427,8 +438,10 @@ $request->validate($form->rules());                    // what the visitor sent
 ```
 
 - Field types: `text email tel number date textarea select radio checkboxes consent`, at most 30,
-  each with a unique `name`. Actions, at most one each: `email` (an address or `@site.email`),
-  `whatsapp`, `redirect`, `webhook` (developer only, `https://` only). The shape is in `v2-plan.md`
+  each with a unique `id` and `name`. A field of another type is dropped. Actions, at most one each:
+  `email` (an address or `@site.email`), `whatsapp`, `redirect` (a link or an `@key`), `webhook`
+  (developer only, `https://` only). Limits (`FormDefinition` constants): form name 200, label and
+  placeholder 200, button text 80, success 500, textarea rows 2 to 10. The shape is in `v2-plan.md`
   section 7.
 - Bind a `Forms\FormEndpoint` (`action(RenderContext): ?string`, `hiddenFields(RenderContext): array`).
   With the default (none) the button is disabled and the builder says "Borang belum disambung".
@@ -507,6 +520,29 @@ Also `bullet`, `numbered`, `quote`, `toggle(title, children)`, `video`, `gallery
 
 The `button` block allows `http(s)://`, `mailto:`, `tel:`, `#anchor` and `/path` addresses. Any other address
 draws as a `<span class="bn-button">` with no link.
+
+## The rules the builder checks
+
+The builder checks every value before it sends it, so it never sends what the server would drop.
+PHP stays the authority: `Support\BuilderRules::all()` collects every limit and word list (style keys
+and their kinds, units and their maximums, hover keys, `NON_NEGATIVE`, the class name rule, form limits,
+lock keys, kit lists and package defaults, `Enums\DocumentKind`, the dynamic key rule) from the classes
+that clean them. After changing one, run:
+
+```bash
+php84 bin/export-rules.php   # writes builder/src/generated/rules.json and rules.d.json.ts
+```
+
+The builder imports `rules.json`; `rules.d.json.ts` gives TypeScript every word as a literal type.
+`BuilderRulesTest` fails when the committed files differ from `all()`.
+
+Rules a table can not hold (custom CSS, the length grammar, `@key` links, form cleaning) have shared
+cases in `tests/fixtures/shared/*.json` (input and expected output). PHPUnit
+(`SharedFixturesTest`) and Vitest (`builder/tests/shared-fixtures.test.ts`) both run them. Add a case
+there when you change one of these rules.
+
+- `Urls::linkOrReference($url)`: an address `Urls::link()` allows, or an `@key` (resolved when the
+  page is drawn). `Urls::mediaOrReference($url)` is the same for pictures.
 
 ## Translations
 
