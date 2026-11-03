@@ -19,6 +19,7 @@ import { Sidebar } from './builder/sidebar';
 import type { Device, SidebarPanel } from './builder/types';
 import { useBuilder } from './builder/use-builder';
 import { useBuilderShortcuts } from './builder/use-builder-shortcuts';
+import { combineSaveStatus } from './builder/use-save-state';
 import { useSectionLibrary } from './builder/use-section-library';
 import { ConfirmDialog } from './editor/confirm-dialog';
 import { useMediaQuery } from './editor/use-media-query';
@@ -122,8 +123,11 @@ function Builder({
     // Tablets get the sidebar too. Phones get the bar at the bottom.
     const isDesktop = useMediaQuery('(min-width: 768px)');
 
-    const hasUnsavedChanges = form.isDirty || kit.isDirty || siteInfo.isDirty;
-    const isSaving = form.processing || kit.processing || siteInfo.processing;
+    const { hasUnsavedChanges, isSaving, recentlySaved } = combineSaveStatus([
+        form,
+        kit,
+        siteInfo,
+    ]);
 
     const leaveTo = useUnsavedChangesGuard(hasUnsavedChanges);
 
@@ -205,35 +209,23 @@ function Builder({
     const sidebar = (
         <Sidebar onDone={isDesktop ? undefined : () => setIsDockOpen(false)} />
     );
-    const hasPageErrors = Object.keys(form.errors).length > 0;
-    const hasKitErrors = Object.keys(kit.errors).length > 0;
-    const hasSiteInfoErrors = Object.keys(siteInfo.errors).length > 0;
+    const refused = [
+        { key: 'page', title: undefined, state: form },
+        { key: 'kit', title: t('Your design was not saved'), state: kit },
+        { key: 'siteInfo', title: t('Your shop info was not saved'), state: siteInfo },
+    ].filter(({ state }) => Object.keys(state.errors).length > 0);
     const notices =
-        hasPageErrors || hasKitErrors || hasSiteInfoErrors ? (
+        refused.length > 0 ? (
             <>
-                {hasPageErrors && (
+                {refused.map(({ key, title, state }) => (
                     <SaveErrors
-                        errors={form.errors}
+                        key={key}
+                        title={title}
+                        errors={state.errors}
                         onShowSection={showSection}
-                        onDismiss={form.clearErrors}
+                        onDismiss={state.clearErrors}
                     />
-                )}
-                {hasKitErrors && (
-                    <SaveErrors
-                        title={t('Your design was not saved')}
-                        errors={kit.errors}
-                        onShowSection={showSection}
-                        onDismiss={kit.clearErrors}
-                    />
-                )}
-                {hasSiteInfoErrors && (
-                    <SaveErrors
-                        title={t('Your shop info was not saved')}
-                        errors={siteInfo.errors}
-                        onShowSection={showSection}
-                        onDismiss={siteInfo.clearErrors}
-                    />
-                )}
+                ))}
             </>
         ) : null;
 
@@ -267,11 +259,7 @@ function Builder({
                             onDeviceChange={setDevice}
                             isDesktop={isDesktop}
                             hasUnsavedChanges={hasUnsavedChanges}
-                            recentlySaved={
-                                form.recentlySuccessful ||
-                                kit.recentlySuccessful ||
-                                siteInfo.recentlySuccessful
-                            }
+                            recentlySaved={recentlySaved}
                             isSaving={isSaving}
                             onPreview={() => setIsPreviewOpen(true)}
                             onDesign={
