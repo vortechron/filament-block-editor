@@ -174,3 +174,37 @@ describe('a dynamic value in a link or a picture', () => {
         expect(screen.queryByRole('button', { name: 'Shop pictures' })).toBeNull();
     });
 });
+
+describe('short codes in an own block’s card in the section’s words', () => {
+    it('show the value’s label, and “no longer exists” for an unknown key or one that is not text', async () => {
+        const note = { kind: 'note', label: 'Note', fields: [{ name: 'heading', label: 'Heading', type: 'text' as const }] };
+        const values = JSON.stringify({ heading: 'Hubungi {site.phone}, {site.whatsapp} atau {site.gone}' });
+
+        mountBuilder({
+            value: {
+                version: 2,
+                sections: [
+                    {
+                        id: 'note0001',
+                        type: 'rich',
+                        data: {
+                            layout: 'plain',
+                            document: [
+                                { id: 'head0001', type: 'heading', props: { level: 2 }, content: 'Nota kedai' },
+                                { id: 'own00001', type: 'ownBlock', props: { kind: 'note', values } },
+                            ],
+                        },
+                    },
+                ],
+            },
+            dynamicValues: VALUES,
+            blocks: [note],
+        });
+
+        await pickSection(/Nota kedai/);
+
+        expect(
+            await screen.findByText('Hubungi Phone, no longer exists atau no longer exists'),
+        ).toBeTruthy();
+    });
+});

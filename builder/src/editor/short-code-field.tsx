@@ -7,7 +7,7 @@ import { type Command, EditorState, Selection, TextSelection } from '@tiptap/pm/
 import { EditorView, type NodeViewConstructor } from '@tiptap/pm/view';
 import { useEffect, useId, useRef } from 'react';
 import RULES from '@/generated/rules.json';
-import { dynamicValuesOfType, findDynamicValue } from '@/lib/dynamic-values';
+import { dynamicValuesOfType, findDynamicValue, findTextValue } from '@/lib/dynamic-values';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
@@ -239,11 +239,15 @@ function insertText(view: EditorView, text: string, multiline: boolean) {
     }
 }
 
-/** A chip like the section's words show: the label, then "· what it is now". */
+/**
+ * A chip like the section's words show: the label, then "· what it is now".
+ * A key the words can not show (unknown, or a link or a picture, which the
+ * page draws as nothing here) looks broken: "· no longer exists".
+ */
 function chipView(values: readonly DynamicValueDefinition[], missing: string): NodeViewConstructor {
     return (node: Node) => {
         const key = String(node.attrs.key);
-        const definition = findDynamicValue(values, key);
+        const definition = findTextValue(values, key);
         const dom = document.createElement('span');
         const name = document.createElement('span');
 
@@ -251,7 +255,7 @@ function chipView(values: readonly DynamicValueDefinition[], missing: string): N
         dom.title = key;
         dom.contentEditable = 'false';
         dom.className = definition ? CHIP_CLASS : CHIP_MISSING_CLASS;
-        name.textContent = definition?.label ?? key;
+        name.textContent = definition?.label ?? findDynamicValue(values, key)?.label ?? key;
         dom.append(name);
 
         const note = definition ? definition.preview : missing;

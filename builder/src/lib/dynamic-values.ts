@@ -74,6 +74,19 @@ export function findDynamicValue(
     return values.find((value) => value.key === key);
 }
 
+/**
+ * A text value by key: what a short code in words can show. A link or a
+ * picture key there draws nothing (DynamicValues::fill()), like an unknown one.
+ */
+export function findTextValue(
+    values: readonly DynamicValueDefinition[],
+    key: string,
+): DynamicValueDefinition | undefined {
+    const value = findDynamicValue(values, key);
+
+    return value?.type === 'text' ? value : undefined;
+}
+
 export function dynamicValuesOfType(
     values: readonly DynamicValueDefinition[],
     type: DynamicValueDefinition['type'],

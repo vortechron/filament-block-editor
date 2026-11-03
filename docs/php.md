@@ -457,7 +457,8 @@ The shop info form (`getPageBuilderSiteInfo()`, saved by `savePageBuilderSiteInf
   text fields and the `@key` of its links, pictures and form actions (`@site.email`, `@site.whatsapp_number`);
   only values with a `settings` group count. An own block's `usesSiteInfo()` group shows as one row when none
   of those values comes from it. A form shows its rows in its "After sending" part;
-- the header and footer panel shows one row per shop info group, with a short summary of its fields;
+- the header and footer panel shows one row per shop info group, with a short summary of its fields (a list
+  gives each row's first word, such as a phone number or a platform), or "not filled yet" when it holds nothing;
 - a tap on a row opens only that row's group of the form in the sidebar; Back returns to the item or the part,
   still picked. The section panel shows no shop info.
 

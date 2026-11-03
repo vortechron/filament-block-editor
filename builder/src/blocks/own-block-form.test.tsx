@@ -297,6 +297,12 @@ describe('shop values in an own block’s text fields', () => {
         expect(screen.getByRole('textbox', { name: 'Intro' }).getAttribute('aria-multiline')).toBe('true');
     });
 
+    it('show a link or a picture value typed into the words as broken, since words only show text', () => {
+        renderWithShopValues(JSON.stringify({ heading: 'Chat {site.whatsapp}' }));
+
+        expect(chipsIn(screen.getByRole('textbox', { name: 'Heading' }))).toEqual(['WhatsApp· no longer exists']);
+    });
+
     it('put a picked shop value at the end of the words, stored as {key}, and undo takes it out', () => {
         const onChange = renderWithShopValues(JSON.stringify({ heading: 'Hubungi ' }));
         const heading = screen.getByRole('group', { name: 'Heading' });

@@ -80,6 +80,86 @@ describe('the header and footer on the canvas', () => {
         expect(screen.queryByRole('region', { name: 'Shop info' })).toBeNull();
     });
 
+    it('sum up each group in its row, lists too, and say when a group is not filled yet', async () => {
+        const siteInfo: SiteInfo = {
+            groups: [
+                {
+                    key: 'contact',
+                    label: 'Hubungi',
+                    fields: [
+                        {
+                            name: 'phones',
+                            type: 'list',
+                            label: 'Phones',
+                            fields: [{ name: 'number', type: 'text', label: 'Number' }],
+                        },
+                        { name: 'email', type: 'text', label: 'Email' },
+                    ],
+                },
+                {
+                    key: 'hours',
+                    label: 'Waktu operasi',
+                    fields: [
+                        {
+                            name: 'days',
+                            type: 'list',
+                            label: 'Days',
+                            fields: [
+                                { name: 'days', type: 'text', label: 'Days' },
+                                { name: 'time', type: 'text', label: 'Time' },
+                            ],
+                        },
+                    ],
+                },
+                {
+                    key: 'social',
+                    label: 'Media sosial',
+                    fields: [
+                        {
+                            name: 'links',
+                            type: 'list',
+                            label: 'Links',
+                            fields: [
+                                {
+                                    name: 'platform',
+                                    type: 'select',
+                                    label: 'Platform',
+                                    options: [
+                                        { value: 'facebook', label: 'Facebook' },
+                                        { value: 'instagram', label: 'Instagram' },
+                                    ],
+                                },
+                                { name: 'url', type: 'link', label: 'Link' },
+                            ],
+                        },
+                    ],
+                },
+                { key: 'business', label: 'Perniagaan', fields: [{ name: 'name', type: 'text', label: 'Name' }] },
+            ],
+            values: {
+                contact: {
+                    phones: [{ number: '012-345 6789' }, { number: '013-111 2222' }, { number: '' }],
+                    email: 'kedai@example.com',
+                },
+                hours: { days: [{ days: 'Isnin - Jumaat', time: '9 pagi' }, { days: 'Sabtu', time: '' }] },
+                social: { links: [{ platform: 'facebook', url: 'https://fb.com/kedai' }, { platform: 'instagram', url: '' }] },
+                business: { name: '  ' },
+            },
+        };
+
+        mountBuilder({ adapter: adapterWithSiteInfo(), parts: PARTS, siteInfo });
+        await clickHeader();
+
+        const rows = await screen.findByRole('region', { name: 'From shop info' });
+
+        expect(within(rows).getAllByRole('button').map((row) => row.textContent)).toEqual([
+            'Hubungi012-345 6789 / 013-111 2222 · kedai@example.com',
+            'Waktu operasiIsnin - Jumaat / Sabtu',
+            'Media sosialFacebook / Instagram',
+            'Perniagaannot filled yet',
+        ]);
+    });
+
     it('save the shop info through saveSiteInfo, then draw the page again', async () => {
         const adapter = adapterWithSiteInfo();
 

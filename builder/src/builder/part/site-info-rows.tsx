@@ -7,8 +7,8 @@ import type { OwnBlockField, SiteInfo } from '@/types';
 import { useBuilderContext } from '../builder-context';
 import type { SiteInfoReturn } from '../types';
 
-/** One row: what it is, what it is now (null: nothing to show), and its group. */
-type Row = { id: string; label: string; value: string | null; isEmpty: boolean; group: string };
+/** One row: what it is, what it is now (null: not filled yet), and its group. */
+type Row = { id: string; label: string; value: string | null; group: string };
 
 type Groups = SiteInfo['groups'];
 
@@ -53,7 +53,6 @@ export function SiteInfoRows({
                 id: `key:${use.key}`,
                 label: definition.label,
                 value: preview === '' ? null : preview,
-                isEmpty: preview === '',
                 group: group as string,
             },
         ];
@@ -112,16 +111,14 @@ function RowList({ rows, back }: { rows: Row[]; back: SiteInfoReturn }) {
                                 {row.label}
                             </span>
                             <span className="min-w-0 flex-1 text-right">
-                                {row.isEmpty ? (
+                                {row.value === null ? (
                                     <span data-row-value="" className="text-sm text-amber-600 italic">
                                         {t('not filled yet')}
                                     </span>
                                 ) : (
-                                    row.value !== null && (
-                                        <span data-row-value="" className="text-foreground block truncate text-sm">
-                                            {row.value}
-                                        </span>
-                                    )
+                                    <span data-row-value="" className="text-foreground block truncate text-sm">
+                                        {row.value}
+                                    </span>
                                 )}
                             </span>
                             <ChevronRight className="text-muted-foreground size-4 shrink-0" />
@@ -146,31 +143,48 @@ function groupRows(
             return [];
         }
 
-        const summary = summaryOf(group.fields, values[key] ?? {});
-
-        return [{ id: `group:${key}`, label: group.label, value: summary, isEmpty: false, group: key }];
+        return [{ id: `group:${key}`, label: group.label, value: summaryOf(group.fields, values[key] ?? {}), group: key }];
     });
 }
 
-/** The words a group's own fields hold, joined, or null when they hold none. */
+/**
+ * The words a group's fields hold, joined with " · ", or null when they hold
+ * none. A list gives one word per row (its first word, like a phone number or
+ * a social platform), joined with " / ".
+ */
 function summaryOf(fields: readonly OwnBlockField[], values: Record<string, unknown>): string | null {
-    const words = fields.flatMap((field) => {
+    const words = fields.map((field) => {
         const value = values[field.name];
 
-        if (field.type === 'select') {
-            return [field.options?.find((option) => option.value === value)?.label ?? ''];
+        if (field.type !== 'list') {
+            return wordOf(field, value);
         }
 
-        if (field.type === 'text' || field.type === 'textarea' || field.type === 'number') {
-            return [typeof value === 'string' || typeof value === 'number' ? String(value) : ''];
-        }
+        const rows = Array.isArray(value) ? value : [];
 
-        return [];
+        return rows
+            .map((row) => {
+                const cells = typeof row === 'object' && row !== null ? (row as Record<string, unknown>) : {};
+
+                return (field.fields ?? []).map((cell) => wordOf(cell, cells[cell.name])).find((word) => word !== '') ?? '';
+            })
+            .filter((word) => word !== '')
+            .join(' / ');
     });
-    const summary = words
-        .map((word) => word.replace(/\s+/g, ' ').trim())
-        .filter((word) => word !== '')
-        .join(' · ');
+    const summary = words.filter((word) => word !== '').join(' · ');
 
     return summary === '' ? null : summary;
+}
+
+/** What one field shows in a summary: its words, or a select's option label; '' for anything else. */
+function wordOf(field: OwnBlockField, value: unknown): string {
+    const word =
+        field.type === 'select'
+            ? (field.options?.find((option) => option.value === value)?.label ?? '')
+            : (field.type === 'text' || field.type === 'textarea' || field.type === 'number') &&
+                (typeof value === 'string' || typeof value === 'number')
+              ? String(value)
+              : '';
+
+    return word.replace(/\s+/g, ' ').trim();
 }

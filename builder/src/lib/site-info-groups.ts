@@ -4,7 +4,7 @@ import type {
     OwnBlockDefinition,
     OwnBlockField,
 } from '@/types';
-import { DYNAMIC_KEY, dynamicRefKey, findDynamicValue } from './dynamic-values';
+import { DYNAMIC_KEY, dynamicRefKey, findDynamicValue, findTextValue } from './dynamic-values';
 import { parseForm } from './form-definition';
 import { shortCodeKeys } from './short-codes';
 
@@ -40,7 +40,8 @@ export function siteInfoUsesFor(
     }
 
     const groupOf = (key: string) => findDynamicValue(dynamicValues, key)?.settings;
-    const uses = usesOf(source, ownBlocks).filter(
+    const isText = (key: string) => findTextValue(dynamicValues, key) !== undefined;
+    const uses = usesOf(source, ownBlocks, isText).filter(
         (use) => !('key' in use) || groupOf(use.key) !== undefined,
     );
     const covered = new Set(uses.flatMap((use) => ('key' in use ? [groupOf(use.key)] : [])));
@@ -59,15 +60,18 @@ export function siteInfoUsesFor(
     });
 }
 
+/** Is the key a text value, which a short code in words can show? */
+type IsText = (key: string) => boolean;
+
 /** One block, then its words, then the blocks inside it (columns, nested items). */
-function usesOf(block: BlockLike, ownBlocks: readonly OwnBlockDefinition[]): SiteInfoUse[] {
+function usesOf(block: BlockLike, ownBlocks: readonly OwnBlockDefinition[], isText: IsText): SiteInfoUse[] {
     const props = isObject(block.props) ? block.props : {};
     const children = Array.isArray(block.children) ? block.children : [];
 
     return [
-        ...propUses(block.type, props, ownBlocks),
+        ...propUses(block.type, props, ownBlocks, isText),
         ...asKeys(contentKeys(block.content)),
-        ...children.filter(isObject).flatMap((child) => usesOf(child as BlockLike, ownBlocks)),
+        ...children.filter(isObject).flatMap((child) => usesOf(child as BlockLike, ownBlocks, isText)),
     ];
 }
 
@@ -75,6 +79,7 @@ function propUses(
     type: unknown,
     props: Record<string, unknown>,
     ownBlocks: readonly OwnBlockDefinition[],
+    isText: IsText,
 ): SiteInfoUse[] {
     switch (type) {
         case 'ownBlock': {
@@ -84,7 +89,7 @@ function propUses(
                 ? [
                       ...asKeys(namedKeys(definition.showsValues)),
                       ...namedGroups(definition.siteInfo),
-                      ...asKeys(fieldKeys(definition.fields, parseValues(props.values))),
+                      ...asKeys(fieldKeys(definition.fields, parseValues(props.values), isText)),
                   ]
                 : [];
         }
@@ -119,9 +124,13 @@ function asKeys(keys: readonly string[]): SiteInfoUse[] {
 
 /**
  * Shop values in an own block's fields: `@key` in links and pictures,
- * short codes in text and textareas, rows of lists too.
+ * short codes of text values in text and textareas, rows of lists too.
  */
-function fieldKeys(fields: readonly OwnBlockField[], values: Record<string, unknown>): string[] {
+function fieldKeys(
+    fields: readonly OwnBlockField[],
+    values: Record<string, unknown>,
+    isText: IsText,
+): string[] {
     return fields.flatMap((field) => {
         const value = values[field.name];
 
@@ -130,13 +139,13 @@ function fieldKeys(fields: readonly OwnBlockField[], values: Record<string, unkn
         }
 
         if ((field.type === 'text' || field.type === 'textarea') && typeof value === 'string') {
-            return shortCodeKeys(value);
+            return shortCodeKeys(value).filter(isText);
         }
 
         if (field.type === 'list' && Array.isArray(value)) {
             return value
                 .filter(isObject)
-                .flatMap((row) => fieldKeys(field.fields ?? [], row as Record<string, unknown>));
+                .flatMap((row) => fieldKeys(field.fields ?? [], row as Record<string, unknown>, isText));
         }
 
         return [];

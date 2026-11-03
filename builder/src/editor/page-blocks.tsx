@@ -10,7 +10,7 @@ import {
 import { createElement, useContext } from 'react';
 import { safeButtonUrl } from '@/blocks/button-url';
 import { parseValues, summarizeValues } from '@/blocks/own-block-values';
-import { dynamicRefKey, findDynamicValue } from '@/lib/dynamic-values';
+import { dynamicRefKey, findDynamicValue, findTextValue } from '@/lib/dynamic-values';
 import { serializeForm } from '@/lib/form-definition';
 import { starterForm } from '@/lib/form-starter';
 import { iconByName } from '@/lib/icons';
@@ -274,10 +274,11 @@ function OwnBlockCard({
     }
 
     const Icon = iconByName(definition.icon);
+    // The owner never sees a short code: a key the words can not show says so.
     const summary = summarizeValues(
         definition,
         parseValues(values),
-        (key) => findDynamicValue(dynamicValues, key)?.label ?? null,
+        (key) => findTextValue(dynamicValues, key)?.label ?? t('no longer exists'),
     );
 
     return (

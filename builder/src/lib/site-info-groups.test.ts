@@ -111,6 +111,15 @@ describe('the shop info an item uses', () => {
         ]);
     });
 
+    it('is not a link or a picture typed into words, which the page does not draw there', () => {
+        const values = JSON.stringify({ heading: 'Chat {site.whatsapp} {site.logo}', link: '@site.whatsapp' });
+
+        expect(usesOf({ type: 'ownBlock', props: { kind: 'team', values } })).toEqual([{ key: 'site.whatsapp' }]);
+        expect(
+            usesOf({ type: 'ownBlock', props: { kind: 'team', values: JSON.stringify({ intro: '{site.logo}' }) } }),
+        ).toEqual([]);
+    });
+
     it('is a form’s email and WhatsApp actions', () => {
         const form = JSON.stringify({
             fields: [],

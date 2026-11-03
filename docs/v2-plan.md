@@ -351,6 +351,9 @@ type PageBuilderOptions = {
   kind?: 'page' | 'header' | 'footer' | 'section' | 'card' | 'single';
 };
 
+// After a good save the host may send the dynamic values read again (Deviations, "Short rows and short codes").
+type SaveSiteInfoResult = { ok: true; dynamicValues?: DynamicValueDefinition[] } | { ok: false; errors: Record<string, string> };
+
 type PageBuilderAdapter = {
   save(value: PageValue): Promise<SaveResult>;
   preview(value: PageValue, extra?: { kit?: Kit }): Promise<string>;
@@ -358,7 +361,7 @@ type PageBuilderAdapter = {
   saveKit?(kit: Kit): Promise<SaveResult>;
   saveSection?(section: RichSection, meta: { title: string; synced: boolean }):
     Promise<{ ok: true; id: number | string; template?: SectionTemplateInput } | { ok: false; errors: Record<string, string> }>;
-  saveSiteInfo?(values: Record<string, Record<string, unknown>>): Promise<SaveResult & { dynamicValues?: DynamicValueDefinition[] }>;  // see Deviations, "Short rows and short codes"
+  saveSiteInfo?(values: Record<string, Record<string, unknown>>): Promise<SaveSiteInfoResult>;
 };
 ```
 
@@ -734,10 +737,12 @@ The whole shop info form in almost every panel was too big. Changes 4 and 5 of "
    section panel shows no shop info. The top bar's button still opens the whole form.
 2. **Which rows.** `siteInfoUsesFor()` (`builder/src/lib/site-info-groups.ts`, which replaces
    `siteInfoGroupsFor()`) returns value keys, each once, in page order: an own block's `showsValues`, chips,
-   `{key}` short codes in own block text fields, and `@key` links, pictures and form actions. Only keys with a
-   `settings` group count. An own block's `siteInfo` group is a row only when none of the item's values comes
-   from it. **The header and footer panel lists every shop info group** (with a short summary of its text
-   fields): the builder does not have their documents, so it can not tell which values they show.
+   `{key}` short codes of text values in own block text fields, and `@key` links, pictures and form actions.
+   Only keys with a `settings` group count. An own block's `siteInfo` group is a row only when none of the
+   item's values comes from it. **The header and footer panel lists every shop info group**: the builder does
+   not have their documents, so it can not tell which values they show. A group row sums up its fields (" · "
+   between fields; a list gives each row's first word or select label, joined with " / "), or says "not filled
+   yet" ("belum diisi") when they hold nothing.
 3. **`OwnBlock::showsValues(string ...$keys)`** names the values a view shows; `toArray()` adds `showsValues`
    (left out when empty); a key that fails `DynamicValues::isKey()` throws. `usesSiteInfo()` is unchanged. The map
    block declares `showsValues('site.address')` next to `usesSiteInfo('contact')`.
@@ -750,9 +755,10 @@ The whole shop info form in almost every panel was too big. Changes 4 and 5 of "
    a picture; a registered value of another type and an unknown key give `''`.
 6. **The builder's text fields.** With text values on the site, an own block's `text` and `textarea` fields are a
    small ProseMirror box (`builder/src/editor/short-code-field.tsx`, on `@tiptap/pm` 3.31.4, already bundled by
-   BlockNote, now a direct dependency): each `{key}` is an atomic chip with the rich text chip's look, an unknown
-   key shows "no longer exists" ("tiada lagi"), `text` stays on one line, paste is plain text, typing `{key}` by
-   hand turns it into a chip. "Shop value" ("Nilai kedai") opens a searchable picker of text values and puts the
+   BlockNote, now a direct dependency): each `{key}` is an atomic chip with the rich text chip's look. A key the
+   words can not show (unknown, or a link or a picture, which `fill()` draws as `''`) is an amber chip with "no
+   longer exists" ("tiada lagi"), and the own block's card in the section's words says the same instead of the
+   key. `text` stays on one line, paste is plain text, typing `{key}` by hand turns it into a chip. "Shop value" ("Nilai kedai") opens a searchable picker of text values and puts the
    chip at the cursor, or at the end. The shop info form's own fields stay plain boxes.
 7. **One searchable picker** (`DynamicValuePicker`: a search box and the values by `group`, each with its preview;
    filters by label, key and preview; arrow keys, Enter, Escape; 44px rows) replaces the "Shop links" and "Shop
