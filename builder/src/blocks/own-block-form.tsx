@@ -2,13 +2,13 @@ import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
 import { type ReactNode, useId } from 'react';
 import { Field, SwitchRow } from '@/editor/fields';
 import { ImageField } from '@/editor/image-field';
+import { LinkField } from '@/editor/link-field';
 import { SegmentedChoice } from '@/editor/segmented-choice';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
 import type { OwnBlockDefinition, OwnBlockField } from '@/types';
 import { Input } from '@/ui/input';
 import { Textarea } from '@/ui/textarea';
-import { safeButtonUrl } from './button-url';
 import {
     emptyValue,
     type OwnValues,
@@ -168,25 +168,7 @@ function OwnField({
             );
         case 'link':
             return (
-                <Field
-                    label={label}
-                    htmlFor={id}
-                    hint={hint ?? t('A web address, #link-name, /path, mailto: or tel:')}
-                    error={
-                        text.trim() !== '' && safeButtonUrl(text) === null
-                            ? t('This link will not work. Use https://, #, /, mailto: or tel:.')
-                            : undefined
-                    }
-                >
-                    <Input
-                        id={id}
-                        value={text}
-                        inputMode="url"
-                        placeholder="https://"
-                        className="bg-card"
-                        onChange={(event) => onChange(event.target.value)}
-                    />
-                </Field>
+                <LinkField label={label} hint={hint} value={text} onChange={onChange} />
             );
         case 'list':
             return (

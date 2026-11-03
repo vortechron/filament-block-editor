@@ -9,6 +9,7 @@ import { useT } from '@/lib/i18n';
 import type { RichDocument, SectionData } from '@/types';
 import { accentTokens } from './accent-tokens';
 import { addLineBelowOnTap } from './add-line-below';
+import { shopInfoSlashItems } from './dynamic-inline';
 import { layoutSlashMenuItems } from './layout-slash-items';
 import { PageBlockEditor } from './page-block-editor';
 import {
@@ -67,13 +68,18 @@ export default function RichEditor({
                     onChange={onDocumentChange}
                     uploadFile={uploadFile}
                     appearance={WORDS_APPEARANCE}
-                    slashMenuItems={(slashEditor) =>
-                        pageSlashMenuItems(
+                    slashMenuItems={(slashEditor) => [
+                        ...pageSlashMenuItems(
                             slashEditor,
                             t,
                             blocks.ownBlocks.values(),
-                        )
-                    }
+                        ),
+                        ...shopInfoSlashItems(
+                            slashEditor,
+                            t,
+                            blocks.dynamicValues ?? [],
+                        ),
+                    ]}
                     slashMenuTopItems={(slashEditor) =>
                         layoutSlashMenuItems(slashEditor, data.layout, t)
                     }

@@ -2,6 +2,7 @@ import {
     BlockNoteSchema,
     createBlockSpecFromTiptapNode,
     defaultBlockSpecs,
+    defaultInlineContentSpecs,
     defaultStyleSpecs,
     propsToAttributes,
 } from '@blocknote/core';
@@ -14,6 +15,7 @@ import {
     withItemProps,
     withVideoEmbeds,
 } from '@vortechron/blocknote-kit';
+import { dynamicInline } from './dynamic-inline';
 import { LOOK_PROP_SCHEMA } from './look-prop';
 import { pageBlockSpecs } from './page-blocks';
 
@@ -98,7 +100,8 @@ export function withLookProps<T extends Record<string, unknown>>(specs: T): T {
 
 /**
  * The kit's schema (blocknote-kit's createKitSchema) with the page's own
- * blocks, where every block, the kit's columns too, has the `look` prop.
+ * blocks, where every block, the kit's columns too, has the `look` prop,
+ * and the `dynamic` inline item for the site's values (dynamic-inline.tsx).
  * The kit itself is not changed; its parts are put together here.
  */
 export function createPageSchema() {
@@ -114,6 +117,10 @@ export function createPageSchema() {
                 ),
                 ...pageBlockSpecs,
             }),
+            inlineContentSpecs: {
+                ...defaultInlineContentSpecs,
+                dynamic: dynamicInline,
+            },
             styleSpecs: {
                 ...defaultStyleSpecs,
                 fontFamily: fontFamilyStyleSpec([]),

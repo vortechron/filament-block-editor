@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react';
 import type {
+    DynamicValueDefinition,
     FontChoice,
     Kit,
     OwnBlockDefinition,
@@ -30,6 +31,8 @@ export type Host = {
      * cannot save one: then there is no design panel.
      */
     kit: Kit | null;
+    /** The values the site fills in: shop info in text, links and pictures. */
+    dynamicValues: DynamicValueDefinition[];
 };
 
 export const HostContext = createContext<Host | null>(null);

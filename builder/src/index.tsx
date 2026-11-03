@@ -4,6 +4,7 @@ import { PageBuilderApp } from './app';
 import { DEFAULT_TEMPLATES } from './lib/default-templates';
 import type { Host } from './lib/host';
 import { isLocale } from './lib/i18n';
+import { normalizeDynamicValues } from './lib/dynamic-values';
 import { normalizeKit } from './lib/kit';
 import { normalizeTemplates, normalizeValue } from './lib/page-value';
 import { uploadWith } from './lib/upload';
@@ -87,6 +88,7 @@ export function mountPageBuilder(
             options.kit && typeof adapter.saveKit === 'function'
                 ? normalizeKit(options.kit)
                 : null,
+        dynamicValues: normalizeDynamicValues(options.dynamicValues),
     };
     let value: PageValue = initialValue;
     const root = createRoot(element);

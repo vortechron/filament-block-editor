@@ -23,6 +23,7 @@ const DOCUMENT = [
     { type: 'gallery', props: { images: '/a.jpg', look: LOOK } },
     { type: 'button', props: { text: 'Beli', url: '#', look: LOOK } },
     { type: 'ownBlock', props: { kind: 'map', values: '{}', look: LOOK } },
+    { type: 'form', props: { form: '', look: LOOK } },
     {
         type: 'columnList',
         props: { look: LOOK },
@@ -87,6 +88,7 @@ describe('the look prop on every block', () => {
             ['gallery', LOOK],
             ['button', LOOK],
             ['ownBlock', LOOK],
+            ['form', LOOK],
             ['columnList', LOOK],
             ['column', LOOK],
             ['paragraph', ''],

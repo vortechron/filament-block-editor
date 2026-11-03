@@ -10,6 +10,7 @@ import {
 import { createElement, useContext } from 'react';
 import { safeButtonUrl } from '@/blocks/button-url';
 import { parseValues, summarizeValues } from '@/blocks/own-block-values';
+import { dynamicRefKey, findDynamicValue } from '@/lib/dynamic-values';
 import { serializeForm } from '@/lib/form-definition';
 import { starterForm } from '@/lib/form-starter';
 import { iconByName } from '@/lib/icons';
@@ -194,8 +195,12 @@ function ButtonBlock({
     onTextChange: (text: string) => void;
 }) {
     const t = useT();
-    const { openItem } = useContext(PageBlocksContext);
-    const link = safeButtonUrl(url);
+    const { openItem, dynamicValues = [] } = useContext(PageBlocksContext);
+    const shopLink = dynamicRefKey(url);
+    const link =
+        shopLink === null
+            ? safeButtonUrl(url)
+            : (findDynamicValue(dynamicValues, shopLink)?.label ?? shopLink);
     const isOutline = variant === 'outline';
 
     return (
