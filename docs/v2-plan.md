@@ -530,3 +530,52 @@ type PageBuilderAdapter = {
    phone from tablet, then laptop; tablet and hover from laptop.
 10. **`content` lock for non-developers:** the section's words editor is not opened at all, so its items can not
     be picked or added to. A "Locked" ("Dikunci") note shows instead.
+
+### Track B2 (builder: content), 3 November 2026
+
+1. **Form JSON the builder writes** (`builder/src/lib/form-definition.ts`). Every field has `required` (true or
+   false) and `width` (`full` or `half`). `placeholder` is only on `text`, `email`, `tel`, `number` and `textarea`;
+   `options` only on `select`, `radio` and `checkboxes`; `rows` (2 to 10, default 4) only on `textarea`. Field ids
+   are `[A-Za-z0-9_-]{1,40}` and unique. A field of an unknown type is dropped. A bad `name` is made from the label
+   (`Nombor IC` is `nombor_ic`, `field` when there is nothing); a taken name gets `_2`, `_3`. Options are trimmed;
+   empty and repeated ones are dropped. Typed text is cut to its limit but never trimmed (the server trims).
+2. **Limits the contract left open.** Form `name` 200, `submit.text` 80, `success` 500, `placeholder` 200, email
+   `subject` 200, WhatsApp `message` 1000. `submit.align` is `left`, `center` or `right`.
+3. **Actions.** An email `to` that is not an email address becomes `@site.email`. WhatsApp `to` is
+   `@site.whatsapp_number`; the builder also keeps any other `@key` or a phone of 8 to 15 digits, but has no box for
+   it. A redirect `url` that fails the button link rules, or a webhook `url` that is not `https://`, is stored as
+   `""`: the action stays while the owner is still typing. **Track A / C2: treat an empty `url` as no action.**
+   A stored webhook is kept, hidden, for non-developers; only developers can add or change one.
+4. **Making a section synced** is hidden for non-developers when the section has any lock (the synced section would
+   take its place and drop the lock). A section's `hidden` flag stays on the `ref` that replaces it. When
+   `saveSection` answers a template save without `template`, the builder adds its own: key `saved-{id}`, category
+   `saved` ("Saved sections" / "Seksyen simpanan"), the section's data. A section made synced is added to the
+   builder's synced list as `{ id, title, editUrl: null, section }` until the next load.
+5. **Detach ("Putuskan")** asks first. The copy gets a new id and keeps `hidden`. As in B1 (6), a non-developer's
+   copy has no `lock` and no `advanced.css`; developer-only own block fields and a form webhook inside its document
+   are not stripped by the builder (the server's guard drops them from new elements).
+6. **Shop info** shows only when `adapter.saveSiteInfo` exists too (like the kit and `saveKit`). Its changes count as
+   unsaved changes, the top bar Save saves them too, and refused saves show in the same notice titled "Your shop info
+   was not saved" (error keys like `contact.phone`). After a good save the builder calls `preview()` again with the
+   same page value, so the server must draw the header and footer from the saved info.
+7. **Header and footer on the canvas** get the same hover frame, label (the part's title, else "Header" or
+   "Footer") and picked frame as sections. A click inside a section wins over a part around it.
+8. **Hidden sections:** the badge is drawn by the builder inside the `data-hidden` wrapper. The Malay word for
+   "Hidden" is now "Tersembunyi" everywhere in the builder. The i18n test allows "bahagian" only in texts about a
+   part (header or footer), as the contract's "Bahagian ini sama di semua halaman" needs it.
+9. **The "Seksyen kosong" breadcrumb** came from the builder (`builder/section-meta.ts`), not from the server's
+   `data-empty-label` (that one only shows on a section with no element inside). Fixed in the builder: a section
+   with no words is named after its first own block, or "Form". No PHP change needed.
+10. **Dynamic values.** Definitions with a bad key or type, and repeated keys, are dropped. "Shop pictures" is only
+    offered on own block image fields and the photo item, not on the section background (the contract does not
+    resolve `@key` there). A link field takes any `@key` that matches the key rule without the "will not work"
+    error. **Not done:** a "Pautan kedai" picker in BlockNote's inline link toolbar; a link typed there stays a plain
+    link.
+11. **BlockNote in Malay** covers its dictionary (hints, the / menu with the English search words kept, toolbar tips,
+    table, link, image and column menus) and the kit's spacer, card and column entries in the / menu. The kit's own
+    block controls (card colour swatches, spacer sizes, "Space above/below" in the drag menu) stay English: they
+    live in `@vortechron/blocknote-kit`.
+12. **No emoji picker.** BlockNote's ":" emoji picker is off and `emoji-mart` and `@emoji-mart/data` build to an
+    empty module (`bin/build.js`): they were about 500 kB, a quarter of `page-builder.js`. Owners type emoji with
+    their phone's or computer's own emoji keyboard. To bring it back, remove `emojiPicker={false}` in
+    `page-block-editor.tsx`, the emoji filter in `slash-menu.ts` and the plugin in `bin/build.js`.
