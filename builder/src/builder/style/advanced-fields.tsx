@@ -1,11 +1,12 @@
 import { useEffect, useId, useState } from 'react';
 import { Field, SwitchRow } from '@/editor/fields';
+import { cleanAdvanced, cleanClassNames } from '@/lib/advanced';
 import {
-    cleanAdvanced,
-    cleanClassNames,
+    checkCustomCss,
     cleanCustomCss,
+    CUSTOM_CSS_PROBLEMS,
     MAX_CSS_LENGTH,
-} from '@/lib/advanced';
+} from '@/lib/custom-css';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
 import type { Advanced, StyleDevice } from '@/types';
@@ -135,7 +136,9 @@ function CustomCssField({
     const t = useT();
     const id = useId();
     const [text, setText] = useTyped(value, cleanCustomCss);
-    const isRefused = text.trim() !== '' && cleanCustomCss(text) === null;
+    const check = checkCustomCss(text);
+    // Why the server would drop what is typed. Empty CSS is just none.
+    const problem = !check.ok && check.problem !== 'empty' ? check.problem : null;
 
     return (
         <Field
@@ -145,10 +148,8 @@ function CustomCssField({
                 'Only developers see this. Write selector for this element, like: selector .bn-button { letter-spacing: .1em; }',
             )}
             error={
-                isRefused
-                    ? t(
-                          'This CSS is not saved. It may not hold <, @import, expression(, javascript: or behavior:, and url() must start with https:// or /.',
-                      )
+                problem
+                    ? t(CUSTOM_CSS_PROBLEMS[problem], { max: MAX_CSS_LENGTH })
                     : undefined
             }
         >

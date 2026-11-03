@@ -8,6 +8,7 @@ import { GROUP_LABELS } from '@/builder/item-catalog';
 import { LAYOUT_LABELS } from '@/builder/section-thumbs';
 import { KIT_SLASH_TEXTS } from '@/editor/slash-menu';
 import ms from '@/lang/ms';
+import { CUSTOM_CSS_PROBLEMS } from './custom-css';
 import { translate } from './i18n';
 
 describe('translating the builder', () => {
@@ -90,6 +91,7 @@ function sourceTexts(): string[] {
         ACTION_LABELS,
         FIELD_TYPE_LABELS,
         KIT_SLASH_TEXTS,
+        CUSTOM_CSS_PROBLEMS,
     ]) {
         Object.values(map).forEach((text) => texts.add(text));
     }

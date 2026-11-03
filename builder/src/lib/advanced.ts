@@ -1,64 +1,46 @@
+import RULES from '@/generated/rules.json';
 import type { Advanced, StyleDevice } from '@/types';
+import { cleanCustomCss } from './custom-css';
+
+export { checkCustomCss, cleanCustomCss, MAX_CSS_LENGTH } from './custom-css';
 
 /**
- * The advanced part rules, ported from Styling\Advanced and
- * Styling\CustomCss (docs/v2-plan.md, section 2).
+ * The advanced part rules, from Styling\Advanced and Styling\CustomCss
+ * (docs/v2-plan.md, section 2, and its Deviations). The limits come from
+ * the exported rules (builder/src/generated/rules.json).
  */
 
-export const MAX_CLASSES = 5;
+export const MAX_CLASSES = RULES.advanced.max_classes;
 
-export const MAX_CSS_LENGTH = 5000;
+export const HIDE_ON_DEVICES: readonly StyleDevice[] = RULES.advanced.devices;
 
-export const HIDE_ON_DEVICES: readonly StyleDevice[] = ['desktop', 'tablet', 'phone'];
+const CLASS_NAME = new RegExp(`^(?:${RULES.advanced.class_name})$`);
 
-const CLASS_NAME = /^[A-Za-z][A-Za-z0-9_-]{0,40}$/;
+/** The package's own style hooks start like this, so a class name may not. */
+const RESERVED_PREFIX = RULES.advanced.reserved_class_prefix;
 
-/** Things custom CSS may never hold, in lower case. */
-const BANNED = ['<', '@import', 'expression(', 'javascript:', 'behavior:'];
-
-/** Up to 5 valid class names, joined by a space, or null when there is none. */
+/**
+ * Up to 5 valid class names, joined by a space, or null when there is
+ * none. Names that start with `fbe-` are left out.
+ */
 export function cleanClassNames(raw: unknown): string | null {
     if (typeof raw !== 'string') {
         return null;
     }
 
     const names = [
-        ...new Set(raw.split(/\s+/).filter((name) => CLASS_NAME.test(name))),
+        ...new Set(
+            raw
+                .split(/\s+/)
+                .filter(
+                    (name) =>
+                        CLASS_NAME.test(name) &&
+                        !name.toLowerCase().startsWith(RESERVED_PREFIX),
+                ),
+        ),
     ].slice(0, MAX_CLASSES);
 
     return names.length === 0 ? null : names.join(' ');
-}
-
-/**
- * Developer CSS, or null when it is empty or breaks a rule: then it is
- * dropped whole, like the server does. `url()` may only point to an
- * https:// address or a /path.
- */
-export function cleanCustomCss(raw: unknown): string | null {
-    if (typeof raw !== 'string') {
-        return null;
-    }
-
-    const css = raw.trim();
-    const lower = css.toLowerCase();
-
-    if (
-        css === '' ||
-        css.length > MAX_CSS_LENGTH ||
-        BANNED.some((word) => lower.includes(word))
-    ) {
-        return null;
-    }
-
-    const urls = [...lower.matchAll(/url\(\s*['"]?([^'")\s]*)/g)].map(
-        (match) => match[1],
-    );
-
-    return urls.every(
-        (url) => url.startsWith('https://') || /^\/(?!\/)/.test(url),
-    )
-        ? css
-        : null;
 }
 
 /** The devices to hide on, known ones only, each once, in a fixed order. */

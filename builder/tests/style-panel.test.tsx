@@ -138,6 +138,22 @@ describe('the advanced tab of a section', () => {
         expect(screen.getByText(/This CSS is not saved/)).toBeTruthy();
     });
 
+    it('says why custom CSS is not saved', async () => {
+        mountBuilder({ developer: true });
+
+        await openAdvancedTab();
+
+        const css = screen.getByLabelText('Custom CSS');
+
+        fireEvent.change(css, {
+            target: { value: 'selector { background: url(https://a.test/x.png) }' },
+        });
+        expect(screen.getByText(/url\(\) may only hold a path on this site/)).toBeTruthy();
+
+        fireEvent.change(css, { target: { value: '.other { color: red }' } });
+        expect(screen.getByText(/every selector must start with selector/)).toBeTruthy();
+    });
+
     it('has no custom CSS for others', async () => {
         mountBuilder();
 

@@ -1,0 +1,60 @@
+{
+    "about": "The class names of an element's advanced part: cleaned by Styling\\Advanced (PHP) and cleanClassNames in builder/src/lib/advanced.ts, which must both give output (null: none kept).",
+    "cases": [
+        {
+            "name": "two names",
+            "input": "price-card wide",
+            "output": "price-card wide"
+        },
+        {
+            "name": "at most five, bad ones left out",
+            "input": "a b 1c d-e f_g h i",
+            "output": "a b d-e f_g h"
+        },
+        {
+            "name": "no package style hooks",
+            "input": "fbe-s-abc ok",
+            "output": "ok"
+        },
+        {
+            "name": "no package style hooks in capitals",
+            "input": "FBE-x ok",
+            "output": "ok"
+        },
+        {
+            "name": "each name once",
+            "input": "dup dup other",
+            "output": "dup other"
+        },
+        {
+            "name": "extra spaces",
+            "input": "  spaced   out  ",
+            "output": "spaced out"
+        },
+        {
+            "name": "empty",
+            "input": "",
+            "output": null
+        },
+        {
+            "name": "41 characters at most",
+            "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "output": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        },
+        {
+            "name": "42 characters are too many",
+            "input": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "output": null
+        },
+        {
+            "name": "a character a class name can not hold",
+            "input": "bad!name good",
+            "output": "good"
+        },
+        {
+            "name": "not text",
+            "input": 5,
+            "output": null
+        }
+    ]
+}

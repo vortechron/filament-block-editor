@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { cleanClassNames, cleanCustomCss } from '../src/lib/advanced';
 import { cleanStyleBag } from '../src/lib/style-bag';
 
 /**
@@ -22,4 +23,22 @@ describe('a style value', () => {
     )('$name', ({ key, input, output }) => {
         expect(cleanStyleBag({ desktop: { [key]: input } })?.desktop?.[key] ?? null).toBe(output);
     });
+});
+
+describe('class names', () => {
+    it.each(cases<{ input: unknown; output: string | null }>('class-names.json'))(
+        '$name',
+        ({ input, output }) => {
+            expect(cleanClassNames(input)).toBe(output);
+        },
+    );
+});
+
+describe('custom CSS', () => {
+    it.each(cases<{ input: unknown; output: string | null }>('custom-css.json'))(
+        '$name',
+        ({ input, output }) => {
+            expect(cleanCustomCss(input)).toBe(output);
+        },
+    );
 });

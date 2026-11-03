@@ -3,6 +3,8 @@
 namespace Vortechron\FilamentBlockEditor\Tests\Unit;
 
 use PHPUnit\Framework\Attributes\DataProvider;
+use Vortechron\FilamentBlockEditor\Styling\Advanced;
+use Vortechron\FilamentBlockEditor\Styling\CustomCss;
 use Vortechron\FilamentBlockEditor\Styling\StyleBag;
 use Vortechron\FilamentBlockEditor\Tests\TestCase;
 
@@ -32,6 +34,40 @@ class SharedFixturesTest extends TestCase
         $clean = StyleBag::clean(['desktop' => [$case['key'] => $case['input']]]);
 
         $this->assertSame($case['output'], $clean['desktop'][$case['key']] ?? null);
+    }
+
+    /**
+     * @return array<string, array{0: array<string, mixed>}>
+     */
+    public static function classNames(): array
+    {
+        return self::cases('class-names.json');
+    }
+
+    /**
+     * @param  array<string, mixed>  $case
+     */
+    #[DataProvider('classNames')]
+    public function test_class_names_clean_the_same_on_both_sides(array $case): void
+    {
+        $this->assertSame($case['output'], Advanced::clean(['class' => $case['input']])['class'] ?? null);
+    }
+
+    /**
+     * @return array<string, array{0: array<string, mixed>}>
+     */
+    public static function customCss(): array
+    {
+        return self::cases('custom-css.json');
+    }
+
+    /**
+     * @param  array<string, mixed>  $case
+     */
+    #[DataProvider('customCss')]
+    public function test_custom_css_cleans_the_same_on_both_sides(array $case): void
+    {
+        $this->assertSame($case['output'], CustomCss::clean($case['input']));
     }
 
     /**

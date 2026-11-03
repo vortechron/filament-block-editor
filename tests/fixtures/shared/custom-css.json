@@ -1,0 +1,320 @@
+{
+    "about": "A developer's custom CSS (advanced.css): cleaned by Styling\\CustomCss (PHP) and cleanCustomCss in builder/src/lib/advanced.ts, which must both give output (null: the whole value is dropped).",
+    "cases": [
+        {
+            "name": "a rule on the element's buttons",
+            "input": "selector .bn-button { letter-spacing: .1em; }",
+            "output": "selector .bn-button { letter-spacing: .1em; }"
+        },
+        {
+            "name": "plain declarations",
+            "input": "color: red",
+            "output": "color: red"
+        },
+        {
+            "name": "spaces around are trimmed",
+            "input": "  selector { color: red }  ",
+            "output": "selector { color: red }"
+        },
+        {
+            "name": "comments are taken out",
+            "input": "/* note */ selector { color: red }",
+            "output": "selector { color: red }"
+        },
+        {
+            "name": "an unclosed comment",
+            "input": "/* open selector { color: red }",
+            "output": null
+        },
+        {
+            "name": "only spaces",
+            "input": "   ",
+            "output": null
+        },
+        {
+            "name": "empty",
+            "input": "",
+            "output": null
+        },
+        {
+            "name": "not text",
+            "input": 12,
+            "output": null
+        },
+        {
+            "name": "two rules",
+            "input": "selector .a{color:red}selector .b{color:blue}",
+            "output": "selector .a{color:red}selector .b{color:blue}"
+        },
+        {
+            "name": "an empty rule",
+            "input": "selector{}",
+            "output": "selector{}"
+        },
+        {
+            "name": "a hover rule",
+            "input": "selector { color: red; } selector:hover { color: blue }",
+            "output": "selector { color: red; } selector:hover { color: blue }"
+        },
+        {
+            "name": "a list of selectors that each start with selector",
+            "input": "selector, selector .a { color: red }",
+            "output": "selector, selector .a { color: red }"
+        },
+        {
+            "name": "commas inside :is()",
+            "input": "selector:is(.a, .b) { color: red }",
+            "output": "selector:is(.a, .b) { color: red }"
+        },
+        {
+            "name": "a tab after selector",
+            "input": "selector\t.a { color: red }",
+            "output": "selector\t.a { color: red }"
+        },
+        {
+            "name": "a selector that does not start with selector",
+            "input": ".other { color: red }",
+            "output": null
+        },
+        {
+            "name": "one selector in the list that does not",
+            "input": "selector, .other { color: red }",
+            "output": null
+        },
+        {
+            "name": "selector in capitals",
+            "input": "SELECTOR { color: red }",
+            "output": null
+        },
+        {
+            "name": "a word that only starts like selector",
+            "input": "selectors { color: red }",
+            "output": null
+        },
+        {
+            "name": "the + combinator",
+            "input": "selector + .x { color: red }",
+            "output": null
+        },
+        {
+            "name": "the ~ combinator",
+            "input": "selector ~ .x { color: red }",
+            "output": null
+        },
+        {
+            "name": "~ inside an attribute selector",
+            "input": "selector [class~=a] { color: red }",
+            "output": "selector [class~=a] { color: red }"
+        },
+        {
+            "name": ":root",
+            "input": "selector :root { color: red }",
+            "output": null
+        },
+        {
+            "name": ":host",
+            "input": "selector:host { color: red }",
+            "output": null
+        },
+        {
+            "name": ":has(",
+            "input": "selector:has(input) { color: red }",
+            "output": null
+        },
+        {
+            "name": "an attribute selector on value",
+            "input": "selector input[value^=a] { color: red }",
+            "output": null
+        },
+        {
+            "name": "an attribute selector on value with spaces",
+            "input": "selector [ value ] { color: red }",
+            "output": null
+        },
+        {
+            "name": "an attribute selector on a namespaced value",
+            "input": "selector [ns|value] { color: red }",
+            "output": null
+        },
+        {
+            "name": "an attribute selector on another name",
+            "input": "selector [data-value] { color: red }",
+            "output": "selector [data-value] { color: red }"
+        },
+        {
+            "name": "@media",
+            "input": "@media (max-width: 600px) { selector { color: red } }",
+            "output": "@media (max-width: 600px) { selector { color: red } }"
+        },
+        {
+            "name": "@supports",
+            "input": "@supports (display: grid) { selector .a { display: grid } }",
+            "output": "@supports (display: grid) { selector .a { display: grid } }"
+        },
+        {
+            "name": "@media in capitals",
+            "input": "@MEDIA print { selector { color: red } }",
+            "output": "@MEDIA print { selector { color: red } }"
+        },
+        {
+            "name": "@media three deep",
+            "input": "@media a { @media b { @media c { selector { color: red } } } }",
+            "output": "@media a { @media b { @media c { selector { color: red } } } }"
+        },
+        {
+            "name": "@media four deep",
+            "input": "@media a { @media b { @media c { @media d { selector { color: red } } } } }",
+            "output": null
+        },
+        {
+            "name": "a rule in @media that does not start with selector",
+            "input": "@media print { body { color: red } }",
+            "output": null
+        },
+        {
+            "name": "@font-face",
+            "input": "@font-face { font-family: x }",
+            "output": null
+        },
+        {
+            "name": "@import",
+            "input": "@IMPORT 'x.css';",
+            "output": null
+        },
+        {
+            "name": "@import after a rule",
+            "input": "selector { color: red } @import url(/x.css);",
+            "output": null
+        },
+        {
+            "name": "an at-rule with no braces",
+            "input": "@media print",
+            "output": null
+        },
+        {
+            "name": "a url() path on this site",
+            "input": "selector { background: url(/img/x.png) }",
+            "output": "selector { background: url(/img/x.png) }"
+        },
+        {
+            "name": "a quoted url() path",
+            "input": "selector { background: url('/img/x.png') }",
+            "output": "selector { background: url('/img/x.png') }"
+        },
+        {
+            "name": "url() in capitals",
+            "input": "selector { background: URL(/img/x.png) }",
+            "output": "selector { background: URL(/img/x.png) }"
+        },
+        {
+            "name": "url() to another site",
+            "input": "selector { background: url(https://a.test/x.png) }",
+            "output": null
+        },
+        {
+            "name": "url() starting with //",
+            "input": "selector { background: url(//a.test/x.png) }",
+            "output": null
+        },
+        {
+            "name": "url() with a query string",
+            "input": "selector { background: url(/x.png?v=1) }",
+            "output": null
+        },
+        {
+            "name": "url() with a space in the path",
+            "input": "selector { background: url('/a b.png') }",
+            "output": null
+        },
+        {
+            "name": "url() that is not closed",
+            "input": "selector { background: url(/x.png }",
+            "output": null
+        },
+        {
+            "name": "a relative url()",
+            "input": "selector { background: url(x.png) }",
+            "output": null
+        },
+        {
+            "name": "image-set()",
+            "input": "selector { background: image-set('/a.png' 1x) }",
+            "output": null
+        },
+        {
+            "name": "src()",
+            "input": "selector { background: src(/x.png) }",
+            "output": null
+        },
+        {
+            "name": "expression(",
+            "input": "selector { width: expression(1) }",
+            "output": null
+        },
+        {
+            "name": "javascript:",
+            "input": "selector { background: javascript:alert(1) }",
+            "output": null
+        },
+        {
+            "name": "behavior:",
+            "input": "selector { behavior: url(/x.htc) }",
+            "output": null
+        },
+        {
+            "name": "-moz-binding",
+            "input": "selector { -moz-binding: url(/x.xml) }",
+            "output": null
+        },
+        {
+            "name": "a < anywhere",
+            "input": "</style><script>",
+            "output": null
+        },
+        {
+            "name": "a backslash anywhere",
+            "input": "selector { content: '\\201C' }",
+            "output": null
+        },
+        {
+            "name": "a brace in a string",
+            "input": "selector { content: '{' }",
+            "output": null
+        },
+        {
+            "name": "a string with words",
+            "input": "selector::after { content: \"a, b\" }",
+            "output": "selector::after { content: \"a, b\" }"
+        },
+        {
+            "name": "a string that is not closed",
+            "input": "selector { content: 'open }",
+            "output": null
+        },
+        {
+            "name": "a missing closing brace",
+            "input": "selector { color: red ",
+            "output": null
+        },
+        {
+            "name": "an extra closing brace",
+            "input": "selector { color: red } }",
+            "output": null
+        },
+        {
+            "name": "a nested rule",
+            "input": "selector { .a { color: red } }",
+            "output": null
+        },
+        {
+            "name": "a declaration after the rules",
+            "input": "selector { color: red } color: blue",
+            "output": null
+        },
+        {
+            "name": "a semicolon before a rule",
+            "input": "color: red; selector { color: blue }",
+            "output": null
+        }
+    ]
+}

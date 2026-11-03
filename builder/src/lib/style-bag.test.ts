@@ -88,7 +88,8 @@ describe('the advanced part', () => {
         const ok = 'selector .bn-button { letter-spacing: .1em; }';
 
         expect(cleanCustomCss(ok)).toBe(ok);
-        expect(cleanCustomCss('selector { background: url(https://a.test/x.png) }')).not.toBeNull();
+        // Like the server: url() only holds a path on this site.
+        expect(cleanCustomCss('selector { background: url(https://a.test/x.png) }')).toBeNull();
         expect(cleanCustomCss("selector { background: url('/img/x.png') }")).not.toBeNull();
         expect(cleanCustomCss('selector { background: url(http://a.test/x.png) }')).toBeNull();
         expect(cleanCustomCss('selector { background: url(//a.test/x.png) }')).toBeNull();
