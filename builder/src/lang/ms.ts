@@ -196,7 +196,7 @@ export default {
     'Heaviest': 'Paling tebal',
     'Height': 'Ketinggian',
     'Hero': 'Hero',
-    'Hidden': 'Disembunyikan',
+    'Hidden': 'Tersembunyi',
     'Hide from the page': 'Sembunyi daripada halaman',
     'Hide on laptops': 'Sembunyikan di laptop',
     'Hide on phones': 'Sembunyikan di telefon',
