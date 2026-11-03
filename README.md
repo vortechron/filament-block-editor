@@ -10,8 +10,9 @@ It started as the page builder of [NakJual](https://nakjual.com) and is made gen
 
 - **Builder (JavaScript):** `mountPageBuilder(element, options)`. No framework needed: it talks to your app only
   through an adapter with three calls (save, preview, upload). React is bundled inside.
-- **Content (PHP, Laravel):** cleans the page value, draws it as HTML with Blade, ready-made section templates,
-  and an own-block registry.
+- **Content (PHP, Laravel):** cleans the page value (format 2, with versioned upgrades), draws it as HTML with
+  Blade, styles per device as data, a design kit, locks, synced sections, dynamic values, a form block,
+  ready-made section templates and blocks, and an own-block registry.
 - **Filament:** one trait turns any Filament page into the full-screen builder.
 
 ## Requirements
@@ -32,7 +33,9 @@ php artisan vendor:publish --tag=filament-block-editor-assets
 
 ## Show a page
 
-A page is a list of sections stored as JSON (see [The page value](docs/php.md#the-page-value)). Draw it with:
+A page is a page value stored as JSON: `['version' => 2, 'sections' => [...]]` (see
+[The page value](docs/php.md#the-page-value)). Older values (a bare list, or `['sections' => [...]]`) are
+upgraded when they are read. Draw it with:
 
 ```blade
 <head>
@@ -43,8 +46,9 @@ A page is a list of sections stored as JSON (see [The page value](docs/php.md#th
 </body>
 ```
 
-Theme it with CSS custom properties (`--sf-accent`, `--sf-text`, `--sf-heading-font`, ...): see
-[docs/php.md](docs/php.md#theme-it-with-css-variables).
+The styles component also prints the site's [design kit](docs/php.md#design-kit) (colours, fonts, corners,
+buttons, forms). You can still theme with CSS custom properties (`--sf-accent`, `--sf-text`,
+`--sf-heading-font`, ...): see [docs/php.md](docs/php.md#theme-it-with-css-variables).
 
 ## Edit a page in Filament
 
@@ -71,12 +75,13 @@ class BuildPage extends Page
 
     protected function getPageBuilderValue(): array
     {
-        return ['sections' => $this->record->sections ?? []];
+        return $this->record->content ?? [];   // any format: it is upgraded for the builder
     }
 
     protected function savePageBuilderValue(array $value): void
     {
-        $this->record->update(['sections' => $value['sections']]); // already validated and cleaned
+        // ['version' => 2, 'sections' => [...]], already validated, cleaned and guarded
+        $this->record->update(['content' => $value]);
     }
 
     protected function renderPageBuilderPreview(array $sections): string
@@ -101,6 +106,22 @@ class BuildPage extends Page
         abort_unless(PageResource::canEdit($this->record), 403);
     }
 }
+```
+
+Every save by someone who is not a developer keeps the stored locks and developer-only data
+(`PageValue::guard()`). Override these hooks to switch more on; each one has a safe default, and the
+builder only offers what you override:
+
+```php
+protected function isPageBuilderDeveloper(): bool { return auth()->user()->is_developer; }  // locks, custom CSS
+protected function getPageBuilderKit(): ?array { return Kit::normalize(setting('kit')); }    // the design panel
+protected function savePageBuilderKit(array $kit): void { setting(['kit' => $kit]); }
+protected function savePageBuilderSection(array $section, string $title, bool $synced): array { /* ... */ return ['ok' => true, 'id' => $id, 'template' => null]; }
+protected function getPageBuilderSiteInfo(): ?array { /* groups of Fields and their values */ }
+protected function savePageBuilderSiteInfo(array $values): void { /* validate and save */ }
+protected function getPageBuilderSyncedSections(): array { return []; }   // [['id', 'title', 'editUrl', 'section']]
+protected function getPageBuilderParts(): array { return []; }            // [['key' => 'header', 'title', 'editUrl']]
+protected function getPageBuilderKind(): string { return 'page'; }        // page header footer section card single
 ```
 
 Register the route like any resource page (`'build' => BuildPage::route('/{record}/build')`) and add
@@ -135,7 +156,7 @@ app(BlockRegistry::class)->register(
 ```
 
 Field types: `text`, `textarea`, `select`, `toggle`, `number`, `image`, `link`, `list`. Values are cleaned by the
-definition before your view sees them. A section with `width: full` and `padding: none` lets your block draw edge
+definition before your view sees them. Mark a field `->developerOnly()` to keep it to developers. A section with `width: full` and `padding: none` lets your block draw edge
 to edge. More in [docs/php.md](docs/php.md#your-own-blocks).
 
 ## Use the builder anywhere else
@@ -167,6 +188,13 @@ preview (the PHP layer does that for Laravel; another stack draws the same HTML 
 
 The full option list and the adapter types are in [docs/v1-architecture.md](docs/v1-architecture.md) and
 `builder/src/index.ts`.
+
+## Ready-made blocks
+
+The package registers five blocks for every site: FAQ (`fbe-faq`), map (`fbe-map`), icon list
+(`fbe-icon-list`), pricing (`fbe-pricing`) and testimonials (`fbe-testimonials`). Anyone can also build a
+form in the editor (the `form` block); your app saves the submissions through a `FormEndpoint`. Turn the
+ready-made blocks off with `'core_blocks' => false`. More in [docs/php.md](docs/php.md#core-blocks).
 
 ## What changed from 0.1
 
