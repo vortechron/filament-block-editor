@@ -9,6 +9,7 @@ import {
 import { BuilderContext } from './builder/builder-context';
 import { BuilderTopBar } from './builder/builder-top-bar';
 import { useKitState } from './builder/kit/use-kit-state';
+import { useSiteInfoState } from './builder/part/use-site-info-state';
 import { Canvas } from './builder/canvas';
 import { BuilderDragAndDrop } from './builder/drag-and-drop';
 import { MobileDock } from './builder/mobile-dock';
@@ -113,6 +114,7 @@ function Builder({
     const library = useSectionLibrary(templates);
     const builder = useBuilder({ form, templates: library.templates });
     const kit = useKitState();
+    const siteInfo = useSiteInfoState();
     const [device, setDevice] = useState<Device>('desktop');
     const [isDockOpen, setIsDockOpen] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -120,8 +122,8 @@ function Builder({
     // Tablets get the sidebar too. Phones get the bar at the bottom.
     const isDesktop = useMediaQuery('(min-width: 768px)');
 
-    const hasUnsavedChanges = form.isDirty || kit.isDirty;
-    const isSaving = form.processing || kit.processing;
+    const hasUnsavedChanges = form.isDirty || kit.isDirty || siteInfo.isDirty;
+    const isSaving = form.processing || kit.processing || siteInfo.processing;
 
     const leaveTo = useUnsavedChangesGuard(hasUnsavedChanges);
 
@@ -162,10 +164,14 @@ function Builder({
         }
     }
 
-    /** Saves the page and the design kit, whichever has changes. */
+    /** Saves the page, the design kit and the shop info, whichever has changes. */
     function saveEverything() {
         if (kit.isDirty) {
             void kit.save();
+        }
+
+        if (siteInfo.isDirty) {
+            void siteInfo.save();
         }
 
         if (form.isDirty) {
@@ -201,8 +207,9 @@ function Builder({
     );
     const hasPageErrors = Object.keys(form.errors).length > 0;
     const hasKitErrors = Object.keys(kit.errors).length > 0;
+    const hasSiteInfoErrors = Object.keys(siteInfo.errors).length > 0;
     const notices =
-        hasPageErrors || hasKitErrors ? (
+        hasPageErrors || hasKitErrors || hasSiteInfoErrors ? (
             <>
                 {hasPageErrors && (
                     <SaveErrors
@@ -219,6 +226,14 @@ function Builder({
                         onDismiss={kit.clearErrors}
                     />
                 )}
+                {hasSiteInfoErrors && (
+                    <SaveErrors
+                        title={t('Your shop info was not saved')}
+                        errors={siteInfo.errors}
+                        onShowSection={showSection}
+                        onDismiss={siteInfo.clearErrors}
+                    />
+                )}
             </>
         ) : null;
 
@@ -233,6 +248,7 @@ function Builder({
                     device: isDesktop ? device : 'phone',
                     setDevice,
                     kit,
+                    siteInfo,
                     isDesktop,
                     onDeleteSection: setDeleteId,
                     revealPanel,
@@ -252,7 +268,9 @@ function Builder({
                             isDesktop={isDesktop}
                             hasUnsavedChanges={hasUnsavedChanges}
                             recentlySaved={
-                                form.recentlySuccessful || kit.recentlySuccessful
+                                form.recentlySuccessful ||
+                                kit.recentlySuccessful ||
+                                siteInfo.recentlySuccessful
                             }
                             isSaving={isSaving}
                             onPreview={() => setIsPreviewOpen(true)}
@@ -269,7 +287,8 @@ function Builder({
                                     aria-label={t('Editor panels')}
                                     className={
                                         builder.panel.name === 'section' ||
-                                        builder.panel.name === 'item'
+                                        builder.panel.name === 'item' ||
+                                        builder.panel.name === 'part'
                                             ? 'bg-card w-[22rem] shrink-0 border-r transition-[width] duration-200 lg:w-[26rem] xl:w-[28rem]'
                                             : 'bg-card w-[19.5rem] shrink-0 border-r transition-[width] duration-200 lg:w-[21.5rem] xl:w-[23rem]'
                                     }

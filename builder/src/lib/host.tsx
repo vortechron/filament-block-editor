@@ -1,10 +1,13 @@
 import { createContext, useContext } from 'react';
 import type {
+    DocumentKind,
     DynamicValueDefinition,
     FontChoice,
     Kit,
     OwnBlockDefinition,
     PageBuilderAdapter,
+    PagePart,
+    SiteInfo,
     SyncedSectionOption,
     UploadKind,
 } from '@/types';
@@ -36,6 +39,12 @@ export type Host = {
     dynamicValues: DynamicValueDefinition[];
     /** The synced sections this page may use, with the section each holds. */
     syncedSections: SyncedSectionOption[];
+    /** The header and footer the page shows, each built on its own. */
+    parts: PagePart[];
+    /** The shop info form. Null without it or without `adapter.saveSiteInfo`. */
+    siteInfo: SiteInfo | null;
+    /** What the builder edits: a page, the header, the footer… */
+    kind: DocumentKind;
 };
 
 export const HostContext = createContext<Host | null>(null);

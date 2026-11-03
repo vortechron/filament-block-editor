@@ -54,6 +54,9 @@ function wrap(upload: Host['upload'] = vi.fn(), developer = false) {
         kit: null,
         dynamicValues: [],
         syncedSections: [],
+        parts: [],
+        siteInfo: null,
+        kind: 'page',
     };
 
     return ({ children }: { children: ReactNode }) => (

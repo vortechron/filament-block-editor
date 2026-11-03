@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { lastRich, MAX_SECTIONS, sectionFromTemplate } from '@/lib/page-value';
 import { useHost } from '@/lib/host';
 import { isLocked, withoutDeveloperData } from '@/lib/locks';
-import type { LockKey, Section, SectionTemplate } from '@/types';
+import type { LockKey, PartKey, Section, SectionTemplate } from '@/types';
 import { duplicateBlock, withHidden } from '../editor/block-meta';
 import {
     insertAfter,
@@ -203,10 +203,18 @@ export function useBuilder({
     function clearSelection() {
         setSelection(NOTHING_SELECTED);
         setPanel((current) =>
-            current.name === 'section' || current.name === 'item'
+            current.name === 'section' ||
+            current.name === 'item' ||
+            current.name === 'part'
                 ? { name: homePanel }
                 : current,
         );
+    }
+
+    /** A tap on the header or footer: its panel, and no section picked. */
+    function selectPart(part: PartKey) {
+        setSelection(NOTHING_SELECTED);
+        setPanel({ name: 'part', part });
     }
 
     function registerHandle(
@@ -474,6 +482,7 @@ export function useBuilder({
         pickOnPage,
         editInSection,
         clearSelection,
+        selectPart,
         registerHandle,
         addSection,
         sectionInsertIndex,

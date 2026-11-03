@@ -15,6 +15,7 @@ import { useBuilderContext } from './builder-context';
 import { describeBlock } from './item-catalog';
 import { ItemPanel } from './item-panel';
 import { LayersPanel } from './layers-panel';
+import { PartPanel } from './part/part-panel';
 import { useSectionTitle } from './section-meta';
 import { SectionPanel } from './section-panel';
 import type { HomePanelName } from './types';
@@ -47,12 +48,19 @@ export function Sidebar({
         <div className="flex h-full min-h-0 flex-col">
             {!(isHome && onDone) && <SidebarHeader />}
             <div
-                key={isSection ? `section:${selection.sectionId}` : panel.name}
+                key={
+                    isSection
+                        ? `section:${selection.sectionId}`
+                        : panel.name === 'part'
+                          ? `part:${panel.part}`
+                          : panel.name
+                }
                 className="animate-in fade-in-0 slide-in-from-left-1 min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 duration-200"
             >
                 {panel.name === 'add' && <AddPanel onAdded={onDone} />}
                 {panel.name === 'layers' && <LayersPanel onPicked={onDone} />}
                 {panel.name === 'design' && <DesignPanel />}
+                {panel.name === 'part' && <PartPanel part={panel.part} />}
                 {isSection && (
                     // The section's words stay open under an item's
                     // settings, which change the item through them.
@@ -114,7 +122,7 @@ function SidebarHeader() {
         (block) => block.id === selection.sectionId,
     );
     const section =
-        sectionIndex === -1 || panel.name === 'design'
+        sectionIndex === -1 || panel.name === 'design' || panel.name === 'part'
             ? null
             : blocks[sectionIndex];
     const goHome = () =>
@@ -127,6 +135,12 @@ function SidebarHeader() {
 
     if (panel.name === 'design') {
         crumbs.push({ label: t('Design') });
+    }
+
+    if (panel.name === 'part') {
+        crumbs.push({
+            label: panel.part === 'header' ? t('Header') : t('Footer'),
+        });
     }
 
     if (section) {

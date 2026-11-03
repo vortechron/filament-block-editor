@@ -1,4 +1,4 @@
-import type { SectionLayout } from '@/types';
+import type { PartKey, SectionLayout } from '@/types';
 
 /**
  * What is picked on the canvas. Nothing picked is the page itself. An
@@ -19,7 +19,9 @@ export type SidebarPanel =
     | { name: HomePanelName }
     | { name: 'section' }
     | { name: 'item' }
-    | { name: 'design' };
+    | { name: 'design' }
+    /** The header or footer, picked on the canvas. */
+    | { name: 'part'; part: PartKey };
 
 /**
  * The picked section's tabs: its words and items, its simple look

@@ -12,6 +12,7 @@ import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useHost } from '@/lib/host';
 import { useBuilderContext } from './builder-context';
+import type { FrameMarks } from './frame-marks';
 import { type FramePick, PageFrame } from './page-frame';
 import { sectionKind } from './section-meta';
 import { TemplateMenu } from './template-menu';
@@ -39,8 +40,8 @@ const DRAWN_WIDTH = { desktop: 1280, tablet: 820 } as const;
  */
 export function Canvas({ notices }: { notices: ReactNode }) {
     const t = useT();
-    const { viewUrl } = useHost();
-    const { builder, form, device, isDesktop, revealPanel, kit } =
+    const { viewUrl, parts } = useHost();
+    const { builder, form, device, isDesktop, revealPanel, kit, siteInfo } =
         useBuilderContext();
     const kitDraft = kit.kit === null ? null : JSON.stringify(kit.kit);
     const { blocks, selection } = builder;
@@ -58,12 +59,23 @@ export function Canvas({ notices }: { notices: ReactNode }) {
                   .handleFor(selection.sectionId)
                   ?.pathOf(selection.itemId) ?? null)
             : null;
-    const sectionLabels = new Map(
-        blocks.map((block, index) => [
-            block.id,
-            `${index + 1}. ${sectionKind(block, t)}`,
-        ]),
-    );
+    const partTitle = (key: 'header' | 'footer') =>
+        parts.find((part) => part.key === key)?.title ||
+        (key === 'header' ? t('Header') : t('Footer'));
+    const marks: FrameMarks = {
+        sectionLabels: new Map(
+            blocks.map((block, index) => [
+                block.id,
+                `${index + 1}. ${sectionKind(block, t)}`,
+            ]),
+        ),
+        pickedSectionId: selection.sectionId,
+        pickedItemPath,
+        partLabels: { header: partTitle('header'), footer: partTitle('footer') },
+        pickedPart: builder.panel.name === 'part' ? builder.panel.part : null,
+        hiddenLabel: t('Hidden'),
+        scale,
+    };
 
     function handleBackdrop(event: PointerEvent<HTMLElement>) {
         if (
@@ -77,6 +89,16 @@ export function Canvas({ notices }: { notices: ReactNode }) {
     function handlePick(pick: FramePick) {
         if (pick.kind === 'nothing') {
             builder.clearSelection();
+
+            return;
+        }
+
+        if (pick.kind === 'part') {
+            builder.selectPart(pick.part);
+
+            if (!isDesktop) {
+                revealPanel({ name: 'part', part: pick.part });
+            }
 
             return;
         }
@@ -140,10 +162,8 @@ export function Canvas({ notices }: { notices: ReactNode }) {
                             <PageFrame
                                 draft={JSON.stringify(form.data)}
                                 kit={kitDraft}
-                                pickedSectionId={selection.sectionId}
-                                pickedItemPath={pickedItemPath}
-                                sectionLabels={sectionLabels}
-                                scale={scale}
+                                reloads={siteInfo.reloads}
+                                marks={marks}
                                 onPick={handlePick}
                             />
                         )}

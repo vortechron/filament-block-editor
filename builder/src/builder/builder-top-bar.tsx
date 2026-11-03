@@ -19,7 +19,8 @@ import type { Device } from './types';
 
 /**
  * The bar across the top of the page builder: back to the host's list
- * (when it gave a back link), the page title, laptop, tablet or phone view, then
+ * (when it gave a back link), the page title (with "Header" or "Footer"
+ * when the builder edits one), laptop, tablet or phone view, then
  * Design (when the host has a design kit), Preview, View page (when it
  * gave a page link) and Save.
  */
@@ -46,7 +47,9 @@ export function BuilderTopBar({
     onSave: () => void;
 }) {
     const t = useT();
-    const { title, backUrl, viewUrl } = useHost();
+    const { title, backUrl, viewUrl, kind } = useHost();
+    const kindLabel =
+        kind === 'header' ? t('Header') : kind === 'footer' ? t('Footer') : null;
     const canSave = hasUnsavedChanges && !isSaving;
 
     return (
@@ -74,8 +77,13 @@ export function BuilderTopBar({
             )}
 
             <div className="flex min-w-0 flex-1 items-center gap-2 pl-1 md:flex-none">
+                {kindLabel && (
+                    <span className="shrink-0 rounded-md bg-[var(--builder-select)]/10 px-2 py-0.5 text-xs font-semibold text-[var(--builder-select)]">
+                        {kindLabel}
+                    </span>
+                )}
                 <h1 className="text-foreground min-w-0 truncate text-sm font-semibold sm:text-[15px] md:max-w-[10rem] lg:max-w-[18rem] xl:max-w-[26rem]">
-                    {title || t('Page')}
+                    {title || kindLabel || t('Page')}
                 </h1>
             </div>
 

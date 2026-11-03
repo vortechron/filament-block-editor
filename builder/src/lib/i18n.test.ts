@@ -101,8 +101,14 @@ describe('the Malay dictionary', () => {
 
     it('uses the generic words: seksyen and halaman, never seller words', () => {
         const words = Object.values(ms).join('\n').toLowerCase();
+        // "Bahagian" names a part (the header or footer), never a section.
+        const sectionWords = Object.entries(ms)
+            .filter(([english]) => !/\bpart\b/i.test(english))
+            .map(([, malay]) => malay)
+            .join('\n')
+            .toLowerCase();
 
-        expect(words).not.toMatch(/\bbahagian\b/);
+        expect(sectionWords).not.toMatch(/\bbahagian\b/);
         expect(words).not.toMatch(/\bpembeli\b/);
         expect(words).not.toMatch(/\bproduk\b/);
         expect(words).not.toMatch(/\bpesanan\b/);
