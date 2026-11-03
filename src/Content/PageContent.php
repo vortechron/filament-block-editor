@@ -99,7 +99,7 @@ final class PageContent
             $attribute => ['present', 'array', 'max:'.self::MAX_SECTIONS],
             "{$attribute}.*" => ['array', function (string $attribute, mixed $value, Closure $fail): void {
                 if (is_array($value) && ($value['type'] ?? null) === self::REF && self::ref($value['ref'] ?? null) === null) {
-                    $fail('A synced section needs a ref: a positive number or an id of letters, digits, dashes and underscores.');
+                    $fail(__('filament-block-editor::builder.errors.ref_needed'));
                 }
             }],
             "{$attribute}.*.type" => ['required', 'string', 'in:'.implode(',', self::types())],

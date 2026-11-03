@@ -56,7 +56,7 @@ trait PageBuilderHooks
      */
     protected function savePageBuilderSection(array $section, string $title, bool $synced): array
     {
-        return ['ok' => false, 'errors' => ['section' => 'Saving sections is not available here.']];
+        return ['ok' => false, 'errors' => ['section' => __('filament-block-editor::builder.errors.section_not_available')]];
     }
 
     /**
@@ -167,7 +167,7 @@ trait PageBuilderHooks
         $this->authorizePageBuilder();
 
         if (! $this->overridesPageBuilderHook('savePageBuilderKit')) {
-            return ['ok' => false, 'errors' => ['kit' => 'Saving the design is not available here.']];
+            return ['ok' => false, 'errors' => ['kit' => __('filament-block-editor::builder.errors.kit_not_available')]];
         }
 
         $validator = Validator::make(['kit' => $kit], Kit::rules());
@@ -188,14 +188,14 @@ trait PageBuilderHooks
         $this->authorizePageBuilder();
 
         if (! $this->overridesPageBuilderHook('savePageBuilderSection')) {
-            return ['ok' => false, 'errors' => ['section' => 'Saving sections is not available here.']];
+            return ['ok' => false, 'errors' => ['section' => __('filament-block-editor::builder.errors.section_not_available')]];
         }
 
         $title = mb_substr(trim($title), 0, 120);
         $clean = PageContent::normalize([$section])[0] ?? null;
 
         if ($title === '' || ($clean['type'] ?? null) !== PageContent::TYPE) {
-            return ['ok' => false, 'errors' => $title === '' ? ['title' => 'A title is needed.'] : ['section' => 'Only a section of its own can be saved.']];
+            return ['ok' => false, 'errors' => $title === '' ? ['title' => __('filament-block-editor::builder.errors.title_needed')] : ['section' => __('filament-block-editor::builder.errors.section_only')]];
         }
 
         // A saved section is new, so it keeps no developer-only data from someone else.
@@ -207,7 +207,7 @@ trait PageBuilderHooks
 
         return ($result['ok'] ?? false) === true
             ? ['ok' => true, 'id' => $result['id'] ?? null, 'template' => is_array($result['template'] ?? null) ? $result['template'] : null]
-            : ['ok' => false, 'errors' => is_array($result['errors'] ?? null) ? $result['errors'] : ['section' => 'The section was not saved.']];
+            : ['ok' => false, 'errors' => is_array($result['errors'] ?? null) ? $result['errors'] : ['section' => __('filament-block-editor::builder.errors.section_not_saved')]];
     }
 
     /**
@@ -219,7 +219,7 @@ trait PageBuilderHooks
         $this->authorizePageBuilder();
 
         if (! $this->overridesPageBuilderHook('savePageBuilderSiteInfo')) {
-            return ['ok' => false, 'errors' => ['siteInfo' => 'Saving the shop info is not available here.']];
+            return ['ok' => false, 'errors' => ['siteInfo' => __('filament-block-editor::builder.errors.site_info_not_available')]];
         }
 
         return $this->refusingInvalid(fn () => $this->savePageBuilderSiteInfo(array_filter($values, is_array(...))));

@@ -78,6 +78,22 @@ class PageBuilderHooksTest extends FilamentTestCase
         $this->assertSame(['page.title' => 'Laman Utama', 'site.phone' => '019'], Livewire::test(FullDemoBuilder::class)->instance()->previewContextValues());
     }
 
+    public function test_a_refusal_is_in_the_language_of_the_panel(): void
+    {
+        $this->signIn();
+
+        app()->setLocale('ms');
+        $this->assertSame(
+            ['kit' => 'Reka bentuk tidak boleh disimpan di sini.'],
+            Livewire::test(DemoBuilder::class)->call('saveKitFromPageBuilder', Kit::defaults())->effects['returns'][0]['errors'],
+        );
+
+        app()->setLocale('en');
+        $component = Livewire::test(FullDemoBuilder::class);
+        $this->assertSame(['title' => 'A title is needed.'], $component->call('saveSectionFromPageBuilder', ['type' => 'rich', 'data' => []], ' ', false)->effects['returns'][0]['errors']);
+        $this->assertSame(['section' => 'Only a section of its own can be saved.'], $component->call('saveSectionFromPageBuilder', ['type' => 'ref', 'ref' => 4], 'Hero', false)->effects['returns'][0]['errors']);
+    }
+
     public function test_a_hook_the_host_did_not_override_is_refused(): void
     {
         $this->signIn();
