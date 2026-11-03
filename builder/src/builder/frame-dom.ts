@@ -8,6 +8,19 @@
 /** A section, or one item in it, by its place in the document. */
 export type FrameTarget = { sectionId: string; path: string | null };
 
+/**
+ * A section of the page being built. A header or footer the host built
+ * from sections is wrapped in `data-part`, and so is the home page's
+ * content in the header and footer builders: the sections inside a
+ * `data-part` belong to another document.
+ */
+export const PAGE_SECTION = '[data-block-id]:not([data-part] *)';
+
+/** The sections of the page being built, in page order. */
+export function pageSections(root: ParentNode): HTMLElement[] {
+    return [...root.querySelectorAll<HTMLElement>(PAGE_SECTION)];
+}
+
 /** The builder's own element, inside the element the host mounted it on. */
 export function builderApp(): HTMLElement | null {
     return document.querySelector<HTMLElement>('[data-fbe-app]');
@@ -26,7 +39,7 @@ export function frameSection(
 ): HTMLElement | null {
     return (
         frame?.contentDocument?.querySelector<HTMLElement>(
-            `[data-block-id="${CSS.escape(sectionId)}"]`,
+            `${PAGE_SECTION}[data-block-id="${CSS.escape(sectionId)}"]`,
         ) ?? null
     );
 }

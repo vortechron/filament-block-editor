@@ -14,7 +14,7 @@ import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useBuilderContext } from './builder-context';
-import { builderApp, liveFrame } from './frame-dom';
+import { builderApp, liveFrame, pageSections } from './frame-dom';
 import { nearestPlace, type Row } from './page-frame-updates';
 import type { ItemKey, ItemPlace, PagePlace } from './types';
 
@@ -298,11 +298,8 @@ function findTarget(at: Point, data: DragData): DropTarget | null {
     }
 
     const frame = liveFrame();
-    const sections = [
-        ...(frame?.contentDocument?.querySelectorAll<HTMLElement>(
-            '[data-block-id]',
-        ) ?? []),
-    ];
+    const shown = frame?.contentDocument;
+    const sections = shown ? pageSections(shown) : [];
 
     if (!frame || sections.length === 0) {
         return null;

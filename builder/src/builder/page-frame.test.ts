@@ -6,6 +6,7 @@ import {
     pathOfBlock,
     planUpdate,
     type PageDrawing,
+    readDrawing,
 } from './page-frame-updates';
 
 function drawing(frame: string, sections: [string, string][]): PageDrawing {
@@ -168,5 +169,34 @@ describe('dropping an item between the items of a section', () => {
 
     it('has no place in a section with no items', () => {
         expect(nearestPlace([], { x: 0, y: 10 })).toBeNull();
+    });
+});
+
+/** A page with a header the host built from sections, as the server draws it. */
+function builtPage(phone: string, title: string): string {
+    return `<!doctype html><html><body>
+<div data-part="header" class="sf-page"><div data-block-id="head0001"><p>${phone}</p></div></div>
+<div data-block-id="hero0001"><h1>${title}</h1></div>
+</body></html>`;
+}
+
+describe('reading a drawing of the page', () => {
+    it('splits out only the sections of the page being built', () => {
+        const drawing = readDrawing(builtPage('012-345 6789', 'Kedai Buku'));
+
+        expect([...drawing.sections]).toEqual([['hero0001', '<h1>Kedai Buku</h1>']]);
+        expect(drawing.frame).toContain('012-345 6789');
+    });
+
+    it('draws the whole page again when the header made of sections changed', () => {
+        const before = readDrawing(builtPage('012-345 6789', 'Kedai Buku'));
+
+        expect(planUpdate(before, readDrawing(builtPage('013-000 1111', 'Kedai Buku')))).toEqual({
+            kind: 'reload',
+        });
+        expect(planUpdate(before, readDrawing(builtPage('012-345 6789', 'Kedai Buku Pak Long')))).toEqual({
+            kind: 'swap',
+            sectionIds: ['hero0001'],
+        });
     });
 });

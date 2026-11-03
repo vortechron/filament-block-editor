@@ -1,3 +1,5 @@
+import { pageSections } from './frame-dom';
+
 /**
  * The plain logic behind the canvas, which shows the real page drawn by
  * the server (page-frame.tsx): what to redraw after a change, and how a
@@ -11,6 +13,23 @@ export type PageDrawing = {
     /** Each section's HTML by section id, in page order. */
     sections: ReadonlyMap<string, string>;
 };
+
+/**
+ * The page split into its sections and everything around them. The
+ * sections of a header or footer made of sections stay in the frame, so
+ * a change there draws the whole page again.
+ */
+export function readDrawing(html: string): PageDrawing {
+    const page = new DOMParser().parseFromString(html, 'text/html');
+    const sections = new Map<string, string>();
+
+    pageSections(page).forEach((section) => {
+        sections.set(section.dataset.blockId ?? '', section.innerHTML);
+        section.replaceChildren();
+    });
+
+    return { frame: page.documentElement.outerHTML, sections };
+}
 
 export type FrameUpdate =
     | { kind: 'reload' }

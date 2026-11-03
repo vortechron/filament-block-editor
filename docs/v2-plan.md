@@ -597,7 +597,8 @@ type PageBuilderAdapter = {
    was not saved" (error keys like `contact.phone`). After a good save the builder calls `preview()` again with the
    same page value, so the server must draw the header and footer from the saved info.
 7. **Header and footer on the canvas** get the same hover frame, label (the part's title, else "Header" or
-   "Footer") and picked frame as sections. A click inside a section wins over a part around it.
+   "Footer") and picked frame as sections. A click inside a section wins over a part around it. *(Changed by
+   end-to-end fix 1: the sections inside a part are the part's own.)*
 8. **Hidden sections:** the badge is drawn by the builder inside the `data-hidden` wrapper. The Malay word for
    "Hidden" is now "Tersembunyi" everywhere in the builder. The i18n test allows "bahagian" only in texts about a
    part (header or footer), as the contract's "Bahagian ini sama di semua halaman" needs it.
@@ -670,3 +671,13 @@ type PageBuilderAdapter = {
 12. **Smaller choices.** A saved or synced section's title is at most `PageContent::MAX_TITLE_LENGTH` (120) on
     both sides (the builder had 100). `BlockNoteRenderer` is split into `InlineContent`, `MediaBlocks` and
     `PackageBlocks`; its public API and HTML are unchanged.
+
+### End-to-end fixes, 3 November 2026
+
+1. **Sections inside a `data-part` are not sections of the page being built.** A header or footer built with the
+   builder is made of sections (`<div data-part="header"><div data-block-id="…">`), and the CMS wraps the home page's
+   content in `data-part="page"` in the header and footer builders. A tap inside `data-part="header|footer"` picks
+   that part, even on one of its sections; a tap inside any other part picks nothing. Those sections get no label,
+   hover frame, picked frame or hidden badge, and the builder never uses them for drop places, scrolling or
+   swapping one section (`PAGE_SECTION` in `builder/src/builder/frame-dom.ts`). A change inside a part draws the
+   whole page again. Only `header` and `footer` parts get the hover frame.

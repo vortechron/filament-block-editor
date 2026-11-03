@@ -1,6 +1,6 @@
-import { isPartKey } from '@/lib/site-parts';
+import { isPartKey, PART_KEYS } from '@/lib/site-parts';
 import type { PartKey } from '@/types';
-import { frameItem } from './frame-dom';
+import { frameItem, PAGE_SECTION, pageSections } from './frame-dom';
 
 /** What a click on the page picked. */
 export type FramePick =
@@ -23,7 +23,15 @@ export type FrameMarks = {
     scale: number;
 };
 
-const TARGETS = ':is([data-block-id], [data-part])';
+/**
+ * What can be picked: the page's own sections, and the header and footer.
+ * Other parts, like the home page's content in the header builder, and
+ * the sections inside any part, are not.
+ */
+const TARGETS = `:is(${[
+    PAGE_SECTION,
+    ...PART_KEYS.map((part) => `[data-part="${part}"]`),
+].join(', ')})`;
 
 /**
  * The builder's marks inside the page: a dashed frame on hover, a blue
@@ -52,10 +60,10 @@ ${TARGETS}::after {
     pointer-events: none; opacity: 0; transition: opacity 0.15s;
 }
 ${TARGETS}:hover::after, ${TARGETS}[data-builder-picked]::after { opacity: 1; }
-[data-block-id] [data-part]::after, [data-part] [data-block-id]::after { z-index: 61; }
-[data-builder-picked] [data-item]:hover { outline: 1px dashed rgb(37 99 235 / 0.6); outline-offset: 3px; }
+[data-block-id] [data-part]::after { z-index: 61; }
+${PAGE_SECTION}[data-builder-picked] [data-item]:hover { outline: 1px dashed rgb(37 99 235 / 0.6); outline-offset: 3px; }
 [data-builder-picked-item] { outline: calc(2px * var(--builder-ui, 1)) solid #2563eb !important; outline-offset: 3px; }
-[data-block-id][data-hidden] > :not([data-builder-hidden-badge]) { opacity: 0.45; filter: grayscale(0.5); }
+${PAGE_SECTION}[data-hidden] > :not([data-builder-hidden-badge]) { opacity: 0.45; filter: grayscale(0.5); }
 [data-builder-hidden-badge] {
     position: absolute; top: calc(0.5rem * var(--builder-ui, 1)); right: calc(0.5rem * var(--builder-ui, 1)); z-index: 60;
     padding: calc(0.25rem * var(--builder-ui, 1)) calc(0.6rem * var(--builder-ui, 1));
@@ -65,21 +73,30 @@ ${TARGETS}:hover::after, ${TARGETS}[data-builder-picked]::after { opacity: 1; }
 }
 `;
 
-/** What a click on `target` picks: a section first, then the header or footer. */
+/**
+ * What a click on `target` picks. Inside a `data-part` it is the header
+ * or footer, even on one of its own sections, and nothing in any other
+ * part (like the home page's content around the header being built).
+ * Elsewhere it is the section of the page under it.
+ */
 export function pickAt(target: Element): FramePick {
-    const section = target.closest('[data-block-id]');
+    const part = target.closest('[data-part]');
 
-    if (section) {
-        return {
-            kind: 'section',
-            sectionId: section.getAttribute('data-block-id') ?? '',
-            path: target.closest('[data-item]')?.getAttribute('data-item') ?? null,
-        };
+    if (part) {
+        const key = part.getAttribute('data-part');
+
+        return isPartKey(key) ? { kind: 'part', part: key } : { kind: 'nothing' };
     }
 
-    const part = target.closest('[data-part]')?.getAttribute('data-part');
+    const section = target.closest('[data-block-id]');
 
-    return isPartKey(part) ? { kind: 'part', part } : { kind: 'nothing' };
+    return section
+        ? {
+              kind: 'section',
+              sectionId: section.getAttribute('data-block-id') ?? '',
+              path: target.closest('[data-item]')?.getAttribute('data-item') ?? null,
+          }
+        : { kind: 'nothing' };
 }
 
 /** Puts the builder's marks on the page, and takes old ones off. */
@@ -87,7 +104,7 @@ export function applyMarks(page: Document, marks: FrameMarks): void {
     // The labels and frames keep their size when the page is shrunk.
     page.documentElement.style.setProperty('--builder-ui', String(1 / marks.scale));
 
-    page.querySelectorAll<HTMLElement>('[data-block-id]').forEach((section) => {
+    pageSections(page).forEach((section) => {
         const id = section.dataset.blockId ?? '';
 
         section.setAttribute('data-builder-label', marks.sectionLabels.get(id) ?? '');
@@ -110,7 +127,7 @@ export function applyMarks(page: Document, marks: FrameMarks): void {
 
     if (marks.pickedSectionId !== null && marks.pickedItemPath !== null) {
         const section = page.querySelector<HTMLElement>(
-            `[data-block-id="${CSS.escape(marks.pickedSectionId)}"]`,
+            `${PAGE_SECTION}[data-block-id="${CSS.escape(marks.pickedSectionId)}"]`,
         );
 
         frameItem(section, marks.pickedItemPath)?.setAttribute('data-builder-picked-item', '');

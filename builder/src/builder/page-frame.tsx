@@ -11,7 +11,7 @@ import {
     type FramePick,
     pickAt,
 } from './frame-marks';
-import { type PageDrawing, planUpdate } from './page-frame-updates';
+import { type PageDrawing, planUpdate, readDrawing } from './page-frame-updates';
 
 export type { FramePick } from './frame-marks';
 
@@ -302,19 +302,6 @@ export function PageFrame({
             )}
         </div>
     );
-}
-
-/** The page split into its sections and everything around them. */
-function readDrawing(html: string): PageDrawing {
-    const page = new DOMParser().parseFromString(html, 'text/html');
-    const sections = new Map<string, string>();
-
-    page.querySelectorAll<HTMLElement>('[data-block-id]').forEach((section) => {
-        sections.set(section.dataset.blockId ?? '', section.innerHTML);
-        section.replaceChildren();
-    });
-
-    return { frame: page.documentElement.outerHTML, sections };
 }
 
 /**
