@@ -5,7 +5,6 @@ import { isLocked } from '@/lib/locks';
 import { withDataPart } from '@/lib/page-value';
 import { cn } from '@/lib/utils';
 import type { RichSection, SectionData } from '@/types';
-import { blockTitle } from '../editor/block-meta';
 import {
     hasInvalidBackgroundColor,
     RichLookFields,
@@ -14,6 +13,7 @@ import { useBuilderContext } from './builder-context';
 import { ItemGrid } from './catalog-tiles';
 import { RefSectionPanel } from './ref-section-panel';
 import { SectionActions } from './section-actions';
+import { useSectionTitle } from './section-meta';
 import { LAYOUT_ICONS, LAYOUT_LABELS } from './section-thumbs';
 import { SectionWords } from './section-words';
 import { AdvancedFields } from './style/advanced-fields';
@@ -57,6 +57,7 @@ function RichSectionPanel({ block, index }: { block: RichSection; index: number 
     const t = useT();
     const { builder } = useBuilderContext();
     const { accent, developer } = useHost();
+    const titleOf = useSectionTitle();
     const { sectionTab, setSectionTab: setTab } = builder;
     const Icon = LAYOUT_ICONS[block.data.layout];
     const isContentLocked = isLocked(block, 'content', developer);
@@ -91,7 +92,7 @@ function RichSectionPanel({ block, index }: { block: RichSection; index: number 
                 </span>
                 <div className="min-w-0">
                     <p className="text-foreground truncate text-sm font-semibold">
-                        {blockTitle(block) || t('Empty section')}
+                        {titleOf(block)}
                     </p>
                     <p className="text-muted-foreground text-xs">
                         {t('Section :number of :count', {

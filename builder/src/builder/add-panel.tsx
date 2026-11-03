@@ -6,7 +6,7 @@ import { lastRich } from '@/lib/page-value';
 import type { SectionTemplate } from '@/types';
 import { useBuilderContext } from './builder-context';
 import { ItemGrid, matchesSearch, TemplateTile } from './catalog-tiles';
-import { sectionTitle } from './section-meta';
+import { useSectionTitle } from './section-meta';
 
 type AddTab = 'sections' | 'items';
 
@@ -27,6 +27,7 @@ export const CATEGORY_LABELS: Record<string, string> = {
     content: 'Content',
     media: 'Photos and videos',
     basic: 'Basic',
+    saved: 'Saved sections',
 };
 
 /** The categories in the order their first template comes, basic last. */
@@ -76,6 +77,7 @@ function categoryName(
 export function AddPanel({ onAdded }: { onAdded?: () => void }) {
     const t = useT();
     const { builder, templates, isDesktop } = useBuilderContext();
+    const titleOf = useSectionTitle();
     const { selection, blocks } = builder;
     const [tab, setTab] = useState<AddTab>(
         selection.sectionId ? 'items' : 'sections',
@@ -135,7 +137,7 @@ export function AddPanel({ onAdded }: { onAdded?: () => void }) {
                 tab={tab}
                 sectionLabel={
                     section
-                        ? `${sectionIndex + 1}. ${sectionTitle(section, t)}`
+                        ? `${sectionIndex + 1}. ${titleOf(section)}`
                         : null
                 }
                 hasItem={selection.itemId !== null}

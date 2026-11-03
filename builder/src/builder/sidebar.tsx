@@ -15,7 +15,7 @@ import { useBuilderContext } from './builder-context';
 import { describeBlock } from './item-catalog';
 import { ItemPanel } from './item-panel';
 import { LayersPanel } from './layers-panel';
-import { sectionTitle } from './section-meta';
+import { useSectionTitle } from './section-meta';
 import { SectionPanel } from './section-panel';
 import type { HomePanelName } from './types';
 
@@ -72,6 +72,7 @@ function SidebarHeader() {
     const t = useT();
     const { ownBlocks } = useHost();
     const { builder } = useBuilderContext();
+    const titleOf = useSectionTitle();
     const { panel, selection, blocks } = builder;
 
     if (panel.name === 'add' || panel.name === 'layers') {
@@ -129,7 +130,7 @@ function SidebarHeader() {
     }
 
     if (section) {
-        const sectionLabel = `${sectionIndex + 1}. ${sectionTitle(section, t)}`;
+        const sectionLabel = `${sectionIndex + 1}. ${titleOf(section)}`;
 
         crumbs.push(
             panel.name === 'item'

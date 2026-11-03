@@ -4,6 +4,7 @@ import type { SectionTemplate } from '@/types';
 import type { KitState } from './kit/use-kit-state';
 import type { Device, SidebarPanel } from './types';
 import type { Builder } from './use-builder';
+import type { SectionLibrary } from './use-section-library';
 
 /**
  * What every part of the page builder shares: the builder state, the
@@ -14,6 +15,8 @@ export type BuilderContextValue = {
     builder: Builder;
     form: PageState;
     templates: SectionTemplate[];
+    /** The templates and synced sections, with the ones added while building. */
+    library: SectionLibrary;
     device: Device;
     /** Changes the canvas device. On a phone the canvas stays a phone. */
     setDevice: (device: Device) => void;
@@ -27,6 +30,10 @@ export type BuilderContextValue = {
     revealPanel: (panel: SidebarPanel) => void;
     /** On a phone: the sheet covers the lower part of the canvas. */
     isSheetOpen: boolean;
+    /** The page, the design or the shop info has changes not saved yet. */
+    hasUnsavedChanges: boolean;
+    /** Goes to another page of the host, after the builder asked. */
+    leaveTo: (url: string) => void;
 };
 
 export const BuilderContext = createContext<BuilderContextValue | null>(null);

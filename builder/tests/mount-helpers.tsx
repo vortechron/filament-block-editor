@@ -50,6 +50,8 @@ export function makeAdapter(
 
 export type TestAdapter = ReturnType<typeof makeAdapter> & {
     saveKit?: ReturnType<typeof vi.fn>;
+    saveSection?: ReturnType<typeof vi.fn>;
+    saveSiteInfo?: ReturnType<typeof vi.fn>;
 };
 
 let unmountLast: (() => void) | null = null;

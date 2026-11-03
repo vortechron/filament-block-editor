@@ -5,6 +5,7 @@ import type {
     Kit,
     OwnBlockDefinition,
     PageBuilderAdapter,
+    SyncedSectionOption,
     UploadKind,
 } from '@/types';
 
@@ -33,6 +34,8 @@ export type Host = {
     kit: Kit | null;
     /** The values the site fills in: shop info in text, links and pictures. */
     dynamicValues: DynamicValueDefinition[];
+    /** The synced sections this page may use, with the section each holds. */
+    syncedSections: SyncedSectionOption[];
 };
 
 export const HostContext = createContext<Host | null>(null);

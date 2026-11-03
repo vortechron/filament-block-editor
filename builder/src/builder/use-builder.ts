@@ -385,6 +385,18 @@ export function useBuilder({
         );
     }
 
+    /**
+     * Puts another section in a section's place, like a synced section's
+     * copy, and picks it when the old one was picked.
+     */
+    function replaceSection(sectionId: string, next: Section) {
+        updateSection(sectionId, () => next);
+
+        if (next.id !== sectionId && selection.sectionId === sectionId) {
+            selectSection(next.id);
+        }
+    }
+
     function moveSection(sectionId: string, offset: -1 | 1) {
         if (locked(sectionId, 'move')) {
             return;
@@ -468,6 +480,7 @@ export function useBuilder({
         defaultItemTarget,
         addItem,
         updateSection,
+        replaceSection,
         moveSection,
         moveSectionTo,
         duplicateSection,

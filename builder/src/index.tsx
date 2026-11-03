@@ -6,6 +6,7 @@ import type { Host } from './lib/host';
 import { isLocale } from './lib/i18n';
 import { normalizeDynamicValues } from './lib/dynamic-values';
 import { normalizeKit } from './lib/kit';
+import { normalizeSyncedSections } from './lib/synced-sections';
 import { normalizeTemplates, normalizeValue } from './lib/page-value';
 import { uploadWith } from './lib/upload';
 import { translate } from './lib/i18n';
@@ -89,6 +90,7 @@ export function mountPageBuilder(
                 ? normalizeKit(options.kit)
                 : null,
         dynamicValues: normalizeDynamicValues(options.dynamicValues),
+        syncedSections: normalizeSyncedSections(options.syncedSections),
     };
     let value: PageValue = initialValue;
     const root = createRoot(element);

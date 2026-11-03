@@ -6,11 +6,12 @@ import type { RichSection } from '@/types';
 import { ActionButton } from './action-button';
 import { useBuilderContext } from './builder-context';
 import { LockMenu } from './lock-menu';
+import { SectionMenu } from './section-menu';
 
 /**
- * The picked section's buttons: hide, move, copy and delete. A lock takes
- * out the buttons it blocks, except for developers, who get the Lock
- * menu instead.
+ * The picked section's buttons: hide, move, copy and delete, and a menu to
+ * save it as a template or make it synced. A lock takes out the buttons it
+ * blocks, except for developers, who get the Lock menu instead.
  */
 export function SectionActions({
     block,
@@ -64,6 +65,7 @@ export function SectionActions({
                 <CopyPlus />
             </ActionButton>
             <span className="flex-1" />
+            <SectionMenu block={block} />
             {developer && <LockMenu block={block} />}
             {canRemove && (
                 <ActionButton

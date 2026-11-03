@@ -3,6 +3,7 @@ import {
     useEffect,
     useEffectEvent,
     useMemo,
+    useRef,
     useState,
 } from 'react';
 import { BuilderContext } from './builder/builder-context';
@@ -17,6 +18,7 @@ import { Sidebar } from './builder/sidebar';
 import type { Device, SidebarPanel } from './builder/types';
 import { useBuilder } from './builder/use-builder';
 import { useBuilderShortcuts } from './builder/use-builder-shortcuts';
+import { useSectionLibrary } from './builder/use-section-library';
 import { ConfirmDialog } from './editor/confirm-dialog';
 import { useMediaQuery } from './editor/use-media-query';
 import { usePageState } from './editor/use-page-state';
@@ -108,7 +110,8 @@ function Builder({
         onValue(value);
         onChange?.(value);
     });
-    const builder = useBuilder({ form, templates });
+    const library = useSectionLibrary(templates);
+    const builder = useBuilder({ form, templates: library.templates });
     const kit = useKitState();
     const [device, setDevice] = useState<Device>('desktop');
     const [isDockOpen, setIsDockOpen] = useState(false);
@@ -120,7 +123,7 @@ function Builder({
     const hasUnsavedChanges = form.isDirty || kit.isDirty;
     const isSaving = form.processing || kit.processing;
 
-    useUnsavedChangesGuard(hasUnsavedChanges);
+    const leaveTo = useUnsavedChangesGuard(hasUnsavedChanges);
 
     // On a phone the sheet covers the lower part of the page. When it opens
     // for a section or an item, bring that part up above it.
@@ -225,7 +228,8 @@ function Builder({
                 value={{
                     builder,
                     form,
-                    templates,
+                    templates: library.templates,
+                    library,
                     device: isDesktop ? device : 'phone',
                     setDevice,
                     kit,
@@ -233,6 +237,8 @@ function Builder({
                     onDeleteSection: setDeleteId,
                     revealPanel,
                     isSheetOpen: !isDesktop && isDockOpen,
+                    hasUnsavedChanges,
+                    leaveTo,
                 }}
             >
                 <BuilderDragAndDrop>
@@ -314,14 +320,24 @@ function Builder({
     );
 }
 
-/** While there are unsaved changes, the browser asks before leaving. */
+/**
+ * While there are unsaved changes, the browser asks before leaving.
+ * Returns `leaveTo`, for leaving on purpose after the builder already
+ * asked, so the browser does not ask a second time.
+ */
 function useUnsavedChangesGuard(hasUnsavedChanges: boolean) {
+    const isLeaving = useRef(false);
+
     useEffect(() => {
         if (!hasUnsavedChanges) {
             return;
         }
 
         function warnBeforeUnload(event: BeforeUnloadEvent) {
+            if (isLeaving.current) {
+                return;
+            }
+
             event.preventDefault();
             event.returnValue = '';
         }
@@ -331,4 +347,9 @@ function useUnsavedChangesGuard(hasUnsavedChanges: boolean) {
         return () =>
             window.removeEventListener('beforeunload', warnBeforeUnload);
     }, [hasUnsavedChanges]);
+
+    return (url: string) => {
+        isLeaving.current = true;
+        window.location.assign(url);
+    };
 }
