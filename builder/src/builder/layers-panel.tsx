@@ -14,13 +14,10 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import {
-    Eye,
-    EyeOff,
-    GripVertical,
-    Plus,
-} from 'lucide-react';
+import { Eye, EyeOff, GripVertical, Lock, Plus } from 'lucide-react';
+import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
+import { isLocked } from '@/lib/locks';
 import { cn } from '@/lib/utils';
 import { MAX_SECTIONS } from '@/lib/page-value';
 import type { Section } from '@/types';
@@ -141,6 +138,9 @@ function LayerRow({
     onToggleHidden: () => void;
 }) {
     const t = useT();
+    const { developer } = useHost();
+    const canMove = !isLocked(block, 'move', developer);
+    const canRemove = !isLocked(block, 'remove', developer);
     const {
         attributes,
         listeners,
@@ -149,7 +149,7 @@ function LayerRow({
         transform,
         transition,
         isDragging,
-    } = useSortable({ id: block.id });
+    } = useSortable({ id: block.id, disabled: !canMove });
     const Icon = sectionIcon(block);
     const isHidden = block.hidden === true;
     const title = sectionTitle(block, t);
@@ -169,16 +169,25 @@ function LayerRow({
                 isDragging && 'relative z-10 shadow-lg',
             )}
         >
-            <button
-                ref={setActivatorNodeRef}
-                type="button"
-                {...attributes}
-                {...listeners}
-                aria-label={t('Move section :number', { number: index + 1 })}
-                className="text-muted-foreground/70 hover:bg-muted hover:text-foreground grid h-9 w-6 shrink-0 cursor-grab touch-none place-items-center rounded-md active:cursor-grabbing"
-            >
-                <GripVertical className="size-4" />
-            </button>
+            {canMove ? (
+                <button
+                    ref={setActivatorNodeRef}
+                    type="button"
+                    {...attributes}
+                    {...listeners}
+                    aria-label={t('Move section :number', { number: index + 1 })}
+                    className="text-muted-foreground/70 hover:bg-muted hover:text-foreground grid h-9 w-6 shrink-0 cursor-grab touch-none place-items-center rounded-md active:cursor-grabbing"
+                >
+                    <GripVertical className="size-4" />
+                </button>
+            ) : (
+                <span
+                    title={t('Locked')}
+                    className="text-muted-foreground/60 grid h-9 w-6 shrink-0 place-items-center"
+                >
+                    <Lock className="size-3.5" />
+                </span>
+            )}
             <button
                 type="button"
                 onClick={onPick}
@@ -210,34 +219,36 @@ function LayerRow({
                     </span>
                 </span>
             </button>
-            <button
-                type="button"
-                onClick={onToggleHidden}
-                aria-label={
-                    isHidden
-                        ? t('Show section :number on the page', {
-                              number: index + 1,
-                          })
-                        : t('Hide section :number from the page', {
-                              number: index + 1,
-                          })
-                }
-                title={
-                    isHidden ? t('Show on the page') : t('Hide from the page')
-                }
-                className={cn(
-                    'hover:bg-muted grid size-8 shrink-0 place-items-center rounded-md transition-colors',
-                    isHidden
-                        ? 'text-foreground'
-                        : 'text-muted-foreground/70 opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100',
-                )}
-            >
-                {isHidden ? (
-                    <EyeOff className="size-4" />
-                ) : (
-                    <Eye className="size-4" />
-                )}
-            </button>
+            {canRemove && (
+                <button
+                    type="button"
+                    onClick={onToggleHidden}
+                    aria-label={
+                        isHidden
+                            ? t('Show section :number on the page', {
+                                  number: index + 1,
+                              })
+                            : t('Hide section :number from the page', {
+                                  number: index + 1,
+                              })
+                    }
+                    title={
+                        isHidden ? t('Show on the page') : t('Hide from the page')
+                    }
+                    className={cn(
+                        'hover:bg-muted grid size-8 shrink-0 place-items-center rounded-md transition-colors',
+                        isHidden
+                            ? 'text-foreground'
+                            : 'text-muted-foreground/70 opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100',
+                    )}
+                >
+                    {isHidden ? (
+                        <EyeOff className="size-4" />
+                    ) : (
+                        <Eye className="size-4" />
+                    )}
+                </button>
+            )}
         </li>
     );
 }

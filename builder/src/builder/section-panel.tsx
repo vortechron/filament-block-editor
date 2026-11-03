@@ -1,6 +1,7 @@
-import { Paintbrush, Palette, SlidersHorizontal, Type } from 'lucide-react';
+import { Lock, Paintbrush, Palette, SlidersHorizontal, Type } from 'lucide-react';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
+import { isLocked } from '@/lib/locks';
 import { withDataPart } from '@/lib/page-value';
 import { cn } from '@/lib/utils';
 import type { RichSection, SectionData } from '@/types';
@@ -55,9 +56,17 @@ export function SectionPanel() {
 function RichSectionPanel({ block, index }: { block: RichSection; index: number }) {
     const t = useT();
     const { builder } = useBuilderContext();
-    const { accent } = useHost();
-    const { sectionTab: tab, setSectionTab: setTab } = builder;
+    const { accent, developer } = useHost();
+    const { sectionTab, setSectionTab: setTab } = builder;
     const Icon = LAYOUT_ICONS[block.data.layout];
+    const isContentLocked = isLocked(block, 'content', developer);
+    // A style lock keeps the look, the style and the advanced settings.
+    const tabs = isLocked(block, 'style', developer)
+        ? TABS.filter((entry) => entry.name === 'content')
+        : TABS;
+    const tab = tabs.some((entry) => entry.name === sectionTab)
+        ? sectionTab
+        : 'content';
 
     /** Only the look changes here. The words come from the latest document. */
     function updateData(update: (data: SectionData) => SectionData) {
@@ -91,6 +100,7 @@ function RichSectionPanel({ block, index }: { block: RichSection; index: number 
                         })}{' '}
                         · {t(LAYOUT_LABELS[block.data.layout])}
                         {block.hidden === true && ` · ${t('Hidden')}`}
+                        {block.lock !== undefined && ` · ${t('Locked')}`}
                     </p>
                 </div>
             </div>
@@ -100,9 +110,10 @@ function RichSectionPanel({ block, index }: { block: RichSection; index: number 
             <div
                 role="tablist"
                 aria-label={t('Section settings')}
+                hidden={tabs.length === 1}
                 className="grid grid-cols-4 border-b"
             >
-                {TABS.map(({ name, label, icon: TabIcon }) => (
+                {tabs.map(({ name, label, icon: TabIcon }) => (
                     <button
                         key={name}
                         type="button"
@@ -130,25 +141,28 @@ function RichSectionPanel({ block, index }: { block: RichSection; index: number 
                 </p>
             )}
 
-            <div hidden={tab !== 'content'} className="grid grid-cols-1 gap-4">
-                <SectionWords block={block} />
-                <div className="grid gap-1">
-                    <p className="text-foreground text-sm font-medium">
-                        {t('Add to this section')}
-                    </p>
-                    <p className="text-muted-foreground text-xs">
-                        {builder.selection.itemId
-                            ? t(
-                                  'Tap to add under the picked item, or drag to any place.',
-                              )
-                            : t('Tap to add at the end, or drag to any place.')}
-                    </p>
+            {tab === 'content' && isContentLocked && <LockedNote />}
+            {!isContentLocked && (
+                <div hidden={tab !== 'content'} className="grid grid-cols-1 gap-4">
+                    <SectionWords block={block} />
+                    <div className="grid gap-1">
+                        <p className="text-foreground text-sm font-medium">
+                            {t('Add to this section')}
+                        </p>
+                        <p className="text-muted-foreground text-xs">
+                            {builder.selection.itemId
+                                ? t(
+                                      'Tap to add under the picked item, or drag to any place.',
+                                  )
+                                : t('Tap to add at the end, or drag to any place.')}
+                        </p>
+                    </div>
+                    <ItemGrid
+                        layout={block.data.layout}
+                        onPick={(key) => builder.addItem(key)}
+                    />
                 </div>
-                <ItemGrid
-                    layout={block.data.layout}
-                    onPick={(key) => builder.addItem(key)}
-                />
-            </div>
+            )}
             {tab === 'look' && (
                 <RichLookFields
                     data={block.data}
@@ -174,6 +188,25 @@ function RichSectionPanel({ block, index }: { block: RichSection; index: number 
                     }
                 />
             )}
+        </div>
+    );
+}
+
+/** Instead of the words, in a section locked for content. */
+function LockedNote() {
+    const t = useT();
+
+    return (
+        <div className="bg-muted/60 text-muted-foreground flex items-start gap-3 rounded-xl p-3 text-sm leading-relaxed">
+            <Lock className="mt-0.5 size-4 shrink-0" />
+            <div className="grid gap-0.5">
+                <p className="text-foreground font-semibold">{t('Locked')}</p>
+                <p>
+                    {t(
+                        'This section is locked, so its words and items can not be changed here.',
+                    )}
+                </p>
+            </div>
         </div>
     );
 }

@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react';
 import { lastRich, MAX_SECTIONS, sectionFromTemplate } from '@/lib/page-value';
-import type { Section, SectionTemplate } from '@/types';
+import { useHost } from '@/lib/host';
+import { isLocked, withoutDeveloperData } from '@/lib/locks';
+import type { LockKey, Section, SectionTemplate } from '@/types';
 import { duplicateBlock, withHidden } from '../editor/block-meta';
 import {
     insertAfter,
@@ -39,6 +41,14 @@ export function useBuilder({
     templates: SectionTemplate[];
 }) {
     const blocks = form.data.sections;
+    const { developer } = useHost();
+    /** Does a lock stop this user doing `key` to the section? */
+    const locked = (sectionId: string, key: LockKey) =>
+        isLocked(
+            blocks.find((block) => block.id === sectionId),
+            key,
+            developer,
+        );
     const [selection, setSelection] = useState<Selection>(NOTHING_SELECTED);
     const [panel, setPanel] = useState<SidebarPanel>({ name: 'add' });
     const [homePanel, setHomePanel] = useState<HomePanelName>('add');
@@ -140,7 +150,8 @@ export function useBuilder({
     function pickOnPage(sectionId: string, path: string | null) {
         selectSection(sectionId);
 
-        if (path === null) {
+        // A section locked for content has no words editor to open items in.
+        if (path === null || locked(sectionId, 'content')) {
             return;
         }
 
@@ -337,7 +348,7 @@ export function useBuilder({
         const section = blocks.find((block) => block.id === sectionId);
 
         // A synced section's words are not in this page.
-        if (section?.type === 'ref') {
+        if (section?.type === 'ref' || locked(sectionId, 'content')) {
             return;
         }
 
@@ -375,6 +386,10 @@ export function useBuilder({
     }
 
     function moveSection(sectionId: string, offset: -1 | 1) {
+        if (locked(sectionId, 'move')) {
+            return;
+        }
+
         updateAt(sectionId, (current, index) =>
             moveItem(current, index, offset),
         );
@@ -383,6 +398,10 @@ export function useBuilder({
     }
 
     function moveSectionTo(sectionId: string, target: number) {
+        if (locked(sectionId, 'move')) {
+            return;
+        }
+
         updateAt(sectionId, (current, index) =>
             moveToIndex(current, index, target),
         );
@@ -395,7 +414,9 @@ export function useBuilder({
             return;
         }
 
-        const copy = duplicateBlock(blocks[index]);
+        const copy = developer
+            ? duplicateBlock(blocks[index])
+            : withoutDeveloperData(duplicateBlock(blocks[index]));
 
         updateAt(sectionId, (current, at) => insertAfter(current, at, copy));
         selectSection(copy.id);
@@ -403,6 +424,10 @@ export function useBuilder({
     }
 
     function removeSection(sectionId: string) {
+        if (locked(sectionId, 'remove')) {
+            return;
+        }
+
         updateBlocks((current) =>
             current.filter((block) => block.id !== sectionId),
         );
@@ -413,6 +438,10 @@ export function useBuilder({
     }
 
     function toggleHidden(sectionId: string) {
+        if (locked(sectionId, 'remove')) {
+            return;
+        }
+
         updateSection(sectionId, (block) => withHidden(block, !block.hidden));
     }
 
