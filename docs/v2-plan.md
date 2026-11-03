@@ -520,6 +520,17 @@ type PageBuilderAdapter = {
 - **`KitSource` is an interface with `current()` and `override(?array $kit)`.** The `Design\OverridesKit` trait
   implements both; a host source only writes `storedKit()`. `override(null)` clears it. The builder preview sets
   the override and clears it after drawing.
+- **`RenderContext` has a fourth argument, `?string $sectionId`, and `withSection(string $id)`.** PageRenderer sets
+  it for each section, so a form knows its `_form` key (`{sectionId}.{blockId}`). A form drawn outside a page has
+  the key `{blockId}`. `withValues()` keeps it.
+- **Smaller choices in track A:** `font_size` must be at least 0 (section 2 says "length"). `advanced.class` names
+  may not start with `fbe-` (the package's own style hooks). `hide_on` in the builder canvas dims the element
+  (opacity and a dashed outline) instead of hiding it, so it can still be picked. `Field::developerOnly()` on a
+  field inside a list throws when the list is built (a whole list may be developer only). The form's
+  `submit.align` also allows `full`; an empty button text or success message uses the page language's words at
+  draw time, so stored forms do not depend on the locale. `Kit::rules()` was added for the CMS store. The styles
+  component also links a host font's `href` when the kit uses that font. Because `<style data-fbe-style>` sits
+  inside `.sf-page` before the sections, the band on every second section now counts `:nth-of-type`.
 - **A page value's `version` is clamped** to 1 … `VERSION` before the upgrade steps run (security review). A
   version below 1 or not a whole number counts as 1, one above `VERSION` counts as `VERSION`. So
   `registerUpgrade()` takes `$from` from 1 to `VERSION - 1`; other steps never run. Reason: a huge negative
