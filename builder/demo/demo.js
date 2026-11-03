@@ -13,6 +13,13 @@
  * developer (add `?developer=0` to see it as a shop owner), and the stub
  * draws each style bag, advanced part and the kit, roughly as
  * Styling\StyleSheet and Design\Kit do.
+ *
+ * Content (track B2): shop info values (`dynamicValues`) in text, links and
+ * pictures; a form block; a synced section with an edit link; the header
+ * and footer (`parts`, drawn with `data-part`) with the shop info form
+ * (`siteInfo`, `saveSiteInfo`); `saveSection` for templates and synced
+ * sections; hidden sections drawn dimmed. `?kind=footer` shows the top bar
+ * of a footer.
  */
 import { mountPageBuilder } from '../../resources/dist/page-builder.js';
 
@@ -71,6 +78,81 @@ const ownBlocks = [
 const text = (words, styles = {}) => (words ? [{ type: 'text', text: words, styles }] : []);
 const block = (type, props, content = [], children = []) => ({ type, props, content, children });
 
+/** The shop info, kept in memory and changed by `saveSiteInfo`. */
+let shop = {
+    business: { name: 'Kedai Buku Pak Long', logo: SAMPLE_PHOTO },
+    contact: {
+        phone: '012-345 6789',
+        email: 'kedai@example.com',
+        address: 'No. 12, Jalan Merdeka, 83000 Batu Pahat, Johor',
+    },
+};
+
+const siteInfoFields = {
+    business: [{ name: 'name', label: 'Nama kedai', type: 'text' }],
+    contact: [
+        { name: 'phone', label: 'Telefon', type: 'text' },
+        { name: 'email', label: 'E-mel', type: 'text' },
+        { name: 'address', label: 'Alamat', type: 'textarea' },
+    ],
+};
+
+/** The values the site fills in, as Content\DynamicValues would list them. */
+function dynamicValues() {
+    const digits = shop.contact.phone.replace(/\D/g, '').replace(/^0/, '60');
+
+    return [
+        { key: 'site.name', label: 'Nama kedai', type: 'text', group: 'Kedai', preview: shop.business.name },
+        { key: 'site.phone', label: 'Telefon', type: 'text', group: 'Kedai', preview: shop.contact.phone },
+        { key: 'site.email', label: 'E-mel', type: 'text', group: 'Kedai', preview: shop.contact.email },
+        { key: 'site.address', label: 'Alamat', type: 'text', group: 'Kedai', preview: shop.contact.address },
+        { key: 'site.whatsapp', label: 'WhatsApp', type: 'link', group: 'Kedai', preview: `https://wa.me/${digits}` },
+        { key: 'site.phone_link', label: 'Telefon (pautan)', type: 'link', group: 'Kedai', preview: `tel:${digits}` },
+        { key: 'site.email_link', label: 'E-mel (pautan)', type: 'link', group: 'Kedai', preview: `mailto:${shop.contact.email}` },
+        { key: 'site.logo', label: 'Logo', type: 'image', group: 'Kedai', preview: shop.business.logo },
+    ];
+}
+
+function dynamicValue(key) {
+    return dynamicValues().find((value) => value.key === key)?.preview ?? '';
+}
+
+/** Synced sections and saved templates, kept in memory like the CMS would. */
+const synced = new Map([
+    [
+        12,
+        {
+            id: 'sync0012',
+            type: 'rich',
+            data: {
+                layout: 'banner',
+                document: [
+                    block('heading', { level: 2 }, text('Singgah ke kedai kami')),
+                    block('paragraph', {}, [
+                        ...text('Hubungi kami di '),
+                        { type: 'dynamic', props: { key: 'site.phone' } },
+                    ]),
+                    block('button', { text: 'WhatsApp kami', url: '@site.whatsapp', variant: 'solid' }),
+                ],
+            },
+        },
+    ],
+]);
+let nextId = 20;
+
+const starterForm = {
+    name: 'Borang pertanyaan',
+    fields: [
+        { id: 'f1', type: 'text', name: 'nama', label: 'Nama', placeholder: '', required: true, width: 'half' },
+        { id: 'f2', type: 'tel', name: 'telefon', label: 'Telefon', placeholder: '', required: true, width: 'half' },
+        { id: 'f3', type: 'select', name: 'servis', label: 'Servis', required: false, width: 'full', options: ['Buku', 'Alat tulis', 'Hadiah'] },
+        { id: 'f4', type: 'textarea', name: 'mesej', label: 'Mesej', placeholder: '', required: false, width: 'full', rows: 4 },
+    ],
+    submit: { text: 'Hantar', align: 'left' },
+    success: 'Terima kasih. Kami akan hubungi anda.',
+    actions: [{ type: 'email', to: '@site.email', subject: 'Pertanyaan baru dari website' }],
+};
+
 /** The site's design kit, kept in memory. */
 let kit = {
     version: 1,
@@ -124,6 +206,35 @@ const value = {
                 ],
             },
         },
+        {
+            id: 'form0004',
+            type: 'rich',
+            data: {
+                layout: 'plain',
+                anchor: 'hubungi',
+                document: [
+                    block('heading', { level: 2 }, text('Hubungi kami')),
+                    block('paragraph', {}, [
+                        ...text('Telefon '),
+                        { type: 'dynamic', props: { key: 'site.phone' } },
+                        ...text(' atau isi borang di bawah.'),
+                    ]),
+                    block('form', { form: JSON.stringify(starterForm) }),
+                ],
+            },
+        },
+        {
+            id: 'hide0005',
+            type: 'rich',
+            hidden: true,
+            data: {
+                layout: 'plain',
+                document: [
+                    block('heading', { level: 2 }, text('Jualan raya (belum dibuka)')),
+                    block('paragraph', {}, text('Seksyen tersembunyi: pelawat tidak nampak.')),
+                ],
+            },
+        },
         { id: 'sync0003', type: 'ref', ref: 12 },
     ],
 };
@@ -146,6 +257,34 @@ const adapter = {
 
         return { ok: true };
     },
+    async saveSection(section, meta) {
+        log.push(['saveSection', structuredClone(section), meta]);
+
+        const id = nextId++;
+
+        if (meta.synced) {
+            synced.set(id, structuredClone(section));
+
+            return { ok: true, id };
+        }
+
+        return {
+            ok: true,
+            id,
+            template: { key: `saved-${id}`, label: meta.title, category: 'saved', section: { data: section.data } },
+        };
+    },
+    async saveSiteInfo(values) {
+        log.push(['saveSiteInfo', structuredClone(values)]);
+
+        if (String(values.contact?.phone ?? '').replace(/\D/g, '').length < 9) {
+            return { ok: false, errors: { 'contact.phone': 'Nombor telefon terlalu pendek.' } };
+        }
+
+        shop = { business: { ...shop.business, ...values.business }, contact: { ...shop.contact, ...values.contact } };
+
+        return { ok: true };
+    },
     async upload(file, kind) {
         log.push(['upload', { name: file.name, type: file.type, kind }]);
 
@@ -153,21 +292,39 @@ const adapter = {
     },
 };
 
+const params = new URLSearchParams(location.search);
+
 const builder = mountPageBuilder(document.getElementById('builder'), {
     value,
     adapter,
     blocks: ownBlocks,
-    locale: new URLSearchParams(location.search).get('locale') === 'en' ? 'en' : 'ms',
-    title: 'Halaman utama',
+    locale: params.get('locale') === 'en' ? 'en' : 'ms',
+    title: params.get('kind') === 'footer' ? 'Footer kedai' : 'Halaman utama',
+    kind: params.get('kind') === 'footer' ? 'footer' : 'page',
     backUrl: '#back',
     viewUrl: 'https://example.com/',
     accent: '#2563eb',
-    developer: new URLSearchParams(location.search).get('developer') !== '0',
+    developer: params.get('developer') !== '0',
     kit,
     fonts: [
         { value: 'serif', label: 'Luxury serif' },
         { value: 'georgia', label: 'Georgia' },
     ],
+    dynamicValues: dynamicValues(),
+    syncedSections: [
+        { id: 12, title: 'Jalur hubungi', editUrl: '#edit-synced-12', section: synced.get(12) },
+    ],
+    parts: [
+        { key: 'header', title: 'Header kedai', editUrl: '#edit-header' },
+        { key: 'footer', title: 'Footer kedai', editUrl: '#edit-footer' },
+    ],
+    siteInfo: {
+        groups: [
+            { key: 'business', label: 'Perniagaan', fields: siteInfoFields.business },
+            { key: 'contact', label: 'Hubungi', fields: siteInfoFields.contact },
+        ],
+        values: { business: { name: shop.business.name }, contact: { ...shop.contact } },
+    },
     onChange(next) {
         log.push(['change', next.sections.length]);
     },
@@ -205,11 +362,55 @@ function inline(content) {
             if (item.styles?.bold) html = `<strong>${html}</strong>`;
             if (item.styles?.italic) html = `<em>${html}</em>`;
 
+            if (item.type === 'dynamic') {
+                const key = item.props?.key ?? '';
+
+                return `<span class="bn-dynamic" data-dynamic="${escapeHtml(key)}">${escapeHtml(dynamicValue(key) || key)}</span>`;
+            }
+
             return item.type === 'link'
-                ? `<a href="${escapeHtml(safeUrl(item.href) ?? '#')}">${inline(item.content)}</a>`
+                ? `<a href="${escapeHtml(safeUrl(resolveRef(item.href)) ?? '#')}">${inline(item.content)}</a>`
                 : html;
         })
         .join('');
+}
+
+/** `@site.whatsapp` and friends, as the server resolves them. */
+function resolveRef(value) {
+    return typeof value === 'string' && value.startsWith('@') ? dynamicValue(value.slice(1)) : value;
+}
+
+function renderForm(props, mark) {
+    let form;
+
+    try {
+        form = JSON.parse(props.form || '{}');
+    } catch {
+        form = {};
+    }
+
+    const fields = (form.fields ?? [])
+        .map((field) => {
+            const label = `<span>${escapeHtml(field.label)}${field.required ? ' *' : ''}</span>`;
+            const width = field.width === 'half' ? ' half' : '';
+
+            if (field.type === 'textarea') {
+                return `<label class="bn-field${width}">${label}<textarea rows="${field.rows ?? 4}" placeholder="${escapeHtml(field.placeholder ?? '')}"></textarea></label>`;
+            }
+
+            if (field.type === 'select') {
+                return `<label class="bn-field${width}">${label}<select>${(field.options ?? []).map((option) => `<option>${escapeHtml(option)}</option>`).join('')}</select></label>`;
+            }
+
+            if (field.type === 'consent') {
+                return `<label class="bn-field consent"><input type="checkbox"> ${escapeHtml(field.label)}</label>`;
+            }
+
+            return `<label class="bn-field${width}">${label}<input type="${escapeHtml(field.type)}" placeholder="${escapeHtml(field.placeholder ?? '')}"></label>`;
+        })
+        .join('');
+
+    return `<form class="bn-form" style="text-align:${escapeHtml(form.submit?.align ?? 'left')}"${mark}><div class="bn-fields">${fields}</div><button type="submit" class="bn-button bn-button-solid" disabled>${escapeHtml(form.submit?.text || 'Hantar')}</button><p class="bn-form-note">Borang belum disambung</p></form>`;
 }
 
 function parseValues(values) {
@@ -279,10 +480,12 @@ function renderBlockOnly(item, path, sheet) {
             return `<details${mark}><summary>${inline(item.content)}</summary>${children}</details>`;
         case 'image':
             return props.url
-                ? `<figure${mark}><img src="${escapeHtml(props.url)}" alt=""></figure>`
+                ? `<figure${mark}><img src="${escapeHtml(resolveRef(props.url))}" alt=""></figure>`
                 : `<figure class="bn-media-empty" data-empty-media="image"${mark}><span>Tambah gambar di sini</span></figure>`;
+        case 'form':
+            return renderForm(props, mark);
         case 'button': {
-            const href = safeUrl(props.url);
+            const href = safeUrl(resolveRef(props.url));
             const variant = props.variant === 'outline' ? 'outline' : 'solid';
             const label = escapeHtml(props.text || 'Butang');
 
@@ -304,8 +507,19 @@ function renderBlockOnly(item, path, sheet) {
 }
 
 function renderSection(section, sheet) {
+    const hidden = section.hidden ? ' data-hidden' : '';
+
     if (section.type === 'ref') {
-        return `<div data-block-id="${escapeHtml(section.id)}" data-ref="${escapeHtml(section.ref)}"><section class="sf-section sf-ref"><div class="sf-body"><p>Seksyen segerak #${escapeHtml(section.ref)}. Pelayan melukisnya di sini.</p></div></section></div>`;
+        const held = synced.get(Number(section.ref)) ?? synced.get(section.ref);
+
+        if (held) {
+            return renderSection({ ...held, id: section.id, hidden: section.hidden }, sheet).replace(
+                /^<div data-block-id="([^"]*)"/,
+                `<div data-block-id="$1" data-ref="${escapeHtml(section.ref)}"`,
+            );
+        }
+
+        return `<div data-block-id="${escapeHtml(section.id)}" data-ref="${escapeHtml(section.ref)}"${hidden}><section class="sf-section sf-ref"><div class="sf-body"><p>Seksyen segerak tiada</p></div></section></div>`;
     }
 
     const data = section.data;
@@ -325,15 +539,15 @@ function renderSection(section, sheet) {
               : '';
     const body = data.document.map((item, index) => renderBlock(item, String(index), sheet)).join('');
 
-    return `<div data-block-id="${escapeHtml(section.id)}" data-empty-label="Seksyen kosong"><section${data.anchor ? ` id="${escapeHtml(data.anchor)}"` : ''} class="${classes.join(' ')}" style="${background}"><div class="sf-body">${body}</div></section></div>`;
+    return `<div data-block-id="${escapeHtml(section.id)}"${hidden} data-empty-label="Seksyen kosong"><section${data.anchor ? ` id="${escapeHtml(data.anchor)}"` : ''} class="${classes.join(' ')}" style="${background}"><div class="sf-body">${body}</div></section></div>`;
 }
 
 function renderPage(page, designKit) {
     const sheet = [];
-    const sections = page.sections
-        .filter((section) => !section.hidden)
-        .map((section) => renderSection(section, sheet))
-        .join('');
+    // The builder's canvas draws hidden sections too, marked data-hidden.
+    const sections = page.sections.map((section) => renderSection(section, sheet)).join('');
+    const header = `<div data-part="header"><header class="site-header"><b>${escapeHtml(shop.business.name)}</b><nav><a href="#utama">Utama</a><a href="#hubungi">Hubungi</a><a class="bn-button bn-button-solid" href="${escapeHtml(dynamicValue('site.whatsapp'))}">WhatsApp</a></nav></header></div>`;
+    const footer = `<div data-part="footer"><footer class="site-footer"><p>${escapeHtml(shop.contact.address)}</p><p>${escapeHtml(shop.contact.phone)} · ${escapeHtml(shop.contact.email)}</p><p>© ${escapeHtml(shop.business.name)}</p></footer></div>`;
 
     return `<!doctype html><html lang="ms"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><style data-fbe-kit>${kitCss(designKit)}</style><style>
 body{margin:0;font:17px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif;color:#0f172a;background:#fff}
@@ -351,7 +565,15 @@ h1,h2,h3{line-height:1.2}figure{margin:1rem 0}img{max-width:100%;border-radius:1
 details{border-bottom:1px solid #e2e8f0;padding:.75rem 0}summary{cursor:pointer;font-weight:600}
 .cols{display:grid;grid-auto-flow:column;gap:1.5rem}
 .sf-ref{background:repeating-linear-gradient(45deg,#f8fafc 0 12px,#f1f5f9 12px 24px);color:#475569}
-</style><style data-fbe-style>${sheet.join('\n')}</style></head><body class="sf-page">${sections}</body></html>`;
+.site-header{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:1rem 1.5rem;border-bottom:1px solid #e2e8f0}
+.site-header nav{display:flex;align-items:center;gap:1rem}.site-header a{color:inherit;text-decoration:none}.site-header .bn-button{margin:0;padding:.5rem 1rem;color:#fff}
+.site-footer{padding:2rem 1.5rem;background:#0f172a;color:#cbd5e1;font-size:.9rem}.site-footer p{margin:.25rem 0}
+.bn-dynamic{background:#e0f2fe;border-radius:.3rem;padding:0 .2rem}
+.bn-form{display:grid;gap:1rem;margin:1rem 0}.bn-fields{display:grid;grid-template-columns:1fr 1fr;gap:1rem;text-align:left}
+.bn-field{display:grid;gap:.35rem;grid-column:1/-1;font-weight:600;font-size:.9rem}.bn-field.half{grid-column:auto}.bn-field.consent{display:block;font-weight:400}
+.bn-field input,.bn-field textarea,.bn-field select{font:inherit;font-weight:400;padding:.6rem .75rem;border:1px solid #cbd5e1;border-radius:var(--kit-radius)}
+.bn-form button[disabled]{opacity:.6;cursor:not-allowed}.bn-form-note{margin:0;color:#64748b;font-size:.85rem}
+</style><style data-fbe-style>${sheet.join('\n')}</style></head><body class="sf-page">${header}${sections}${footer}</body></html>`;
 }
 
 /* ------------------------------------------------------------------ */

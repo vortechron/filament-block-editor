@@ -22,7 +22,7 @@ import { cn } from '@/lib/utils';
 import { MAX_SECTIONS } from '@/lib/page-value';
 import type { Section } from '@/types';
 import { useBuilderContext } from './builder-context';
-import { sectionIcon, sectionKind, sectionTitle } from './section-meta';
+import { sectionIcon, sectionKind, useSectionTitle } from './section-meta';
 import { TemplateMenu } from './template-menu';
 
 /**
@@ -152,7 +152,7 @@ function LayerRow({
     } = useSortable({ id: block.id, disabled: !canMove });
     const Icon = sectionIcon(block);
     const isHidden = block.hidden === true;
-    const title = sectionTitle(block, t);
+    const title = useSectionTitle()(block);
 
     return (
         <li

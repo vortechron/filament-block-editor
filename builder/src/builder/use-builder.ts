@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { lastRich, MAX_SECTIONS, sectionFromTemplate } from '@/lib/page-value';
 import { useHost } from '@/lib/host';
 import { isLocked, withoutDeveloperData } from '@/lib/locks';
-import type { LockKey, Section, SectionTemplate } from '@/types';
+import type { LockKey, PartKey, Section, SectionTemplate } from '@/types';
 import { duplicateBlock, withHidden } from '../editor/block-meta';
 import {
     insertAfter,
@@ -203,10 +203,18 @@ export function useBuilder({
     function clearSelection() {
         setSelection(NOTHING_SELECTED);
         setPanel((current) =>
-            current.name === 'section' || current.name === 'item'
+            current.name === 'section' ||
+            current.name === 'item' ||
+            current.name === 'part'
                 ? { name: homePanel }
                 : current,
         );
+    }
+
+    /** A tap on the header or footer: its panel, and no section picked. */
+    function selectPart(part: PartKey) {
+        setSelection(NOTHING_SELECTED);
+        setPanel({ name: 'part', part });
     }
 
     function registerHandle(
@@ -385,6 +393,18 @@ export function useBuilder({
         );
     }
 
+    /**
+     * Puts another section in a section's place, like a synced section's
+     * copy, and picks it when the old one was picked.
+     */
+    function replaceSection(sectionId: string, next: Section) {
+        updateSection(sectionId, () => next);
+
+        if (next.id !== sectionId && selection.sectionId === sectionId) {
+            selectSection(next.id);
+        }
+    }
+
     function moveSection(sectionId: string, offset: -1 | 1) {
         if (locked(sectionId, 'move')) {
             return;
@@ -462,12 +482,14 @@ export function useBuilder({
         pickOnPage,
         editInSection,
         clearSelection,
+        selectPart,
         registerHandle,
         addSection,
         sectionInsertIndex,
         defaultItemTarget,
         addItem,
         updateSection,
+        replaceSection,
         moveSection,
         moveSectionTo,
         duplicateSection,

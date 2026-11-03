@@ -189,9 +189,11 @@ export type SyncedSectionOption = {
     section: RichSection;
 };
 
+export type PartKey = 'header' | 'footer';
+
 /** The header or footer, shown on every page and built on its own. */
 export type PagePart = {
-    key: 'header' | 'footer';
+    key: PartKey;
     title: string;
     editUrl: string;
 };

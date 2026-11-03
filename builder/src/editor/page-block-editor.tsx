@@ -19,20 +19,23 @@ import {
     appearanceToSurface,
     BlockItemControls,
     kitEditorOptions,
-    kitSlashMenuItems,
     MediaFormattingToolbar,
     normalizeDocument,
     SpacingDragHandleMenu,
 } from '@vortechron/blocknote-kit';
 import { useEffect, useMemo } from 'react';
+import { useLocale, useT } from '@/lib/i18n';
 import type { RichDocument } from '@/types';
+import { blockNoteDictionary } from './blocknote-dictionary';
 import { createPageSchema } from './page-schema';
+import { pageSlashMenuItems } from './slash-menu';
 
 type SlashItems = (editor: BlockNoteEditor<any, any, any>) => any[];
 
 /**
  * blocknote-kit's BlockEditor, put together from the kit's own parts with
- * the page schema (page-schema.ts), so every block has the `look` prop.
+ * the page schema (page-schema.ts), so every block has the `look` prop,
+ * and BlockNote's words in the builder's language (blocknote-dictionary.ts).
  * The kit's editor makes its schema inside, where the columns can not get
  * one more prop. No media library and no font picker: the builder uses
  * neither.
@@ -57,6 +60,8 @@ export function PageBlockEditor({
     slashMenuItems: SlashItems;
     slashMenuTopItems: SlashItems;
 }) {
+    const t = useT();
+    const locale = useLocale();
     // Read once, like BlockNote does.
     const startingContent = useMemo(
         () => normalizeDocument(initialContent),
@@ -66,6 +71,8 @@ export function PageBlockEditor({
     const editor = useCreateBlockNote({
         schema: createPageSchema(),
         ...(kitEditorOptions() as Partial<BlockNoteEditorOptions<any, any, any>>),
+        // BlockNote's own words in the builder's language.
+        dictionary: blockNoteDictionary(locale) as never,
         initialContent: startingContent as never,
         uploadFile,
     });
@@ -87,6 +94,10 @@ export function PageBlockEditor({
                 editor={editor}
                 theme="light"
                 slashMenu={false}
+                // No ":" emoji picker: its data is a quarter of the builder's
+                // file (bin/build.js leaves it out). Phones and computers
+                // have their own emoji keyboards.
+                emojiPicker={false}
                 sideMenu={false}
                 filePanel={false}
                 formattingToolbar={false}
@@ -121,11 +132,12 @@ export function PageBlockEditor({
                     triggerCharacter="/"
                     getItems={async (query) =>
                         filterSuggestionItems(
-                            kitSlashMenuItems(
-                                editor,
+                            pageSlashMenuItems(
+                                editor as never,
+                                t,
                                 slashMenuItems(editor as never),
                                 slashMenuTopItems(editor as never),
-                            ),
+                            ) as never,
                             query,
                         )
                     }

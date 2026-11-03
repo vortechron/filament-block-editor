@@ -1,5 +1,6 @@
 import {
     Blocks,
+    ClipboardList,
     Columns2,
     Columns3,
     Heading2,
@@ -158,6 +159,13 @@ const ITEMS: CatalogItem[] = [
         group: 'text',
         keywords: 'button link cta butang pautan',
     },
+    {
+        key: 'form',
+        label: 'Form',
+        icon: ClipboardList,
+        group: 'text',
+        keywords: 'form contact enquiry borang hubungi pertanyaan',
+    },
 ];
 
 /**
@@ -261,6 +269,7 @@ export function describeBlock(
         spacer: 'spacer',
         divider: 'divider',
         button: 'button',
+        form: 'form',
     };
     const item = ITEMS.find((entry) => entry.key === byType[type]);
 

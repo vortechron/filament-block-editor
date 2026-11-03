@@ -3,52 +3,22 @@ import { useEffect, useRef, useState } from 'react';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useDraftPreview } from '../editor/use-draft-preview';
+import { frameSection, revealInFrame, runPendingScroll } from './frame-dom';
 import {
-    frameItem,
-    frameSection,
-    revealInFrame,
-    runPendingScroll,
-} from './frame-dom';
+    applyMarks,
+    FRAME_STYLES,
+    type FrameMarks,
+    type FramePick,
+    pickAt,
+} from './frame-marks';
 import { type PageDrawing, planUpdate } from './page-frame-updates';
 
-/** What a click on the page picked. */
-export type FramePick =
-    | { kind: 'section'; sectionId: string; path: string | null }
-    | { kind: 'nothing' };
+export type { FramePick } from './frame-marks';
 
 type FrameIndex = 0 | 1;
 
 /** How long a new page may load the photos in view before it shows. */
 const PHOTO_WAIT_MS = 400;
-
-/**
- * The builder's marks inside the page: a dashed frame on hover, a blue
- * frame and a label on the picked section, and a frame on the picked item.
- */
-const FRAME_STYLES = `
-[data-preview-banner] { display: none !important; }
-[data-block-id] { position: relative; cursor: pointer; }
-[data-block-id]:has(*)::before {
-    content: ''; position: absolute; inset: 0; z-index: 59;
-    border: calc(1px * var(--builder-ui, 1)) dashed transparent;
-    pointer-events: none; transition: border-color 0.15s;
-}
-[data-block-id]:hover::before { border-color: rgb(37 99 235 / 0.75); }
-[data-block-id][data-builder-picked]::before { border: calc(2px * var(--builder-ui, 1)) solid #2563eb; }
-[data-block-id]::after {
-    content: attr(data-builder-label);
-    position: absolute; top: 0; left: 0; z-index: 60;
-    padding: calc(0.3rem * var(--builder-ui, 1)) calc(0.65rem * var(--builder-ui, 1));
-    border-bottom-right-radius: calc(0.5rem * var(--builder-ui, 1));
-    background: #2563eb; color: #fff;
-    font: 600 calc(12px * var(--builder-ui, 1))/1.3 system-ui, -apple-system, sans-serif;
-    letter-spacing: 0; text-transform: none;
-    pointer-events: none; opacity: 0; transition: opacity 0.15s;
-}
-[data-block-id]:hover::after, [data-block-id][data-builder-picked]::after { opacity: 1; }
-[data-builder-picked] [data-item]:hover { outline: 1px dashed rgb(37 99 235 / 0.6); outline-offset: 3px; }
-[data-builder-picked-item] { outline: calc(2px * var(--builder-ui, 1)) solid #2563eb !important; outline-offset: 3px; }
-`;
 
 /**
  * The page on the canvas, drawn by the host exactly as visitors get it,
@@ -63,30 +33,27 @@ const FRAME_STYLES = `
 export function PageFrame({
     draft,
     kit = null,
-    pickedSectionId,
-    pickedItemPath,
-    sectionLabels,
-    scale,
+    reloads = 0,
+    marks,
     onPick,
 }: {
     /** The page value as JSON. */
     draft: string;
     /** The design kit as JSON, with changes not saved yet, or null. */
     kit?: string | null;
-    pickedSectionId: string | null;
-    /** The picked item's place in its section, as the page marks it. */
-    pickedItemPath: string | null;
-    /** The label on each section, like "3. Hero", by section id. */
-    sectionLabels: ReadonlyMap<string, string>;
+    /** Draws the page again when it goes up, like after the shop info is saved. */
+    reloads?: number;
     /**
-     * Below 1 the page is drawn wider than the canvas and shrunk to fit,
-     * so it keeps the layout it has on a laptop.
+     * What to mark on the page. Below 1, `scale` draws the page wider than
+     * the canvas and shrinks it to fit, so it keeps the layout it has on a
+     * laptop.
      */
-    scale: number;
+    marks: FrameMarks;
     onPick: (pick: FramePick) => void;
 }) {
     const t = useT();
-    const { html, isUpdating, isStale } = useDraftPreview(draft, kit);
+    const { html, isUpdating, isStale } = useDraftPreview(draft, kit, reloads);
+    const { pickedSectionId, pickedItemPath, scale } = marks;
     const frameA = useRef<HTMLIFrameElement>(null);
     const frameB = useRef<HTMLIFrameElement>(null);
     const [sources, setSources] = useState<[string | null, string | null]>([
@@ -104,22 +71,10 @@ export function PageFrame({
     // The pick the page last scrolled to, so it scrolls once per pick.
     const revealedFor = useRef<string | null>(null);
     const [updates, setUpdates] = useState(0);
-    const latest = useRef({
-        onPick,
-        sectionLabels,
-        pickedSectionId,
-        pickedItemPath,
-        scale,
-    });
+    const latest = useRef({ onPick, marks });
 
     useEffect(() => {
-        latest.current = {
-            onPick,
-            sectionLabels,
-            pickedSectionId,
-            pickedItemPath,
-            scale,
-        };
+        latest.current = { onPick, marks };
     });
 
     function frameAt(index: FrameIndex | null): HTMLIFrameElement | null {
@@ -152,7 +107,7 @@ export function PageFrame({
             const page = frame?.contentDocument;
 
             if (page) {
-                applyMarks(page, latest.current);
+                applyMarks(page, latest.current.marks);
             }
 
             setUpdates((count) => count + 1);
@@ -209,7 +164,7 @@ export function PageFrame({
 
         style.textContent = FRAME_STYLES;
         page.head.append(style);
-        applyMarks(page, latest.current);
+        applyMarks(page, latest.current.marks);
 
         page.addEventListener(
             'click',
@@ -250,19 +205,7 @@ export function PageFrame({
             event.preventDefault();
         }
 
-        const section = target.closest('[data-block-id]');
-
-        if (section) {
-            latest.current.onPick({
-                kind: 'section',
-                sectionId: section.getAttribute('data-block-id') ?? '',
-                path:
-                    target.closest('[data-item]')?.getAttribute('data-item') ??
-                    null,
-            });
-        } else {
-            latest.current.onPick({ kind: 'nothing' });
-        }
+        latest.current.onPick(pickAt(target));
     }
 
     // A scroll that waited for this change, like to a moved section.
@@ -278,12 +221,7 @@ export function PageFrame({
             return;
         }
 
-        applyMarks(page, {
-            sectionLabels,
-            pickedSectionId,
-            pickedItemPath,
-            scale,
-        });
+        applyMarks(page, marks);
 
         if (pickedSectionId === null) {
             revealedFor.current = null;
@@ -302,14 +240,7 @@ export function PageFrame({
         ) {
             revealedFor.current = pick;
         }
-    }, [
-        live,
-        updates,
-        pickedSectionId,
-        pickedItemPath,
-        sectionLabels,
-        scale,
-    ]);
+    }, [live, updates, marks, pickedSectionId, pickedItemPath]);
 
     return (
         <div className="absolute inset-0">
@@ -412,50 +343,6 @@ function swapSections(
     });
 
     return true;
-}
-
-function applyMarks(
-    page: Document,
-    marks: {
-        sectionLabels: ReadonlyMap<string, string>;
-        pickedSectionId: string | null;
-        pickedItemPath: string | null;
-        scale: number;
-    },
-) {
-    // The labels and frames keep their size when the page is shrunk.
-    page.documentElement.style.setProperty(
-        '--builder-ui',
-        String(1 / marks.scale),
-    );
-
-    page.querySelectorAll<HTMLElement>('[data-block-id]').forEach((section) => {
-        const id = section.dataset.blockId ?? '';
-
-        section.setAttribute(
-            'data-builder-label',
-            marks.sectionLabels.get(id) ?? '',
-        );
-        section.toggleAttribute(
-            'data-builder-picked',
-            id === marks.pickedSectionId,
-        );
-    });
-
-    page.querySelectorAll('[data-builder-picked-item]').forEach((item) =>
-        item.removeAttribute('data-builder-picked-item'),
-    );
-
-    if (marks.pickedSectionId !== null && marks.pickedItemPath !== null) {
-        const section = page.querySelector<HTMLElement>(
-            `[data-block-id="${CSS.escape(marks.pickedSectionId)}"]`,
-        );
-
-        frameItem(section, marks.pickedItemPath)?.setAttribute(
-            'data-builder-picked-item',
-            '',
-        );
-    }
 }
 
 type PreviewWindow = Window & {

@@ -1,37 +1,39 @@
 import { insertOrUpdateBlockForSlashMenu } from '@blocknote/core';
 import { createReactBlockSpec } from '@blocknote/react';
-import { Images, MousePointerClick, Settings2, TriangleAlert } from 'lucide-react';
-import { createContext, createElement, useContext } from 'react';
+import {
+    ClipboardList,
+    Images,
+    MousePointerClick,
+    Settings2,
+    TriangleAlert,
+} from 'lucide-react';
+import { createElement, useContext } from 'react';
 import { safeButtonUrl } from '@/blocks/button-url';
 import { parseValues, summarizeValues } from '@/blocks/own-block-values';
+import { dynamicRefKey, findDynamicValue } from '@/lib/dynamic-values';
+import { serializeForm } from '@/lib/form-definition';
+import { starterForm } from '@/lib/form-starter';
 import { iconByName } from '@/lib/icons';
 import { useT } from '@/lib/i18n';
 import type { OwnBlockDefinition } from '@/types';
+import { formBlock } from './form-block';
 import { GalleryBlock, galleryUrls, MAX_GALLERY_PHOTOS } from './gallery-block';
 import { LOOK_PROP_SCHEMA } from './look-prop';
+import { PageBlocksContext } from './page-blocks-context';
 import type { Translate } from './helpers';
+
+export { type PageBlocksInfo, PageBlocksContext } from './page-blocks-context';
 
 /**
  * The page's own blocks inside a section, on top of BlockNote's and
- * @vortechron/blocknote-kit's: the photo slideshow, the button and the
- * host's own blocks. The PHP renderer draws them on the public page
+ * @vortechron/blocknote-kit's: the photo slideshow, the button, the form
+ * (form-block.tsx) and the host's own blocks. The PHP renderer draws them on the public page
  * (Blocks\BlockRegistry for own blocks). Keep the two in step.
  *
  * Loaded with the editor only (see rich-editor.tsx), because BlockNote is
  * large. Each one declares the `look` prop itself: BlockNote draws a React
  * block with the prop schema it was made with (see page-schema.ts).
  */
-
-export type PageBlocksInfo = {
-    /** The host's own block definitions, by kind. */
-    ownBlocks: ReadonlyMap<string, OwnBlockDefinition>;
-    /** Opens a block's settings in the sidebar, when the builder can. */
-    openItem?: (blockId: string) => void;
-};
-
-export const PageBlocksContext = createContext<PageBlocksInfo>({
-    ownBlocks: new Map(),
-});
 
 export const BUTTON_VARIANTS = ['solid', 'outline'] as const;
 
@@ -125,11 +127,12 @@ export const pageBlockSpecs = {
     gallery: gallery(),
     button: button(),
     ownBlock: ownBlock(),
+    form: formBlock(),
 };
 
 type SlashMenuEditor = Parameters<typeof insertOrUpdateBlockForSlashMenu>[0];
 
-/** The "Page" group in the "/" menu: the slideshow, the button, own blocks. */
+/** The "Page" group in the "/" menu: the slideshow, the button, the form, own blocks. */
 export function pageSlashMenuItems(
     editor: SlashMenuEditor,
     t: Translate,
@@ -155,6 +158,14 @@ export function pageSlashMenuItems(
             group,
             icon: createElement(MousePointerClick, { size: 18 }),
             onItemClick: insert('button', { text: t('Read more') }),
+        },
+        {
+            title: t('Form'),
+            subtext: t('Visitors send you their name, phone and message'),
+            aliases: ['form', 'contact', 'enquiry', 'borang', 'hubungi', 'pertanyaan'],
+            group,
+            icon: createElement(ClipboardList, { size: 18 }),
+            onItemClick: insert('form', { form: serializeForm(starterForm(t)) }),
         },
         ...[...ownBlocks].map((definition) => ({
             title: definition.label,
@@ -184,8 +195,12 @@ function ButtonBlock({
     onTextChange: (text: string) => void;
 }) {
     const t = useT();
-    const { openItem } = useContext(PageBlocksContext);
-    const link = safeButtonUrl(url);
+    const { openItem, dynamicValues = [] } = useContext(PageBlocksContext);
+    const shopLink = dynamicRefKey(url);
+    const link =
+        shopLink === null
+            ? safeButtonUrl(url)
+            : (findDynamicValue(dynamicValues, shopLink)?.label ?? shopLink);
     const isOutline = variant === 'outline';
 
     return (

@@ -36,7 +36,7 @@ const SHEET_SETTLE_MS = 260;
 export function SectionWords({ block }: { block: RichSection }) {
     const t = useT();
     const { builder } = useBuilderContext();
-    const { accent, ownBlocks, upload } = useHost();
+    const { accent, ownBlocks, upload, dynamicValues } = useHost();
     const ownBlockMap = new Map(
         ownBlocks.map((definition) => [definition.kind, definition]),
     );
@@ -172,6 +172,7 @@ export function SectionWords({ block }: { block: RichSection }) {
                                 ownBlocks: ownBlockMap,
                                 openItem: (itemId) =>
                                     builder.selectItem(block.id, itemId),
+                                dynamicValues,
                             }}
                             uploadFile={(file) => upload(file)}
                             onDocumentChange={(document) =>

@@ -3,10 +3,12 @@ import { type ChangeEvent, useId, useRef, useState } from 'react';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
 import { Input } from '@/ui/input';
+import { DynamicPicker, DynamicRefChip, isDynamicRef } from '../editor/dynamic-picker';
 
 /**
  * The photo of a photo item: pick one and it uploads through the host,
- * then shows on the page right away. Works while the section's words are out
+ * then shows on the page right away. Or pick one of the shop's pictures,
+ * stored as `@key`. Works while the section's words are out
  * of sight, so a tap on an empty photo spot on the page leads straight
  * here.
  */
@@ -47,8 +49,22 @@ export function PhotoField({
         }
     }
 
+    if (isDynamicRef(url)) {
+        return (
+            <DynamicRefChip
+                label={t('Photo')}
+                value={url}
+                clearLabel={t('Remove shop picture')}
+                onClear={() => onChange('')}
+            />
+        );
+    }
+
     return (
         <div className="grid gap-2">
+            <div className="flex justify-end empty:hidden">
+                <DynamicPicker type="image" onPick={onChange} />
+            </div>
             <input
                 ref={input}
                 type="file"

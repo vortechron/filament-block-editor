@@ -2,8 +2,11 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { CATEGORY_LABELS } from '@/builder/add-panel';
+import { ACTION_LABELS } from '@/builder/form/form-actions';
+import { FIELD_TYPE_LABELS } from '@/builder/form/form-field-editor';
 import { GROUP_LABELS } from '@/builder/item-catalog';
 import { LAYOUT_LABELS } from '@/builder/section-thumbs';
+import { KIT_SLASH_TEXTS } from '@/editor/slash-menu';
 import ms from '@/lang/ms';
 import { translate } from './i18n';
 
@@ -50,7 +53,10 @@ function sourceTexts(): string[] {
             const path = join(dir, name);
 
             if (statSync(path).isDirectory()) {
-                walk(path);
+                // The dictionaries themselves are not texts to translate.
+                if (name !== 'lang') {
+                    walk(path);
+                }
             } else if (/\.tsx?$/.test(name) && !/\.test\.tsx?$/.test(name)) {
                 files.push(path);
             }
@@ -77,7 +83,14 @@ function sourceTexts(): string[] {
     }
 
     // Label maps the builder passes through t().
-    for (const map of [CATEGORY_LABELS, GROUP_LABELS, LAYOUT_LABELS]) {
+    for (const map of [
+        CATEGORY_LABELS,
+        GROUP_LABELS,
+        LAYOUT_LABELS,
+        ACTION_LABELS,
+        FIELD_TYPE_LABELS,
+        KIT_SLASH_TEXTS,
+    ]) {
         Object.values(map).forEach((text) => texts.add(text));
     }
 
@@ -93,8 +106,14 @@ describe('the Malay dictionary', () => {
 
     it('uses the generic words: seksyen and halaman, never seller words', () => {
         const words = Object.values(ms).join('\n').toLowerCase();
+        // "Bahagian" names a part (the header or footer), never a section.
+        const sectionWords = Object.entries(ms)
+            .filter(([english]) => !/\bpart\b/i.test(english))
+            .map(([, malay]) => malay)
+            .join('\n')
+            .toLowerCase();
 
-        expect(words).not.toMatch(/\bbahagian\b/);
+        expect(sectionWords).not.toMatch(/\bbahagian\b/);
         expect(words).not.toMatch(/\bpembeli\b/);
         expect(words).not.toMatch(/\bproduk\b/);
         expect(words).not.toMatch(/\bpesanan\b/);

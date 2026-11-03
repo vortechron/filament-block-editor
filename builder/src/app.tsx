@@ -3,11 +3,13 @@ import {
     useEffect,
     useEffectEvent,
     useMemo,
+    useRef,
     useState,
 } from 'react';
 import { BuilderContext } from './builder/builder-context';
 import { BuilderTopBar } from './builder/builder-top-bar';
 import { useKitState } from './builder/kit/use-kit-state';
+import { useSiteInfoState } from './builder/part/use-site-info-state';
 import { Canvas } from './builder/canvas';
 import { BuilderDragAndDrop } from './builder/drag-and-drop';
 import { MobileDock } from './builder/mobile-dock';
@@ -17,6 +19,7 @@ import { Sidebar } from './builder/sidebar';
 import type { Device, SidebarPanel } from './builder/types';
 import { useBuilder } from './builder/use-builder';
 import { useBuilderShortcuts } from './builder/use-builder-shortcuts';
+import { useSectionLibrary } from './builder/use-section-library';
 import { ConfirmDialog } from './editor/confirm-dialog';
 import { useMediaQuery } from './editor/use-media-query';
 import { usePageState } from './editor/use-page-state';
@@ -108,8 +111,10 @@ function Builder({
         onValue(value);
         onChange?.(value);
     });
-    const builder = useBuilder({ form, templates });
+    const library = useSectionLibrary(templates);
+    const builder = useBuilder({ form, templates: library.templates });
     const kit = useKitState();
+    const siteInfo = useSiteInfoState();
     const [device, setDevice] = useState<Device>('desktop');
     const [isDockOpen, setIsDockOpen] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -117,10 +122,10 @@ function Builder({
     // Tablets get the sidebar too. Phones get the bar at the bottom.
     const isDesktop = useMediaQuery('(min-width: 768px)');
 
-    const hasUnsavedChanges = form.isDirty || kit.isDirty;
-    const isSaving = form.processing || kit.processing;
+    const hasUnsavedChanges = form.isDirty || kit.isDirty || siteInfo.isDirty;
+    const isSaving = form.processing || kit.processing || siteInfo.processing;
 
-    useUnsavedChangesGuard(hasUnsavedChanges);
+    const leaveTo = useUnsavedChangesGuard(hasUnsavedChanges);
 
     // On a phone the sheet covers the lower part of the page. When it opens
     // for a section or an item, bring that part up above it.
@@ -159,10 +164,14 @@ function Builder({
         }
     }
 
-    /** Saves the page and the design kit, whichever has changes. */
+    /** Saves the page, the design kit and the shop info, whichever has changes. */
     function saveEverything() {
         if (kit.isDirty) {
             void kit.save();
+        }
+
+        if (siteInfo.isDirty) {
+            void siteInfo.save();
         }
 
         if (form.isDirty) {
@@ -198,8 +207,9 @@ function Builder({
     );
     const hasPageErrors = Object.keys(form.errors).length > 0;
     const hasKitErrors = Object.keys(kit.errors).length > 0;
+    const hasSiteInfoErrors = Object.keys(siteInfo.errors).length > 0;
     const notices =
-        hasPageErrors || hasKitErrors ? (
+        hasPageErrors || hasKitErrors || hasSiteInfoErrors ? (
             <>
                 {hasPageErrors && (
                     <SaveErrors
@@ -216,6 +226,14 @@ function Builder({
                         onDismiss={kit.clearErrors}
                     />
                 )}
+                {hasSiteInfoErrors && (
+                    <SaveErrors
+                        title={t('Your shop info was not saved')}
+                        errors={siteInfo.errors}
+                        onShowSection={showSection}
+                        onDismiss={siteInfo.clearErrors}
+                    />
+                )}
             </>
         ) : null;
 
@@ -225,14 +243,18 @@ function Builder({
                 value={{
                     builder,
                     form,
-                    templates,
+                    templates: library.templates,
+                    library,
                     device: isDesktop ? device : 'phone',
                     setDevice,
                     kit,
+                    siteInfo,
                     isDesktop,
                     onDeleteSection: setDeleteId,
                     revealPanel,
                     isSheetOpen: !isDesktop && isDockOpen,
+                    hasUnsavedChanges,
+                    leaveTo,
                 }}
             >
                 <BuilderDragAndDrop>
@@ -246,7 +268,9 @@ function Builder({
                             isDesktop={isDesktop}
                             hasUnsavedChanges={hasUnsavedChanges}
                             recentlySaved={
-                                form.recentlySuccessful || kit.recentlySuccessful
+                                form.recentlySuccessful ||
+                                kit.recentlySuccessful ||
+                                siteInfo.recentlySuccessful
                             }
                             isSaving={isSaving}
                             onPreview={() => setIsPreviewOpen(true)}
@@ -263,7 +287,8 @@ function Builder({
                                     aria-label={t('Editor panels')}
                                     className={
                                         builder.panel.name === 'section' ||
-                                        builder.panel.name === 'item'
+                                        builder.panel.name === 'item' ||
+                                        builder.panel.name === 'part'
                                             ? 'bg-card w-[22rem] shrink-0 border-r transition-[width] duration-200 lg:w-[26rem] xl:w-[28rem]'
                                             : 'bg-card w-[19.5rem] shrink-0 border-r transition-[width] duration-200 lg:w-[21.5rem] xl:w-[23rem]'
                                     }
@@ -314,14 +339,24 @@ function Builder({
     );
 }
 
-/** While there are unsaved changes, the browser asks before leaving. */
+/**
+ * While there are unsaved changes, the browser asks before leaving.
+ * Returns `leaveTo`, for leaving on purpose after the builder already
+ * asked, so the browser does not ask a second time.
+ */
 function useUnsavedChangesGuard(hasUnsavedChanges: boolean) {
+    const isLeaving = useRef(false);
+
     useEffect(() => {
         if (!hasUnsavedChanges) {
             return;
         }
 
         function warnBeforeUnload(event: BeforeUnloadEvent) {
+            if (isLeaving.current) {
+                return;
+            }
+
             event.preventDefault();
             event.returnValue = '';
         }
@@ -331,4 +366,9 @@ function useUnsavedChangesGuard(hasUnsavedChanges: boolean) {
         return () =>
             window.removeEventListener('beforeunload', warnBeforeUnload);
     }, [hasUnsavedChanges]);
+
+    return (url: string) => {
+        isLeaving.current = true;
+        window.location.assign(url);
+    };
 }

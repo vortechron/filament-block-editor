@@ -21,12 +21,16 @@ export type DraftPreview = {
  *
  * `draft` is the page value as a JSON string, so a new request only
  * starts when something in it really changed. The same goes for `kit`,
- * the design kit, which is sent along so its unsaved changes show.
+ * the design kit, which is sent along so its unsaved changes show, and
+ * for `reloads`, raised when something outside the page changed (the
+ * shop info the header shows).
  */
 export function useDraftPreview(
     draft: string,
     /** The design kit as JSON, with changes not saved yet, or null. */
     kit: string | null = null,
+    /** Asks again when it goes up, though nothing in the page changed. */
+    reloads = 0,
 ): DraftPreview {
     const { adapter } = useHost();
     const [html, setHtml] = useState<string | null>(null);
@@ -84,7 +88,7 @@ export function useDraftPreview(
             isCurrent = false;
             window.clearTimeout(timer);
         };
-    }, [adapter, draft, kit]);
+    }, [adapter, draft, kit, reloads]);
 
     return { html, isUpdating, isStale };
 }
