@@ -1,16 +1,33 @@
 import { useRef, useState } from 'react';
 import { useHost } from '@/lib/host';
+import {
+    canRedo,
+    canUndo,
+    emptyHistory,
+    type History,
+    record,
+    STEP_GROUP,
+    redo as redoHistory,
+    undo as undoHistory,
+} from '@/lib/page-history';
 import { normalizeValue } from '@/lib/page-value';
 import type { PageValue, SaveResult } from '@/types';
 
 /** How long "Saved" shows after a save. */
 const SAVED_FOR_MS = 2000;
 
+/** The page before and after an undo or a redo. */
+export type HistoryMove = { before: PageValue; after: PageValue };
+
 /**
  * The page value being edited, and saving it through the host. It
  * replaces the old page form: `data` is the value, `isDirty` says
  * whether it changed since the last save, and `errors` holds what the
  * host's save refused, keyed like "sections.2.data.anchor".
+ *
+ * It keeps the undo history too (lib/page-history.ts), in memory only:
+ * every change is recorded, in the group its caller names, and Save
+ * leaves the history as it is.
  */
 export function usePageState(
     initial: PageValue,
@@ -24,18 +41,111 @@ export function usePageState(
     const [errors, setErrors] = useState<Record<string, string>>({});
     const latest = useRef(initial);
     const savedTimer = useRef<number | undefined>(undefined);
+    const [history, setHistoryState] = useState(emptyHistory<PageValue>);
+    const latestHistory = useRef(history);
+    // The group of the step running now (inGroup), over the caller's own.
+    const runningGroup = useRef<string | null>(null);
+    const groupCount = useRef(0);
 
-    function setData(update: PageValue | ((current: PageValue) => PageValue)) {
-        const next =
-            typeof update === 'function' ? update(latest.current) : update;
+    function setHistory(next: History<PageValue>) {
+        latestHistory.current = next;
+        setHistoryState(next);
+    }
 
-        if (next === latest.current) {
-            return;
-        }
-
+    function show(next: PageValue) {
         latest.current = next;
         setDataState(next);
         onChange?.(next);
+    }
+
+    /** A group no other change has: a step of its own. */
+    function newGroup(): string {
+        groupCount.current += 1;
+
+        return `${STEP_GROUP}${groupCount.current}`;
+    }
+
+    /**
+     * Changes the value. `group` names what changed, like the words of
+     * one section: changes in one group a moment apart are one step to
+     * undo. Left out, the change is a step of its own.
+     */
+    function setData(
+        update: PageValue | ((current: PageValue) => PageValue),
+        group?: string,
+    ) {
+        const before = latest.current;
+        const next = typeof update === 'function' ? update(before) : update;
+
+        if (next === before) {
+            return;
+        }
+
+        const recorded = record(latestHistory.current, before, next, {
+            group: runningGroup.current ?? group ?? newGroup(),
+            now: Date.now(),
+        });
+
+        // The same page again, like an editor writing its words back.
+        if (recorded === latestHistory.current) {
+            return;
+        }
+
+        setHistory(recorded);
+        show(next);
+    }
+
+    /**
+     * Runs `run` with every change in it recorded in `group`, whatever
+     * group the changes name themselves. A step already running keeps
+     * its own group.
+     */
+    function inGroup<T>(group: string, run: () => T): T {
+        if (runningGroup.current !== null) {
+            return run();
+        }
+
+        runningGroup.current = group;
+
+        try {
+            return run();
+        } finally {
+            runningGroup.current = null;
+        }
+    }
+
+    /**
+     * Runs a builder action as one step of its own, like adding or
+     * deleting a section or an item: it never joins the typing before
+     * it, and typing after it never joins it.
+     */
+    function asStep<T>(run: () => T, group: string = newGroup()): T {
+        return inGroup(group, run);
+    }
+
+    /** Goes back one step, without recording it. Null with nothing to undo. */
+    function undo(): HistoryMove | null {
+        return move(undoHistory(latestHistory.current, latest.current));
+    }
+
+    /** Goes forward one undone step. Null with nothing to redo. */
+    function redo(): HistoryMove | null {
+        return move(redoHistory(latestHistory.current, latest.current));
+    }
+
+    function move(
+        result: { value: PageValue; history: History<PageValue> } | null,
+    ): HistoryMove | null {
+        if (result === null) {
+            return null;
+        }
+
+        const before = latest.current;
+
+        setHistory(result.history);
+        show(result.value);
+
+        return { before, after: result.value };
     }
 
     async function save(
@@ -93,6 +203,16 @@ export function usePageState(
         setData,
         /** The latest value, also between a change and the next draw. */
         current: () => latest.current,
+        inGroup,
+        asStep,
+        /** A group of its own, for a step whose changes come at two times. */
+        newGroup,
+        undo,
+        redo,
+        /** Goes up when a change starts a new step, like a delete. */
+        stepCount: () => latestHistory.current.started,
+        canUndo: canUndo(history),
+        canRedo: canRedo(history),
         save,
         errors,
         clearErrors: () => setErrors({}),

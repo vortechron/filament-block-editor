@@ -2,6 +2,7 @@ import { Lock, Paintbrush, Palette, SlidersHorizontal, Type } from 'lucide-react
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
 import { isLocked } from '@/lib/locks';
+import { changeGroup } from '@/lib/page-history';
 import { withDataPart } from '@/lib/page-value';
 import { cn } from '@/lib/utils';
 import type { RichSection, SectionData } from '@/types';
@@ -68,18 +69,24 @@ function RichSectionPanel({ block, index }: { block: RichSection; index: number 
         ? sectionTab
         : 'content';
 
-    /** Only the look changes here. The words come from the latest document. */
+    /**
+     * Only the look changes here. The words come from the latest document.
+     * Typing in one box is one step to undo; another setting is another.
+     */
     function updateData(update: (data: SectionData) => SectionData) {
-        builder.updateSection(block.id, (current) =>
-            current.type === 'rich'
-                ? {
-                      ...current,
-                      data: {
-                          ...update(current.data),
-                          document: current.data.document,
-                      },
-                  }
-                : current,
+        builder.updateSection(
+            block.id,
+            (current) =>
+                current.type === 'rich'
+                    ? {
+                          ...current,
+                          data: {
+                              ...update(current.data),
+                              document: current.data.document,
+                          },
+                      }
+                    : current,
+            changeGroup(`look:${block.id}`, block.data, update(block.data)),
         );
     }
 

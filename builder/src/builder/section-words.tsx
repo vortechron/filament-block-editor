@@ -165,7 +165,10 @@ export function SectionWords({ block }: { block: RichSection }) {
                 <EditorErrorBoundary>
                     <Suspense fallback={<WordsSkeleton />}>
                         <SectionTextEditor
-                            key={block.id}
+                            // An undo or a redo that changes these words
+                            // opens the editor again: BlockNote reads a
+                            // document only once.
+                            key={`${block.id}:${builder.wordsVersion}`}
                             data={block.data}
                             accent={accent}
                             blocks={{
@@ -176,13 +179,17 @@ export function SectionWords({ block }: { block: RichSection }) {
                             }}
                             uploadFile={(file) => upload(file)}
                             onDocumentChange={(document) =>
-                                builder.updateSection(block.id, (current) =>
-                                    current.type === 'rich'
-                                        ? {
-                                              ...current,
-                                              data: { ...current.data, document },
-                                          }
-                                        : current,
+                                builder.updateSection(
+                                    block.id,
+                                    (current) =>
+                                        current.type === 'rich'
+                                            ? {
+                                                  ...current,
+                                                  data: { ...current.data, document },
+                                              }
+                                            : current,
+                                    // Typing joins up into one step to undo.
+                                    `words:${block.id}`,
                                 )
                             }
                             onHandle={(next) =>

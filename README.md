@@ -3,7 +3,8 @@
 A visual page builder, like a small Elementor, that works in any web app and plugs into **Filament 5**.
 
 The client builds pages from sections. They pick ready-made sections, type straight into the page, drag things
-around, and see the real page in a live frame on desktop or phone width. You keep control of the design: your
+around, and see the real page in a live frame on desktop or phone width. Every change can be undone and redone
+(the top bar's buttons, or Ctrl+Z / ⌘Z) until the page is reloaded. You keep control of the design: your
 own CSS themes the page, and your own blocks draw the parts of the design that must not break.
 
 It started as the page builder of [NakJual](https://nakjual.com) and is made generic here.
@@ -25,7 +26,7 @@ It started as the page builder of [NakJual](https://nakjual.com) and is made gen
 
 ```bash
 composer config repositories.vortechron-block-editor vcs https://github.com/vortechron/filament-block-editor.git
-composer require vortechron/filament-block-editor:^2.2
+composer require vortechron/filament-block-editor:^2.3
 php artisan filament:assets   # with Filament
 # or, without Filament:
 php artisan vendor:publish --tag=filament-block-editor-assets

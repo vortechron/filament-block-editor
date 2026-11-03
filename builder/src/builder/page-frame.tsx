@@ -12,6 +12,7 @@ import {
     pickAt,
 } from './frame-marks';
 import { type PageDrawing, planUpdate, readDrawing } from './page-frame-updates';
+import { historyKeyOf, isTextBox } from './use-builder-shortcuts';
 
 export type { FramePick } from './frame-marks';
 
@@ -351,16 +352,20 @@ function refreshSection(frame: HTMLIFrameElement | null, section: HTMLElement) {
     view?.pageBuilderPreview?.refresh?.(section);
 }
 
-/** Ctrl+S and Escape work while the page has the keyboard too. */
+/**
+ * Ctrl+S, Escape, undo and redo work while the page has the keyboard
+ * too. Undo in a text box of the page, like a form's field, stays its own.
+ */
 function forwardShortcut(event: KeyboardEvent) {
     const isSave =
         (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 's';
+    const isHistory = historyKeyOf(event) !== null && !isTextBox(event.target);
 
-    if (!isSave && event.key !== 'Escape') {
+    if (!isSave && !isHistory && event.key !== 'Escape') {
         return;
     }
 
-    if (isSave) {
+    if (isSave || isHistory) {
         event.preventDefault();
     }
 

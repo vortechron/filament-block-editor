@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
 import { isLocked } from '@/lib/locks';
+import { changeGroup } from '@/lib/page-history';
+import { parseLook } from '../editor/look-prop';
 import { ActionButton } from './action-button';
 import { useBuilderContext } from './builder-context';
 import { describeBlock } from './item-catalog';
@@ -21,13 +23,30 @@ function readItem(
 }
 
 /**
+ * The undo group of a change to an item: typing in one setting is one
+ * step, another setting is another. Its look is one JSON string, so a
+ * look change is grouped by the style or advanced value it changes.
+ */
+function itemChangeGroup(
+    scope: string,
+    current: Record<string, unknown>,
+    props: Record<string, unknown>,
+): string {
+    const keys = Object.keys(props);
+
+    return keys.length === 1 && keys[0] === 'look'
+        ? changeGroup(`${scope}:look`, parseLook(current.look), parseLook(props.look))
+        : changeGroup(scope, current, { ...current, ...props });
+}
+
+/**
  * The picked item: its own settings (item-settings.tsx), its style and
  * advanced tabs, and buttons to move, copy or delete it. Every change goes
  * into the section's editor, and the page shows it a moment later.
  */
 export function ItemPanel() {
     const t = useT();
-    const { builder } = useBuilderContext();
+    const { builder, form, noteDeleted } = useBuilderContext();
     const { ownBlocks, developer } = useHost();
     const { sectionId, itemId } = builder.selection;
     const handle = builder.handleFor(sectionId);
@@ -59,7 +78,10 @@ export function ItemPanel() {
         ownBlocks,
     );
     const update = (props: Record<string, unknown>) =>
-        handle.updateItem(item.id, props);
+        form.inGroup(
+            itemChangeGroup(`item:${sectionId}:${item.id}`, item.props, props),
+            () => handle.updateItem(item.id, props),
+        );
 
     return (
         <div className="grid grid-cols-1 gap-5">
@@ -118,8 +140,11 @@ export function ItemPanel() {
                     label={t('Delete')}
                     destructive
                     onClick={() => {
+                        const stepsBefore = form.stepCount();
+
                         handle.removeItem(item.id);
                         builder.selectSection(sectionId);
+                        noteDeleted('item', stepsBefore);
                     }}
                 >
                     <Trash2 />

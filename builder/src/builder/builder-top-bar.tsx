@@ -1,30 +1,45 @@
 import {
     ArrowLeft,
     Check,
+    Ellipsis,
     ExternalLink,
     Eye,
     LoaderCircle,
     Monitor,
     Palette,
+    Redo2,
     Smartphone,
     Store,
     Tablet,
+    Undo2,
 } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
 import { isPartKey, partLabel } from '@/lib/site-parts';
 import { cn } from '@/lib/utils';
 import { Button } from '@/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/tooltip';
 import type { Device } from './types';
+import { historyShortcuts } from './use-builder-shortcuts';
 
 /**
  * The bar across the top of the page builder: back to the host's list
  * (when it gave a back link), the page title (with "Header" or "Footer"
  * when the builder edits one), laptop, tablet or phone view, then
  * Design (when the host has a design kit), Shop info (when it has a shop
- * info form), Preview, View page (when it gave a page link) and Save.
+ * info form), Preview, View page (when it gave a page link), Undo, Redo
+ * and Save. Below 1024px there is no room for all of them beside the
+ * device switch (or, on a phone, the title), so the host's extra buttons
+ * (Design, Shop info, View page) go into a More menu when there are two
+ * or more of them.
  */
 export function BuilderTopBar({
     device,
@@ -37,6 +52,10 @@ export function BuilderTopBar({
     onDesign,
     onSiteInfo,
     onSave,
+    canUndo,
+    canRedo,
+    onUndo,
+    onRedo,
 }: {
     device: Device;
     onDeviceChange: (device: Device) => void;
@@ -50,11 +69,24 @@ export function BuilderTopBar({
     /** Opens the whole shop info form. Left out, there is no such button. */
     onSiteInfo?: () => void;
     onSave: () => void;
+    canUndo: boolean;
+    canRedo: boolean;
+    onUndo: () => void;
+    onRedo: () => void;
 }) {
     const t = useT();
     const { title, backUrl, viewUrl, kind } = useHost();
     const kindLabel = isPartKey(kind) ? partLabel(kind, t) : null;
     const canSave = hasUnsavedChanges && !isSaving;
+    const keys = historyShortcuts();
+    const extras: Extra[] = [
+        ...(onDesign ? [{ label: t('Design'), icon: Palette, onSelect: onDesign }] : []),
+        ...(onSiteInfo ? [{ label: t('Shop info'), icon: Store, onSelect: onSiteInfo }] : []),
+        ...(viewUrl ? [{ label: t('View page'), icon: ExternalLink, href: viewUrl }] : []),
+    ];
+    const isTucked = extras.length >= 2;
+    // The extra buttons themselves show from 1024px only, when tucked.
+    const extraClass = isTucked ? 'hidden lg:inline-flex' : undefined;
 
     return (
         <header className="bg-card relative z-30 flex h-14 shrink-0 items-center gap-2 border-b px-2 sm:gap-3 sm:px-3">
@@ -131,11 +163,14 @@ export function BuilderTopBar({
                     />
                 )}
 
+                {isTucked && <MoreMenu extras={extras} />}
+
                 {onDesign && (
                     <Button
                         type="button"
                         variant="ghost"
                         size={isDesktop ? 'sm' : 'icon'}
+                        className={extraClass}
                         onClick={onDesign}
                         aria-label={t('Design')}
                         title={t('Design')}
@@ -152,6 +187,7 @@ export function BuilderTopBar({
                         type="button"
                         variant="ghost"
                         size={isDesktop ? 'sm' : 'icon'}
+                        className={extraClass}
                         onClick={onSiteInfo}
                         aria-label={t('Shop info')}
                         title={t('Shop info')}
@@ -169,7 +205,7 @@ export function BuilderTopBar({
                     size={isDesktop ? 'sm' : 'icon'}
                     onClick={onPreview}
                     aria-label={t('Preview')}
-                        title={t('Preview')}
+                    title={t('Preview')}
                 >
                     <Eye />
                     {isDesktop && (
@@ -182,6 +218,7 @@ export function BuilderTopBar({
                         asChild
                         variant="ghost"
                         size={isDesktop ? 'sm' : 'icon'}
+                        className={extraClass}
                         aria-label={t('View page')}
                         title={t('View page')}
                     >
@@ -195,6 +232,33 @@ export function BuilderTopBar({
                         </a>
                     </Button>
                 )}
+
+                <div className="flex items-center">
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size={isDesktop ? 'icon-sm' : 'icon'}
+                        disabled={!canUndo}
+                        onClick={onUndo}
+                        aria-label={t('Undo')}
+                        aria-keyshortcuts={keys.undo.aria}
+                        title={`${t('Undo')} (${keys.undo.shown})`}
+                    >
+                        <Undo2 />
+                    </Button>
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size={isDesktop ? 'icon-sm' : 'icon'}
+                        disabled={!canRedo}
+                        onClick={onRedo}
+                        aria-label={t('Redo')}
+                        aria-keyshortcuts={keys.redo.aria}
+                        title={`${t('Redo')} (${keys.redo.shown})`}
+                    >
+                        <Redo2 />
+                    </Button>
+                </div>
 
                 <Button
                     type="button"
@@ -214,6 +278,50 @@ export function BuilderTopBar({
                 </Button>
             </div>
         </header>
+    );
+}
+
+/** A button of the host's own, in the More menu below 1024px. */
+type Extra = { label: string; icon: LucideIcon } & (
+    | { onSelect: () => void; href?: undefined }
+    | { href: string; onSelect?: undefined }
+);
+
+function MoreMenu({ extras }: { extras: Extra[] }) {
+    const t = useT();
+
+    return (
+        <DropdownMenu modal={false}>
+            <DropdownMenuTrigger asChild>
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="lg:hidden"
+                    aria-label={t('More')}
+                    title={t('More')}
+                >
+                    <Ellipsis />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-52">
+                {extras.map(({ label, icon: Icon, onSelect, href }) =>
+                    href === undefined ? (
+                        <DropdownMenuItem key={label} onSelect={onSelect}>
+                            <Icon />
+                            {label}
+                        </DropdownMenuItem>
+                    ) : (
+                        <DropdownMenuItem key={label} asChild>
+                            <a href={href} target="_blank" rel="noopener noreferrer">
+                                <Icon />
+                                {label}
+                            </a>
+                        </DropdownMenuItem>
+                    ),
+                )}
+            </DropdownMenuContent>
+        </DropdownMenu>
     );
 }
 

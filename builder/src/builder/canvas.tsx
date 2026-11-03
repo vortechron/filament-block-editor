@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils';
 import { useHost } from '@/lib/host';
 import { partLabel } from '@/lib/site-parts';
 import { useBuilderContext } from './builder-context';
+import { type DeletedKind, DeleteNote } from './delete-note';
 import type { PartKey } from '@/types';
 import type { FrameMarks } from './frame-marks';
 import { type FramePick, PageFrame } from './page-frame';
@@ -41,7 +42,16 @@ const DRAWN_WIDTH = { desktop: 1280, tablet: 820 } as const;
  * sidebar, where its words are edited. Tapping the grey space around the
  * page picks nothing, which shows the Add panel again.
  */
-export function Canvas({ notices }: { notices: ReactNode }) {
+export function Canvas({
+    notices,
+    deleted,
+    onUndoDelete,
+}: {
+    notices: ReactNode;
+    /** What was just deleted, for the note with its Undo button. */
+    deleted: DeletedKind | null;
+    onUndoDelete: () => void;
+}) {
     const t = useT();
     const { viewUrl, parts } = useHost();
     const { builder, form, device, isDesktop, revealPanel, kit, siteInfo } =
@@ -58,6 +68,7 @@ export function Canvas({ notices }: { notices: ReactNode }) {
             ? Math.min(1, pageWidth / DRAWN_WIDTH[device])
             : 1;
     const picked = blocks.find((block) => block.id === selection.sectionId);
+    const showsHiddenNote = picked?.hidden === true;
     const pickedItemPath =
         selection.sectionId && selection.itemId
             ? (builder
@@ -174,7 +185,7 @@ export function Canvas({ notices }: { notices: ReactNode }) {
                         )}
                     </div>
 
-                    {picked?.hidden === true && (
+                    {showsHiddenNote && (
                         <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex justify-center px-4">
                             <span className="flex items-center gap-2 rounded-full bg-neutral-900/90 px-3.5 py-2 text-xs font-medium text-white shadow-lg">
                                 <EyeOff className="size-3.5 shrink-0" />
@@ -186,6 +197,13 @@ export function Canvas({ notices }: { notices: ReactNode }) {
                     )}
                 </div>
             </div>
+
+            <DeleteNote
+                kind={deleted}
+                isPhone={!isDesktop}
+                isRaised={showsHiddenNote}
+                onUndo={onUndoDelete}
+            />
         </main>
     );
 }

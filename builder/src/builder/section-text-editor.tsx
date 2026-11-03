@@ -12,6 +12,10 @@ import type { SectionEditorHandle } from './types';
  * The picked section's words, in the sidebar. Loaded on its own with
  * BlockNote (see section-words.tsx), and tells the builder how to reach
  * the editor while it is open.
+ *
+ * An undo or a redo opens it again with the restored words. Every change
+ * it reports then still counts; one that only writes back the words the
+ * page already holds records nothing (usePageState skips the same page).
  */
 export default function SectionTextEditor({
     data,

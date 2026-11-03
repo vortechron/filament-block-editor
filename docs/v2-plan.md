@@ -763,3 +763,45 @@ The whole shop info form in almost every panel was too big. Changes 4 and 5 of "
 7. **One searchable picker** (`DynamicValuePicker`: a search box and the values by `group`, each with its preview;
    filters by label, key and preview; arrow keys, Enter, Escape; 44px rows) replaces the "Shop links" and "Shop
    pictures" drop-down menus. Picked links and pictures are still stored as `@key` and shown as `DynamicRefChip`.
+
+### Undo and redo, 3 November 2026
+
+1. **One history for the page value** (`builder/src/lib/page-history.ts`, kept by `usePageState`): sections, words,
+   items, styles, hide and show, order and locks as stored. Not the design kit and not the shop info, which keep
+   their own saves. Memory only: a reload clears it. Save leaves it as it is, so an undo past a save makes the page
+   unsaved again (the JSON compare). An undo or a redo sets the value without recording a step. At most 100 steps;
+   the oldest drops. A new change after an undo clears the redo steps. A change to the same page (compared as data,
+   section by section, untouched sections by reference) records nothing and is not applied.
+2. **Steps.** A change joins the step before it when it has the same group and comes within 1 second of the change
+   before it. The words of a section are one group (`words:<id>`), so typing a sentence is one step. A builder action
+   (add, delete, move, copy or hide a section; add, delete, move, copy an item or change its kind; a template) runs
+   in a group of its own (`step:<n>`): that is its checkpoint, and its own changes join with no time limit (a blank
+   section and the item added to it once its editor loads are one step). A changed setting in the section's Look,
+   Style or Advanced tab, or in an item's panel, is grouped by the fields it changed (`changeGroup()`); an item's
+   `look` string is read first, so its style values count one by one. Typing in one box (a colour code, the link
+   name) is one step, and another setting is a new step at once. Two quick changes to the same setting join up.
+   Typed and taken back within the step, a step is dropped, so an undo always changes something.
+3. **Top bar:** Undo ("Buat asal", `Undo2`) and Redo ("Buat semula", `Redo2`) icon buttons just before Save, on every
+   width, greyed out when there is nothing to undo or redo. Their `title` has the shortcut (⌘Z / ⇧⌘Z on a Mac,
+   Ctrl+Z / Ctrl+Y elsewhere) and `aria-keyshortcuts` names them. To make room, below 1024px the host's extra
+   buttons (Design, Shop info, View page) sit in a More ("Lagi") menu when there are two or more of them; from
+   1024px they show as before. Checked in a browser at 390, 768, 1024, 1280 and 1440px: nothing overlaps and
+   nothing leaves the screen.
+4. **Keys:** Ctrl+Z / ⌘Z undo; Ctrl+Shift+Z / ⇧⌘Z / Ctrl+Y redo. In a text box (an input that takes text, a
+   textarea, editable text such as the section's words or a short code field) the keys are left alone, so the box
+   keeps its own undo. In a dialog or a menu they do nothing, so "Delete this section?" can not lose its section
+   behind it; the phone's bottom sheet (`data-builder-sheet`) is the sidebar, so they work there. The page on the
+   canvas forwards them like Ctrl+S.
+5. **Following the change:** a section that comes back is picked and the canvas scrolls to it; a picked section that
+   is gone picks nothing; a picked item that is gone picks its section. When the picked section's words change, its
+   editor opens again (`wordsVersion` in its key), because BlockNote reads a document only once. Every change that
+   editor reports counts (typing, dictation, the builder's handle). Writing back the words the page already holds
+   records nothing (the same-page rule in 1). BlockNote 0.54 writes nothing when it opens a document.
+6. **Delete note:** after a section or an item is deleted, "Section deleted · Undo" / "Item deleted · Undo"
+   ("Seksyen dipadam" / "Item dipadam", "Buat asal") shows at the bottom of the canvas for 6 seconds, above the
+   phone's bottom bar and above the hidden-section note. It is a `role="status"` region that is always there. It
+   shows only when the delete recorded a step (`stepCount()` went up; a section already gone is not deleted again).
+   It goes at once when the page changes again, because its Undo would then undo that change. Its button runs the
+   page undo.
+7. **Deviation:** deleting a section still asks first ("Delete this section?"); the note shows after the yes.
+   Deleting an item never asked, and still does not.

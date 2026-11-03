@@ -15,7 +15,8 @@ import {
     moveToIndex,
     replaceItem,
 } from '../editor/helpers';
-import type { PageState } from '../editor/use-page-state';
+import type { HistoryMove, PageState } from '../editor/use-page-state';
+import { followChange } from './follow-history';
 import { followInFrame, scrollFrameTo } from './frame-dom';
 import { isTextItem } from './page-frame-updates';
 import {
@@ -69,28 +70,38 @@ export function useBuilder({
     const waiting = useRef(
         new Map<string, (handle: SectionEditorHandle) => void>(),
     );
+    // Goes up when an undo or a redo changes the picked section's words:
+    // its editor reads them only when it opens, so it opens again.
+    const [wordsVersion, setWordsVersion] = useState(0);
 
     /**
      * Changes the sections from the latest ones. An editor can report a
      * change before React draws again, so never start from `blocks`.
+     * `group` names the change for the undo history (use-page-state.ts);
+     * left out, as for every section action here, the change is a step
+     * of its own.
      */
-    function updateBlocks(update: (current: Section[]) => Section[]) {
+    function updateBlocks(
+        update: (current: Section[]) => Section[],
+        group?: string,
+    ) {
         form.setData((data) => {
             const sections = update(data.sections);
 
             return sections === data.sections ? data : { ...data, sections };
-        });
+        }, group);
     }
 
     function updateAt(
         sectionId: string,
         update: (current: Section[], index: number) => Section[],
+        group?: string,
     ) {
         updateBlocks((current) => {
             const index = current.findIndex((block) => block.id === sectionId);
 
             return index === -1 ? current : update(current, index);
-        });
+        }, group);
     }
 
     function indexOf(sectionId: string): number {
@@ -227,8 +238,10 @@ export function useBuilder({
 
     function registerHandle(
         sectionId: string,
-        handle: SectionEditorHandle | null,
+        editorHandle: SectionEditorHandle | null,
     ) {
+        const handle = editorHandle && withItemSteps(editorHandle);
+
         setHandles((current) => {
             const next = new Map(current);
 
@@ -245,6 +258,24 @@ export function useBuilder({
             waiting.current.get(sectionId)?.(handle);
             waiting.current.delete(sectionId);
         }
+    }
+
+    /**
+     * Adding, moving, copying, deleting an item or changing its kind is
+     * a step of its own to undo. Changing its settings is not: typing in
+     * them joins up like typing words (item-panel.tsx names the group).
+     */
+    function withItemSteps(handle: SectionEditorHandle): SectionEditorHandle {
+        return {
+            ...handle,
+            insertItem: (...args) => form.asStep(() => handle.insertItem(...args)),
+            changeItemType: (...args) =>
+                form.asStep(() => handle.changeItemType(...args)),
+            moveItem: (...args) => form.asStep(() => handle.moveItem(...args)),
+            duplicateItem: (...args) =>
+                form.asStep(() => handle.duplicateItem(...args)),
+            removeItem: (...args) => form.asStep(() => handle.removeItem(...args)),
+        };
     }
 
     function withHandle(
@@ -357,13 +388,17 @@ export function useBuilder({
         target: ItemTarget | null = defaultItemTarget(),
     ) {
         let goal = target;
+        // The new item may land once the section's editor opens: one step.
+        const step = form.newGroup();
 
         // An empty page gets a blank section to hold the item.
         if (goal === null) {
             const blank =
                 templates.find((template) => template.key === 'blank') ??
                 templates.at(-1);
-            const sectionId = blank ? addSection(blank) : null;
+            const sectionId = blank
+                ? form.asStep(() => addSection(blank), step)
+                : null;
 
             if (sectionId === null) {
                 return;
@@ -388,10 +423,14 @@ export function useBuilder({
         }
 
         withHandle(sectionId, (handle) => {
-            const itemId = handle.insertItem(
-                key,
-                'path' in place ? besidePath(handle, place) : place,
-                layout,
+            const itemId = form.asStep(
+                () =>
+                    handle.insertItem(
+                        key,
+                        'path' in place ? besidePath(handle, place) : place,
+                        layout,
+                    ),
+                step,
             );
             const item = itemId ? handle.getItem(itemId) : null;
 
@@ -403,13 +442,20 @@ export function useBuilder({
         });
     }
 
-    /** Changes one section, starting from its latest version. */
+    /**
+     * Changes one section, starting from its latest version. `group`
+     * names the change for the undo history, like "words:<id>"; left
+     * out, the change is a step of its own.
+     */
     function updateSection(
         sectionId: string,
         update: (block: Section) => Section,
+        group?: string,
     ) {
-        updateAt(sectionId, (current, index) =>
-            replaceItem(current, index, update(current[index])),
+        updateAt(
+            sectionId,
+            (current, index) => replaceItem(current, index, update(current[index])),
+            group,
         );
     }
 
@@ -464,7 +510,8 @@ export function useBuilder({
     }
 
     function removeSection(sectionId: string) {
-        if (locked(sectionId, 'remove')) {
+        // Already gone, like after an undo: there is nothing to delete.
+        if (indexOf(sectionId) === -1 || locked(sectionId, 'remove')) {
             return;
         }
 
@@ -483,6 +530,45 @@ export function useBuilder({
         }
 
         updateSection(sectionId, (block) => withHidden(block, !block.hidden));
+    }
+
+    /** One step back, and the pick follows the change. */
+    function undo() {
+        follow(form.undo());
+    }
+
+    /** One undone step forward again, and the pick follows the change. */
+    function redo() {
+        follow(form.redo());
+    }
+
+    function follow(move: HistoryMove | null) {
+        if (move === null) {
+            return;
+        }
+
+        const plan = followChange(move.before, move.after, selection);
+
+        if (plan.kind === 'bring') {
+            selectSection(plan.sectionId);
+            scrollToSection(plan.sectionId);
+
+            return;
+        }
+
+        if (plan.kind === 'clear') {
+            clearSelection();
+
+            return;
+        }
+
+        if (plan.words) {
+            setWordsVersion((version) => version + 1);
+        }
+
+        if (plan.sectionOnly && selection.sectionId !== null) {
+            selectSection(selection.sectionId);
+        }
     }
 
     return {
@@ -518,6 +604,10 @@ export function useBuilder({
         toggleHidden,
         scrollToSection,
         scrollToPicked,
+        undo,
+        redo,
+        /** Changes when the picked section's editor must open again (undo). */
+        wordsVersion,
     };
 }
 

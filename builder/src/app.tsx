@@ -8,6 +8,7 @@ import {
 } from 'react';
 import { BuilderContext } from './builder/builder-context';
 import { BuilderTopBar } from './builder/builder-top-bar';
+import { type DeletedKind, useDeleteNote } from './builder/delete-note';
 import { useKitState } from './builder/kit/use-kit-state';
 import { useSiteInfoState } from './builder/part/use-site-info-state';
 import { Canvas } from './builder/canvas';
@@ -128,6 +129,7 @@ function Builder({
     const [isDockOpen, setIsDockOpen] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [deleteId, setDeleteId] = useState<string | null>(null);
+    const deleteNote = useDeleteNote(form.data);
     // Tablets get the sidebar too. Phones get the bar at the bottom.
     const isDesktop = useMediaQuery('(min-width: 768px)');
 
@@ -138,6 +140,13 @@ function Builder({
     ]);
 
     const leaveTo = useUnsavedChangesGuard(hasUnsavedChanges);
+
+    /** The delete note, when the delete really recorded a step to undo. */
+    function noteDeleted(kind: DeletedKind, stepsBefore: number) {
+        if (form.stepCount() > stepsBefore) {
+            deleteNote.show(kind, form.current());
+        }
+    }
 
     // On a phone the sheet covers the lower part of the page. When it opens
     // for a section or an item, bring that part up above it.
@@ -212,6 +221,8 @@ function Builder({
             }
         },
         onEscape: builder.clearSelection,
+        onUndo: builder.undo,
+        onRedo: builder.redo,
     });
 
     const sidebar = (
@@ -251,6 +262,7 @@ function Builder({
                     siteInfo,
                     isDesktop,
                     onDeleteSection: setDeleteId,
+                    noteDeleted,
                     revealPanel,
                     isSheetOpen: !isDesktop && isDockOpen,
                     hasUnsavedChanges,
@@ -281,6 +293,10 @@ function Builder({
                                     : undefined
                             }
                             onSave={saveEverything}
+                            canUndo={form.canUndo}
+                            canRedo={form.canRedo}
+                            onUndo={builder.undo}
+                            onRedo={builder.redo}
                         />
                         <div className="flex min-h-0 flex-1">
                             {isDesktop && (
@@ -295,7 +311,14 @@ function Builder({
                                     {sidebar}
                                 </aside>
                             )}
-                            <Canvas notices={notices} />
+                            <Canvas
+                                notices={notices}
+                                deleted={deleteNote.kind}
+                                onUndoDelete={() => {
+                                    deleteNote.hide();
+                                    builder.undo();
+                                }}
+                            />
                         </div>
                         {!isDesktop && (
                             <MobileDock
@@ -329,7 +352,10 @@ function Builder({
                 confirmLabel={t('Delete section')}
                 onConfirm={() => {
                     if (deleteId !== null) {
+                        const stepsBefore = form.stepCount();
+
                         builder.removeSection(deleteId);
+                        noteDeleted('section', stepsBefore);
                     }
 
                     setDeleteId(null);

@@ -94,6 +94,7 @@ export function MobileDock({
             {open && (
                 <div
                     role="dialog"
+                    data-builder-sheet=""
                     aria-label={t('Editor panel')}
                     className={cn(
                         'animate-in slide-in-from-bottom-6 fade-in-0 bg-card fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-40 flex flex-col overflow-hidden rounded-t-2xl border-t shadow-[0_-12px_40px_-12px_rgb(15_23_42/0.35)] transition-[height] duration-200',

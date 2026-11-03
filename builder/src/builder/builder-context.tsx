@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react';
 import type { PageState } from '@/editor/use-page-state';
 import type { SectionTemplate } from '@/types';
+import type { DeletedKind } from './delete-note';
 import type { KitState } from './kit/use-kit-state';
 import type { SiteInfoState } from './part/use-site-info-state';
 import type { Device, SidebarPanel } from './types';
@@ -29,6 +30,11 @@ export type BuilderContextValue = {
     isDesktop: boolean;
     /** Asks first, then deletes the section. */
     onDeleteSection: (sectionId: string) => void;
+    /**
+     * After a delete: shows "Item deleted · Undo" when the delete was
+     * recorded, so the undo history has more steps than `stepsBefore`.
+     */
+    noteDeleted: (kind: DeletedKind, stepsBefore: number) => void;
     /** Opens a panel from the canvas. On a phone it opens the sheet too. */
     revealPanel: (panel: SidebarPanel) => void;
     /** On a phone: the sheet covers the lower part of the canvas. */
