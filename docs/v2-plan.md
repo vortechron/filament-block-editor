@@ -509,6 +509,17 @@ type PageBuilderAdapter = {
   with `//` or `/\`. Selectors may not use the `+` or `~` combinators, `:root`, `:host`, `:has(`, or an attribute
   selector on `value`. Reason: custom CSS with an attribute selector and a `url()` to another site can leak data
   from the page, such as a form's token.
+- **`Kit::css()` maps the old `--sf-*` names only for kit values that differ from the package defaults.** The
+  `--kit-*` variables are always written. The package defaults are today's look (`text` `#475569`, `radius`
+  `1.25rem`, buttons `0.75rem` and weight `800`, base size `1.0625rem`, heading weight `800`), not the example
+  values in section 3. Reason: a host may theme with `--sf-accent` on `:root` (the docs allow it). A rule on
+  `.sf-page` that always maps `--sf-accent` to the kit would override that theme and change today's look. With
+  this rule the default kit changes nothing, and once the owner changes a value, every layout follows it. The
+  button and form rules are written the same way (only what differs). Text on the primary colour
+  (`--sf-accent-ink`) is set to white or dark by the primary colour's brightness.
+- **`KitSource` is an interface with `current()` and `override(?array $kit)`.** The `Design\OverridesKit` trait
+  implements both; a host source only writes `storedKit()`. `override(null)` clears it. The builder preview sets
+  the override and clears it after drawing.
 - **A page value's `version` is clamped** to 1 … `VERSION` before the upgrade steps run (security review). A
   version below 1 or not a whole number counts as 1, one above `VERSION` counts as `VERSION`. So
   `registerUpgrade()` takes `$from` from 1 to `VERSION - 1`; other steps never run. Reason: a huge negative
