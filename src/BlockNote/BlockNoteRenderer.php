@@ -3,9 +3,6 @@
 namespace Vortechron\FilamentBlockEditor\BlockNote;
 
 use Vortechron\FilamentBlockEditor\Blocks\BlockRegistry;
-use Vortechron\FilamentBlockEditor\Content\DynamicValues;
-use Vortechron\FilamentBlockEditor\Forms\FormDefinition;
-use Vortechron\FilamentBlockEditor\Forms\FormRenderer;
 use Vortechron\FilamentBlockEditor\Rendering\RenderContext;
 use Vortechron\FilamentBlockEditor\Styling\StyleSheet;
 use Vortechron\FilamentBlockEditor\Support\Urls;
@@ -18,15 +15,13 @@ use Vortechron\FilamentBlockEditor\Support\Urls;
  * attribute: colour names, spacing sizes, whole-number widths. Links keep
  * only http(s), mailto:, tel:, "#anchor" and same-site addresses (Urls::link);
  * pictures, video and files keep only http(s) and same-site addresses
- * (Urls::media). Unknown block types are skipped. The package's own blocks
- * (button, gallery) are drawn here; an `ownBlock` is drawn by the app's
- * Blocks\BlockRegistry.
+ * (Urls::media). Unknown block types are skipped.
  *
- * Dynamic values (Content\DynamicValues) are resolved here: dynamic text
- * is drawn as its escaped value (in the builder inside
- * `<span class="bn-dynamic" data-dynamic="{key}">`, with the value's label
- * when it is empty), and `@key` links and pictures are resolved, then
- * checked by the same address rules.
+ * This class walks the document and draws the blocks that hold blocks
+ * (lists, columns, cards, toggles, indents) and the plain text blocks. The
+ * rest is drawn by focused helpers: InlineContent (styled text, links and
+ * dynamic values), MediaBlocks (photo, video, audio, file, slideshow) and
+ * PackageBlocks (button, the app's own blocks, the form).
  *
  * A block's `look` prop (BlockLook) adds its class and its rules to the
  * page's StyleSheet; drawn on its own, render() puts the <style> in front.
@@ -69,30 +64,6 @@ final class BlockNoteRenderer
      * Keep in sync with SPACER_SIZES in the kit's blocks/spacer.jsx.
      */
     private const SPACER_SIZES = ['sm' => '1rem', 'md' => '2.5rem', 'lg' => '5rem', 'xl' => '8rem'];
-
-    private const TEXT_COLORS = [
-        'gray' => '#6b7280',
-        'brown' => '#92400e',
-        'red' => '#dc2626',
-        'orange' => '#ea580c',
-        'yellow' => '#ca8a04',
-        'green' => '#16a34a',
-        'blue' => '#2563eb',
-        'purple' => '#9333ea',
-        'pink' => '#db2777',
-    ];
-
-    private const BACKGROUND_COLORS = [
-        'gray' => '#f3f4f6',
-        'brown' => '#fef3c7',
-        'red' => '#fee2e2',
-        'orange' => '#ffedd5',
-        'yellow' => '#fef9c3',
-        'green' => '#dcfce7',
-        'blue' => '#dbeafe',
-        'purple' => '#f3e8ff',
-        'pink' => '#fce7f3',
-    ];
 
     private const LIST_TYPES = ['bulletListItem', 'numberedListItem', 'checkListItem'];
 
@@ -191,31 +162,7 @@ final class BlockNoteRenderer
      */
     public static function videoEmbedUrl(?string $url): ?string
     {
-        if ($url === null || trim($url) === '') {
-            return null;
-        }
-
-        if (preg_match('~youtube(?:-nocookie)?\.com/watch\?.*v=([\w-]{6,})~', $url, $matches) === 1
-            || preg_match('~youtube(?:-nocookie)?\.com/(?:shorts|embed|live|v)/([\w-]{6,})~', $url, $matches) === 1
-            || preg_match('~youtu\.be/([\w-]{6,})~', $url, $matches) === 1) {
-            return "https://www.youtube-nocookie.com/embed/{$matches[1]}";
-        }
-
-        if (preg_match('~vimeo\.com/(?:[\w-]+/)*?(?:video/)?(\d+)(?:/([a-zA-Z0-9]+))?~', $url, $matches) === 1) {
-            $hash = $matches[2] ?? '';
-
-            if ($hash === '' && preg_match('~[?&]h=([a-zA-Z0-9]+)~', $url, $query) === 1) {
-                $hash = $query[1];
-            }
-
-            return "https://player.vimeo.com/video/{$matches[1]}".($hash === '' ? '' : '?h='.$hash);
-        }
-
-        if (preg_match('~loom\.com/(?:share|embed)/([\w-]+)~', $url, $matches) === 1) {
-            return "https://www.loom.com/embed/{$matches[1]}";
-        }
-
-        return null;
+        return MediaBlocks::videoEmbedUrl($url);
     }
 
     /**
@@ -321,54 +268,104 @@ final class BlockNoteRenderer
         $children = is_array($block['children'] ?? null) ? $block['children'] : [];
 
         // Columns and cards hold their blocks in `children`, so they skip
-        // the indent drawn below.
-        if ($type === 'columnList') {
-            return $this->wrap($this->own($this->columnList($children, $path), $block), $props, $insideColumn);
-        }
+        // the indent drawn under other blocks.
+        $html = match (true) {
+            $type === 'columnList' => $this->own($this->columnList($children, $path), $block),
+            $type === 'card' => $this->own($this->card($props, $content, $children, $insideColumn, $path), $block),
+            self::isToggle($type, $props) => $this->toggle($block, $props, $children, $insideColumn, $path),
+            default => $this->withIndent($this->own($this->leaf($block, $props), $block), $children, $insideColumn, $path),
+        };
 
-        if ($type === 'card') {
-            return $this->wrap($this->own($this->card($props, $content, $children, $insideColumn, $path), $block), $props, $insideColumn);
-        }
+        return $this->wrap($html, $props, $insideColumn);
+    }
 
-        $style = $this->styleAttribute(BlockLook::inlineProps($props));
+    /**
+     * @param  array<mixed>  $props
+     */
+    private static function isToggle(string $type, array $props): bool
+    {
+        return $type === 'toggleListItem' || ($type === 'heading' && filter_var($props['isToggleable'] ?? false, FILTER_VALIDATE_BOOL));
+    }
 
-        if ($type === 'toggleListItem' || ($type === 'heading' && filter_var($props['isToggleable'] ?? false, FILTER_VALIDATE_BOOL))) {
-            $isHeading = $type === 'heading';
-            $summary = $isHeading ? $this->heading($props, $content, $style) : $this->inline($content);
+    /**
+     * A toggle list item or a toggle heading: a native <details>.
+     *
+     * @param  array<mixed>  $block
+     * @param  array<mixed>  $props
+     * @param  array<mixed>  $children
+     */
+    private function toggle(array $block, array $props, array $children, bool $insideColumn, ?string $path): string
+    {
+        $isHeading = ($block['type'] ?? null) === 'heading';
+        $content = $block['content'] ?? [];
+        $style = $this->inline()->styleAttribute(BlockLook::inlineProps($props));
+        $summary = $isHeading ? $this->heading($props, $content, $style) : $this->inline()->html($content);
 
-            return $this->wrap($this->own(
-                '<details class="bn-toggle"><summary'.($isHeading ? '' : $style).'>'.$summary.'</summary>'
-                    .'<div>'.$this->renderBlocks($children, $insideColumn, $path).'</div></details>',
-                $block,
-            ), $props, $insideColumn);
-        }
+        return $this->own(
+            '<details class="bn-toggle"><summary'.($isHeading ? '' : $style).'>'.$summary.'</summary>'
+                .'<div>'.$this->renderBlocks($children, $insideColumn, $path).'</div></details>',
+            $block,
+        );
+    }
 
-        $html = match ($type) {
-            'paragraph' => '<p'.$style.'>'.$this->inline($content).'</p>',
+    /**
+     * A block with no blocks of its own inside (its children are an indent).
+     *
+     * @param  array<mixed>  $block
+     * @param  array<mixed>  $props
+     */
+    private function leaf(array $block, array $props): string
+    {
+        $content = $block['content'] ?? [];
+        $style = $this->inline()->styleAttribute(BlockLook::inlineProps($props));
+        $media = $this->media();
+        $package = $this->package();
+
+        return match ($block['type'] ?? 'paragraph') {
+            'paragraph' => '<p'.$style.'>'.$this->inline()->html($content).'</p>',
             'heading' => $this->heading($props, $content, $style),
-            'quote' => '<blockquote'.$style.'>'.$this->inline($content).'</blockquote>',
-            'codeBlock' => '<pre><code>'.e($this->plainText($content)).'</code></pre>',
-            'image' => $this->image($props),
-            'video' => $this->video($props),
-            'audio' => $this->audio($props),
-            'file' => $this->file($props),
+            'quote' => '<blockquote'.$style.'>'.$this->inline()->html($content).'</blockquote>',
+            'codeBlock' => '<pre><code>'.e($this->inline()->plainText($content)).'</code></pre>',
+            'image' => $media->image($props),
+            'video' => $media->video($props),
+            'audio' => $media->audio($props),
+            'file' => $media->file($props),
             'table' => $this->table($content),
             'divider' => '<hr>',
             'spacer' => '<div class="bn-spacer" style="height: '.(self::pick(self::SPACER_SIZES, $props['size'] ?? null) ?? self::SPACER_SIZES['md']).';"></div>',
-            Blocks::BUTTON => $this->button($props),
-            Blocks::GALLERY => $this->gallery($props),
-            Blocks::OWN_BLOCK => $this->ownBlock($block, $props),
-            Blocks::FORM => $this->form($block, $props),
+            Blocks::BUTTON => $package->button($props),
+            Blocks::GALLERY => $media->gallery($props),
+            Blocks::OWN_BLOCK => $package->ownBlock($block, $props),
+            Blocks::FORM => $package->form($block, $props),
             default => '',
         };
+    }
 
-        $html = $this->own($html, $block);
+    /**
+     * A block's indented children under its HTML, when it drew anything.
+     *
+     * @param  array<mixed>  $children
+     */
+    private function withIndent(string $html, array $children, bool $insideColumn, ?string $path): string
+    {
+        return $html !== '' && $children !== []
+            ? $html.'<div class="bn-indent">'.$this->renderBlocks($children, $insideColumn, $path).'</div>'
+            : $html;
+    }
 
-        if ($html !== '' && $children !== []) {
-            $html .= '<div class="bn-indent">'.$this->renderBlocks($children, $insideColumn, $path).'</div>';
-        }
+    private function inline(): InlineContent
+    {
+        return new InlineContent($this->context);
+    }
 
-        return $this->wrap($html, $props, $insideColumn);
+    private function media(): MediaBlocks
+    {
+        return new MediaBlocks($this->context);
+    }
+
+    private function package(): PackageBlocks
+    {
+        return new PackageBlocks($this->context, $this->inline(), $this->registry);
     }
 
     /**
@@ -491,7 +488,7 @@ final class BlockNoteRenderer
         return '<details class="bn-card"'.$open.'>'
             .'<summary class="bn-card-head'.($url === null ? '' : ' bn-card-has-image').'">'
             .($url === null ? '' : '<img class="bn-card-image" src="'.e($url).'" alt="" loading="lazy" decoding="async">')
-            .'<span class="bn-card-title">'.$this->inline($content).'</span>'
+            .'<span class="bn-card-title">'.$this->inline()->html($content).'</span>'
             .'<span class="bn-card-toggle" style="background-color: '.$button.'; color: '.$buttonText.';">'
             .'<span class="bn-card-show">'.e(__('filament-block-editor::page.show')).' &rarr;</span>'
             .'<span class="bn-card-hide">'.e(__('filament-block-editor::page.hide')).' &darr;</span>'
@@ -518,9 +515,9 @@ final class BlockNoteRenderer
 
             $path = self::pathOf($item);
 
-            $html .= $this->markItem($this->own('<li'.$this->styleAttribute(BlockLook::inlineProps($props)).'>', $item), $path)
+            $html .= $this->markItem($this->own('<li'.$this->inline()->styleAttribute(BlockLook::inlineProps($props)).'>', $item), $path)
                 .$mark
-                .$this->inline($item['content'] ?? [])
+                .$this->inline()->html($item['content'] ?? [])
                 .($children === [] ? '' : $this->renderBlocks($children, parentPath: $path))
                 .'</li>';
         }
@@ -535,161 +532,7 @@ final class BlockNoteRenderer
     {
         $level = min(max(is_numeric($props['level'] ?? null) ? (int) $props['level'] : 1, 1), 4);
 
-        return "<h{$level}{$style}>".$this->inline($content)."</h{$level}>";
-    }
-
-    /**
-     * @param  array<mixed>  $props
-     */
-    private function image(array $props): string
-    {
-        $url = $this->media($props['url'] ?? null);
-
-        if ($url === null) {
-            return $this->emptyMedia('photo');
-        }
-
-        $width = is_numeric($props['previewWidth'] ?? null) ? (int) $props['previewWidth'] : 0;
-        $caption = is_string($props['caption'] ?? null) ? trim($props['caption']) : '';
-
-        return '<figure class="bn-image">'
-            .'<img src="'.e($url).'" alt="'.e($caption).'" loading="lazy" decoding="async"'
-            .($width > 0 ? ' style="width: '.$width.'px;"' : '').'>'
-            .($caption === '' ? '' : '<figcaption>'.e($caption).'</figcaption>')
-            .'</figure>';
-    }
-
-    /**
-     * @param  array<mixed>  $props
-     */
-    private function video(array $props): string
-    {
-        $url = $this->media($props['url'] ?? null);
-
-        if ($url === null) {
-            return $this->emptyMedia('video');
-        }
-
-        $embedUrl = self::videoEmbedUrl($url);
-
-        if ($embedUrl !== null) {
-            return '<div class="bn-video-embed">'
-                .'<iframe src="'.e($embedUrl).'" title="Video" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>'
-                .'</div>';
-        }
-
-        return '<video class="bn-video" src="'.e($url).'" controls playsinline preload="metadata"></video>';
-    }
-
-    /**
-     * Where a photo or video the author has not added yet goes. Only the
-     * builder shows it; visitors see nothing.
-     *
-     * @param  'photo'|'video'  $kind
-     */
-    private function emptyMedia(string $kind): string
-    {
-        if (! $this->forBuilder) {
-            return '';
-        }
-
-        return '<figure class="bn-media-empty" data-empty-media="'.$kind.'"><span>'.e(__("filament-block-editor::preview.empty_{$kind}")).'</span></figure>';
-    }
-
-    /**
-     * @param  array<mixed>  $props
-     */
-    private function audio(array $props): string
-    {
-        $url = Urls::media($props['url'] ?? null);
-
-        return $url === null ? '' : '<audio src="'.e($url).'" controls preload="none"></audio>';
-    }
-
-    /**
-     * @param  array<mixed>  $props
-     */
-    private function file(array $props): string
-    {
-        $url = Urls::media($props['url'] ?? null);
-
-        if ($url === null) {
-            return '';
-        }
-
-        $name = is_string($props['name'] ?? null) && trim($props['name']) !== '' ? trim($props['name']) : $url;
-
-        return '<p><a href="'.e($url).'" target="_blank" rel="noopener">'.e($name).'</a></p>';
-    }
-
-    /**
-     * A link that looks like a button. An address that is not allowed
-     * (Urls::link) draws the same look as a plain label, with no link.
-     *
-     * @param  array<mixed>  $props
-     */
-    private function button(array $props): string
-    {
-        $text = is_string($props['text'] ?? null) ? trim($props['text']) : '';
-
-        if ($text === '') {
-            return '';
-        }
-
-        $variant = in_array($props['variant'] ?? null, Blocks::BUTTON_VARIANTS, true) ? $props['variant'] : Blocks::BUTTON_VARIANTS[0];
-        $class = 'bn-button bn-button-'.$variant;
-        $url = $this->link($props['url'] ?? null);
-
-        return $url === null
-            ? '<span class="'.$class.'">'.e($text).'</span>'
-            : '<a class="'.$class.'" href="'.e($url).'">'.e($text).'</a>';
-    }
-
-    /**
-     * A photo slideshow. CSS scroll snapping does the swiping; the page
-     * component adds the arrows and dots with a few lines of script.
-     *
-     * @param  array<mixed>  $props
-     */
-    private function gallery(array $props): string
-    {
-        $images = Blocks::galleryUrls($props['images'] ?? null);
-
-        if ($images === []) {
-            return $this->emptyMedia('photo');
-        }
-
-        return view('filament-block-editor::blocks.gallery', ['images' => $images])->render();
-    }
-
-    /**
-     * The app's own block, drawn by its definition in the registry.
-     *
-     * @param  array<mixed>  $block
-     * @param  array<mixed>  $props
-     */
-    private function ownBlock(array $block, array $props): string
-    {
-        $kind = is_string($props['kind'] ?? null) ? $props['kind'] : '';
-
-        unset($block[self::ITEM_PATH]);
-
-        return ($this->registry ?? app(BlockRegistry::class))
-            ->render($kind, Blocks::decodeValues($props['values'] ?? null), $this->context, $block);
-    }
-
-    /**
-     * A form anyone builds in the editor (Forms\FormRenderer). It needs a
-     * block id for its key; BlockNoteDocument::clean() gives every form one.
-     *
-     * @param  array<mixed>  $block
-     * @param  array<mixed>  $props
-     */
-    private function form(array $block, array $props): string
-    {
-        $id = BlockNoteDocument::blockId($block['id'] ?? null);
-
-        return $id === null ? '' : app(FormRenderer::class)->render(FormDefinition::fromProps($props), $id, $this->context);
+        return "<h{$level}{$style}>".$this->inline()->html($content)."</h{$level}>";
     }
 
     private function table(mixed $content): string
@@ -714,142 +557,21 @@ final class BlockNoteRenderer
                     $colspan = is_numeric($props['colspan'] ?? null) ? (int) $props['colspan'] : 1;
                     $rowspan = is_numeric($props['rowspan'] ?? null) ? (int) $props['rowspan'] : 1;
 
-                    $html .= '<td'.$this->styleAttribute($props)
+                    $html .= '<td'.$this->inline()->styleAttribute($props)
                         .($colspan > 1 ? ' colspan="'.min($colspan, 50).'"' : '')
                         .($rowspan > 1 ? ' rowspan="'.min($rowspan, 50).'"' : '')
-                        .'>'.$this->inline($cell['content'] ?? []).'</td>';
+                        .'>'.$this->inline()->html($cell['content'] ?? []).'</td>';
 
                     continue;
                 }
 
-                $html .= '<td>'.$this->inline($cell).'</td>';
+                $html .= '<td>'.$this->inline()->html($cell).'</td>';
             }
 
             $html .= '</tr>';
         }
 
         return '<div class="bn-table"><table>'.$html.'</table></div>';
-    }
-
-    /**
-     * Styled text and links.
-     */
-    private function inline(mixed $content): string
-    {
-        if (! is_array($content)) {
-            return '';
-        }
-
-        $html = '';
-
-        foreach ($content as $item) {
-            if (! is_array($item)) {
-                continue;
-            }
-
-            if (($item['type'] ?? null) === 'dynamic') {
-                $html .= $this->dynamic($item);
-
-                continue;
-            }
-
-            if (($item['type'] ?? null) === 'link') {
-                $url = $this->link($item['href'] ?? null);
-                $inner = $this->inline($item['content'] ?? []);
-                $html .= $url === null ? $inner : '<a href="'.e($url).'" target="_blank" rel="noopener">'.$inner.'</a>';
-
-                continue;
-            }
-
-            $html .= $this->styledText($item);
-        }
-
-        return $html;
-    }
-
-    /**
-     * A dynamic value in the text, escaped. Visitors get nothing when it is
-     * empty; the builder marks it, and shows its label when it is empty.
-     *
-     * @param  array<mixed>  $item
-     */
-    private function dynamic(array $item): string
-    {
-        $key = $item['props']['key'] ?? null;
-
-        if (! DynamicValues::isKey($key)) {
-            return '';
-        }
-
-        $values = app(DynamicValues::class);
-        $value = $values->resolve($key, $this->context);
-
-        if (! $this->forBuilder) {
-            return $value === null ? '' : nl2br(e($value), false);
-        }
-
-        return '<span class="bn-dynamic" data-dynamic="'.e($key).'">'.nl2br(e($value ?? $values->label($key) ?? $key), false).'</span>';
-    }
-
-    /**
-     * A link address, its dynamic value resolved, through Urls::link().
-     */
-    private function link(mixed $url): ?string
-    {
-        return app(DynamicValues::class)->link($url, $this->context);
-    }
-
-    /**
-     * A picture or video address, its dynamic value resolved, through Urls::media().
-     */
-    private function media(mixed $url): ?string
-    {
-        return app(DynamicValues::class)->media($url, $this->context);
-    }
-
-    /**
-     * @param  array<mixed>  $item
-     */
-    private function styledText(array $item): string
-    {
-        // The editor saves Shift+Enter as "\n" inside the text.
-        $html = nl2br(e(is_string($item['text'] ?? null) ? $item['text'] : ''), false);
-        $styles = is_array($item['styles'] ?? null) ? $item['styles'] : [];
-
-        foreach (['bold' => 'strong', 'italic' => 'em', 'underline' => 'u', 'strike' => 's', 'code' => 'code'] as $style => $tag) {
-            if (($styles[$style] ?? false) === true) {
-                $html = "<{$tag}>{$html}</{$tag}>";
-            }
-        }
-
-        $css = $this->colorCss($styles);
-
-        return $css === '' ? $html : '<span style="'.$css.'">'.$html.'</span>';
-    }
-
-    /**
-     * @param  array<mixed>  $props
-     */
-    private function styleAttribute(array $props): string
-    {
-        $alignment = $props['textAlignment'] ?? null;
-        $css = in_array($alignment, ['center', 'right', 'justify'], true) ? "text-align: {$alignment};" : '';
-        $css .= $this->colorCss($props);
-
-        return $css === '' ? '' : ' style="'.$css.'"';
-    }
-
-    /**
-     * Only BlockNote's named colours, never a raw value.
-     *
-     * @param  array<mixed>  $values
-     */
-    private function colorCss(array $values): string
-    {
-        $text = self::pick(self::TEXT_COLORS, $values['textColor'] ?? null);
-        $background = self::pick(self::BACKGROUND_COLORS, $values['backgroundColor'] ?? null);
-
-        return ($text === null ? '' : "color: {$text};").($background === null ? '' : "background-color: {$background};");
     }
 
     /**
@@ -861,17 +583,5 @@ final class BlockNoteRenderer
     private static function pick(array $map, mixed $key): ?string
     {
         return is_string($key) ? ($map[$key] ?? null) : null;
-    }
-
-    private function plainText(mixed $content): string
-    {
-        if (! is_array($content)) {
-            return '';
-        }
-
-        return implode('', array_map(
-            fn (mixed $item): string => is_array($item) && is_string($item['text'] ?? null) ? $item['text'] : '',
-            $content,
-        ));
     }
 }
