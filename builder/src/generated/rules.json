@@ -1,0 +1,272 @@
+{
+    "page": {
+        "version": 2,
+        "max_sections": 30,
+        "max_name_length": 40
+    },
+    "style": {
+        "variants": [
+            "desktop",
+            "tablet",
+            "phone",
+            "hover"
+        ],
+        "keys": {
+            "padding_top": "length",
+            "padding_right": "length",
+            "padding_bottom": "length",
+            "padding_left": "length",
+            "margin_top": "length",
+            "margin_bottom": "length",
+            "width": "length",
+            "max_width": "length",
+            "min_height": "length",
+            "gap": "length",
+            "color": "color",
+            "background_color": "color",
+            "border_color": "color",
+            "font_family": "font",
+            "font_size": "length",
+            "letter_spacing": "length",
+            "font_weight": "weight",
+            "line_height": "line_height",
+            "text_transform": "choice",
+            "text_align": "choice",
+            "border_width": "length",
+            "border_style": "choice",
+            "radius": "radius",
+            "shadow": "shadow",
+            "opacity": "opacity"
+        },
+        "non_negative": [
+            "padding_top",
+            "padding_right",
+            "padding_bottom",
+            "padding_left",
+            "width",
+            "max_width",
+            "min_height",
+            "gap",
+            "font_size",
+            "line_height",
+            "border_width",
+            "radius"
+        ],
+        "hover_keys": [
+            "color",
+            "background_color",
+            "border_color",
+            "shadow",
+            "opacity"
+        ],
+        "choices": {
+            "text_transform": [
+                "none",
+                "uppercase",
+                "lowercase",
+                "capitalize"
+            ],
+            "text_align": [
+                "left",
+                "center",
+                "right",
+                "justify"
+            ],
+            "border_style": [
+                "none",
+                "solid",
+                "dashed",
+                "dotted"
+            ]
+        },
+        "shadows": [
+            "none",
+            "sm",
+            "md",
+            "lg",
+            "xl"
+        ],
+        "font_weights": [
+            "300",
+            "400",
+            "500",
+            "600",
+            "700",
+            "800",
+            "900"
+        ],
+        "length_units": {
+            "px": 2000,
+            "rem": 200,
+            "em": 200,
+            "%": 100,
+            "vw": 100,
+            "vh": 100
+        },
+        "line_height": {
+            "min": 0.8,
+            "max": 3
+        },
+        "opacity": {
+            "min": 0,
+            "max": 1
+        },
+        "kit_key": "[a-z0-9-]{1,30}"
+    },
+    "advanced": {
+        "class_name": "[A-Za-z][A-Za-z0-9_-]{0,40}",
+        "reserved_class_prefix": "fbe-",
+        "max_classes": 5,
+        "devices": [
+            "desktop",
+            "tablet",
+            "phone"
+        ],
+        "max_css_length": 5000
+    },
+    "form": {
+        "field_types": [
+            "text",
+            "email",
+            "tel",
+            "number",
+            "date",
+            "textarea",
+            "select",
+            "radio",
+            "checkboxes",
+            "consent"
+        ],
+        "choice_types": [
+            "select",
+            "radio",
+            "checkboxes"
+        ],
+        "action_types": [
+            "email",
+            "whatsapp",
+            "redirect",
+            "webhook"
+        ],
+        "submit_aligns": [
+            "left",
+            "center",
+            "right",
+            "full"
+        ],
+        "max_fields": 30,
+        "max_options": 30,
+        "field_name": "[a-z][a-z0-9_]{0,39}",
+        "field_name_length": 40,
+        "field_id_length": 40,
+        "label_length": 200,
+        "placeholder_length": 200,
+        "name_length": 100,
+        "submit_length": 60,
+        "success_length": 500,
+        "subject_length": 200,
+        "message_length": 1000,
+        "email_length": 200,
+        "webhook_length": 500,
+        "rows": {
+            "min": 2,
+            "max": 12,
+            "default": 4
+        }
+    },
+    "locks": [
+        "move",
+        "remove",
+        "content",
+        "style"
+    ],
+    "kit": {
+        "version": 1,
+        "colors": [
+            "primary",
+            "secondary",
+            "accent",
+            "text",
+            "muted",
+            "background",
+            "surface",
+            "border"
+        ],
+        "max_custom_colors": 12,
+        "custom_label_length": 60,
+        "button_styles": [
+            "solid",
+            "outline",
+            "pill",
+            "shadow"
+        ],
+        "button_sizes": [
+            "sm",
+            "md",
+            "lg"
+        ],
+        "form_styles": [
+            "outline",
+            "filled",
+            "underline"
+        ],
+        "form_labels": [
+            "above",
+            "hidden"
+        ],
+        "text_transforms": [
+            "none",
+            "uppercase",
+            "lowercase",
+            "capitalize"
+        ],
+        "defaults": {
+            "version": 1,
+            "colors": {
+                "primary": "#2563eb",
+                "secondary": "#0f172a",
+                "accent": "#f59e0b",
+                "text": "#475569",
+                "muted": "#64748b",
+                "background": "#ffffff",
+                "surface": "#f8fafc",
+                "border": "#e2e8f0"
+            },
+            "custom_colors": [],
+            "fonts": {
+                "heading": "theme",
+                "body": "theme"
+            },
+            "text": {
+                "base_size": "1.0625rem",
+                "heading_weight": "800"
+            },
+            "radius": "1.25rem",
+            "buttons": {
+                "style": "solid",
+                "radius": "0.75rem",
+                "size": "md",
+                "text_transform": "none",
+                "font_weight": "800"
+            },
+            "forms": {
+                "style": "outline",
+                "radius": "0.75rem",
+                "labels": "above"
+            }
+        }
+    },
+    "document_kinds": [
+        "page",
+        "header",
+        "footer",
+        "section",
+        "card",
+        "single"
+    ],
+    "part_kinds": [
+        "header",
+        "footer"
+    ],
+    "dynamic_key": "[a-z][a-z0-9_]*(?:\\.[a-z0-9_]+){1,3}"
+}

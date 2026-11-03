@@ -20,6 +20,16 @@ final class Advanced
 {
     public const MAX_CLASSES = 5;
 
+    /**
+     * One class name.
+     */
+    public const CLASS_NAME = '[A-Za-z][A-Za-z0-9_-]{0,40}';
+
+    /**
+     * The start of the package's own style hooks (`fbe-s-{id}`, `fbe-b-{id}`).
+     */
+    public const RESERVED_CLASS_PREFIX = 'fbe-';
+
     public const DEVICES = ['desktop', 'tablet', 'phone'];
 
     /**
@@ -52,7 +62,7 @@ final class Advanced
 
         $names = array_filter(
             preg_split('/\s+/', trim($value)) ?: [],
-            fn (string $name): bool => preg_match('/^[A-Za-z][A-Za-z0-9_-]{0,40}$/', $name) === 1 && ! str_starts_with(strtolower($name), 'fbe-'),
+            fn (string $name): bool => preg_match('/^'.self::CLASS_NAME.'$/', $name) === 1 && ! str_starts_with(strtolower($name), self::RESERVED_CLASS_PREFIX),
         );
 
         return implode(' ', array_slice(array_values(array_unique($names)), 0, self::MAX_CLASSES));

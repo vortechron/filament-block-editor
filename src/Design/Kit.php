@@ -29,6 +29,11 @@ final class Kit
 
     public const MAX_CUSTOM_COLORS = 12;
 
+    /**
+     * The longest a custom colour's label may be.
+     */
+    public const CUSTOM_LABEL_LENGTH = 60;
+
     public const COLORS = ['primary', 'secondary', 'accent', 'text', 'muted', 'background', 'surface', 'border'];
 
     public const BUTTON_STYLES = ['solid', 'outline', 'pill', 'shadow'];
@@ -189,7 +194,7 @@ final class Kit
                 continue;
             }
 
-            $label = is_string($color['label'] ?? null) && trim($color['label']) !== '' ? Str::limit(trim($color['label']), 60, '') : Str::headline($key);
+            $label = is_string($color['label'] ?? null) && trim($color['label']) !== '' ? Str::limit(trim($color['label']), self::CUSTOM_LABEL_LENGTH, '') : Str::headline($key);
             $clean[$key] = ['key' => $key, 'label' => $label, 'value' => $value];
         }
 

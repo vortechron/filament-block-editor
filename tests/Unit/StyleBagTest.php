@@ -24,7 +24,7 @@ class StyleBagTest extends TestCase
         return [
             'px length' => ['padding_top', '24px', '24px'],
             'rem length with decimals' => ['padding_left', '1.125rem', '1.125rem'],
-            'a leading dot' => ['gap', '.5rem', '.5rem'],
+            'a leading dot gets its zero' => ['gap', '.5rem', '0.5rem'],
             'zero' => ['padding_bottom', '0', '0'],
             'zero as a number' => ['padding_right', 0, '0'],
             'upper case unit' => ['width', '50PX', '50px'],

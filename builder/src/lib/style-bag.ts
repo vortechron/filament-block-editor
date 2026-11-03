@@ -1,99 +1,55 @@
+import RULES from '@/generated/rules.json';
 import type { StyleBag, StyleValues, StyleVariant } from '@/types';
 
 /**
- * The style bag rules, ported from Styling\StyleBag (docs/v2-plan.md,
- * section 2). The server cleans again and stays the authority; this keeps
- * the builder from sending a value the server would drop.
+ * The style bag rules (docs/v2-plan.md, section 2). The keys, units and
+ * words come from Styling\StyleBag through the exported rules
+ * (builder/src/generated/rules.json); the value grammar is the same as
+ * Styling\CssValue, checked against the server by the shared fixtures in
+ * tests/fixtures/shared. The server cleans again and stays the authority;
+ * this keeps the builder from sending a value the server would drop.
  */
 
-export const STYLE_VARIANTS: readonly StyleVariant[] = [
-    'desktop',
-    'tablet',
-    'phone',
-    'hover',
-];
+const STYLE = RULES.style;
 
-export const LENGTH_UNITS = ['px', 'rem', 'em', '%', 'vw', 'vh'] as const;
+export const STYLE_VARIANTS: readonly StyleVariant[] = STYLE.variants;
 
-export type LengthUnit = (typeof LENGTH_UNITS)[number];
-
-/** The biggest number each unit allows. */
-const LENGTH_LIMITS: Record<LengthUnit, number> = {
-    px: 2000,
-    rem: 200,
-    em: 200,
-    '%': 100,
-    vw: 100,
-    vh: 100,
-};
-
-const LENGTH = /^(-?\d+(?:\.\d{1,3})?)(px|rem|em|%|vw|vh)$/;
-const NUMBER = /^\d+(?:\.\d{1,3})?$/;
-const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/;
-const KIT_COLOR = /^kit:[a-z0-9-]{1,30}$/;
-/** A font key: SectionFont values and the host's font keys look like this. */
-const FONT_KEY = /^[a-z0-9][a-z0-9_-]{0,39}$/;
-
-export const FONT_WEIGHTS = ['300', '400', '500', '600', '700', '800', '900'] as const;
-export const TEXT_TRANSFORMS = ['none', 'uppercase', 'lowercase', 'capitalize'] as const;
-export const TEXT_ALIGNS = ['left', 'center', 'right', 'justify'] as const;
-export const BORDER_STYLES = ['none', 'solid', 'dashed', 'dotted'] as const;
-export const SHADOWS = ['none', 'sm', 'md', 'lg', 'xl'] as const;
-
-/** How a key's value is checked. */
-export type StyleKind =
-    | 'size'
-    | 'length'
-    | 'color'
-    | 'font'
-    | 'weight'
-    | 'line-height'
-    | 'transform'
-    | 'align'
-    | 'border-style'
-    | 'radius'
-    | 'shadow'
-    | 'opacity';
-
-/** Every key a style bag may hold, and how its value is checked. */
-export const STYLE_KEYS = {
-    padding_top: 'size',
-    padding_right: 'size',
-    padding_bottom: 'size',
-    padding_left: 'size',
-    margin_top: 'length',
-    margin_bottom: 'length',
-    width: 'size',
-    max_width: 'size',
-    min_height: 'size',
-    gap: 'size',
-    color: 'color',
-    background_color: 'color',
-    border_color: 'color',
-    font_family: 'font',
-    font_size: 'length',
-    letter_spacing: 'length',
-    font_weight: 'weight',
-    line_height: 'line-height',
-    text_transform: 'transform',
-    text_align: 'align',
-    border_width: 'size',
-    border_style: 'border-style',
-    radius: 'radius',
-    shadow: 'shadow',
-    opacity: 'opacity',
-} as const satisfies Record<string, StyleKind>;
+/** Every key a style bag may hold, and the kind of value it takes. */
+export const STYLE_KEYS = STYLE.keys;
 
 export type StyleKey = keyof typeof STYLE_KEYS;
 
+/** How a key's value is checked. */
+export type StyleKind = (typeof STYLE_KEYS)[StyleKey];
+
+export type LengthUnit = keyof typeof STYLE.length_units;
+
+export const LENGTH_UNITS = Object.keys(STYLE.length_units) as LengthUnit[];
+
+export const FONT_WEIGHTS = STYLE.font_weights;
+export const TEXT_TRANSFORMS = STYLE.choices.text_transform;
+export const TEXT_ALIGNS = STYLE.choices.text_align;
+export const BORDER_STYLES = STYLE.choices.border_style;
+export const SHADOWS = STYLE.shadows;
+
 /** The only keys `hover` may hold. */
-export const HOVER_KEYS: readonly StyleKey[] = [
-    'color',
-    'background_color',
-    'border_color',
-    'shadow',
-    'opacity',
-];
+export const HOVER_KEYS: readonly StyleKey[] = STYLE.hover_keys;
+
+/** Keys whose length must be 0 or more. */
+const NON_NEGATIVE = new Set<StyleKey>(STYLE.non_negative);
+
+const CHOICES: Partial<Record<StyleKey, readonly string[]>> = STYLE.choices;
+
+/** A number with no sign, the same as Styling\CssValue::NUMBER. */
+const NUMBER_PATTERN = '\\d{1,4}(?:\\.\\d{1,3})?|\\.\\d{1,3}';
+const NUMBER = new RegExp(`^(?:${NUMBER_PATTERN})$`);
+const LENGTH = new RegExp(
+    `^(-?)(${NUMBER_PATTERN})(${LENGTH_UNITS.map(escapeRegExp).join('|')})$`,
+);
+const HEX = /^#(?:[0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/;
+const KIT_COLOR = new RegExp(`^kit:${STYLE.kit_key}$`);
+/** A font key: SectionFont values and the host's font keys look like this. */
+const FONT_KEY = /^[a-z0-9][a-z0-9_-]{0,39}$/;
 
 export function isStyleKey(key: string): key is StyleKey {
     return Object.hasOwn(STYLE_KEYS, key);
@@ -104,8 +60,13 @@ export function allowsKey(variant: StyleVariant, key: StyleKey): boolean {
     return variant !== 'hover' || HOVER_KEYS.includes(key);
 }
 
-/** A length like "24px", or "0". Negative only when `allowNegative`. */
-export function cleanLength(value: string, allowNegative = true): string | null {
+/**
+ * A length like "24px", or "0", in lower case with a leading zero
+ * (`.5REM` is `0.5rem`). Negative only when `allowNegative`.
+ */
+export function cleanLength(raw: string, allowNegative = true): string | null {
+    const value = raw.trim().toLowerCase();
+
     if (value === '0') {
         return value;
     }
@@ -116,25 +77,24 @@ export function cleanLength(value: string, allowNegative = true): string | null 
         return null;
     }
 
-    const number = Number(match[1]);
-    const unit = match[2] as LengthUnit;
+    const [, sign, number, unit] = match;
 
-    if ((!allowNegative && number < 0) || Math.abs(number) > LENGTH_LIMITS[unit]) {
+    if (sign === '-' && !allowNegative) {
         return null;
     }
 
-    return value;
+    return Number(number) <= STYLE.length_units[unit as LengthUnit]
+        ? `${sign}${withLeadingZero(number)}${unit}`
+        : null;
 }
 
-/** A colour as stored: hex in lower case, `transparent` or `kit:<key>`. */
-export function cleanColor(value: string): string | null {
-    const lower = value.toLowerCase();
+/** A colour as stored, in lower case: hex, `transparent` or `kit:<key>`. */
+export function cleanColor(raw: string): string | null {
+    const value = raw.trim().toLowerCase();
 
-    if (HEX.test(lower) || lower === 'transparent') {
-        return lower;
-    }
-
-    return KIT_COLOR.test(value) ? value : null;
+    return HEX.test(value) || value === 'transparent' || KIT_COLOR.test(value)
+        ? value
+        : null;
 }
 
 function inList(list: readonly string[], value: string): string | null {
@@ -148,7 +108,16 @@ function numberBetween(value: string, min: number, max: number): string | null {
 
     const number = Number(value);
 
-    return number >= min && number <= max ? value : null;
+    return number >= min && number <= max ? withLeadingZero(value) : null;
+}
+
+/** `.5` as `0.5`. */
+function withLeadingZero(number: string): string {
+    return number.startsWith('.') ? `0${number}` : number;
+}
+
+function escapeRegExp(text: string): string {
+    return text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 /**
@@ -167,11 +136,11 @@ export function cleanStyleValue(key: StyleKey, raw: unknown): string | null {
         return null;
     }
 
+    const allowNegative = !NON_NEGATIVE.has(key);
+
     switch (STYLE_KEYS[key]) {
-        case 'size':
-            return cleanLength(value, false);
         case 'length':
-            return cleanLength(value);
+            return cleanLength(value, allowNegative);
         case 'color':
             return cleanColor(value);
         case 'font':
@@ -182,20 +151,19 @@ export function cleanStyleValue(key: StyleKey, raw: unknown): string | null {
                 : null;
         case 'weight':
             return inList(FONT_WEIGHTS, value);
-        case 'line-height':
-            return numberBetween(value, 0.8, 3) ?? cleanLength(value, false);
-        case 'transform':
-            return inList(TEXT_TRANSFORMS, value);
-        case 'align':
-            return inList(TEXT_ALIGNS, value);
-        case 'border-style':
-            return inList(BORDER_STYLES, value);
+        case 'line_height':
+            return (
+                numberBetween(value, STYLE.line_height.min, STYLE.line_height.max) ??
+                cleanLength(value, allowNegative)
+            );
+        case 'choice':
+            return inList(CHOICES[key] ?? [], value);
         case 'radius':
-            return value === 'kit:radius' ? value : cleanLength(value, false);
+            return value === 'kit:radius' ? value : cleanLength(value, allowNegative);
         case 'shadow':
             return inList(SHADOWS, value);
         case 'opacity':
-            return numberBetween(value, 0, 1);
+            return numberBetween(value, STYLE.opacity.min, STYLE.opacity.max);
     }
 }
 

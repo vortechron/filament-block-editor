@@ -11,6 +11,7 @@ use Vortechron\FilamentBlockEditor\Content\PageContent;
 use Vortechron\FilamentBlockEditor\Content\PageValue;
 use Vortechron\FilamentBlockEditor\Design\Kit;
 use Vortechron\FilamentBlockEditor\Design\KitSource;
+use Vortechron\FilamentBlockEditor\Enums\DocumentKind;
 
 /**
  * The page builder's optional parts: the design kit, saved and synced
@@ -95,7 +96,8 @@ trait PageBuilderHooks
     }
 
     /**
-     * What is being built: page, header, footer, section, card or single.
+     * What is being built: a DocumentKind value (page, header, footer,
+     * section, card or single).
      */
     protected function getPageBuilderKind(): string
     {
@@ -197,9 +199,9 @@ trait PageBuilderHooks
             'developer' => $this->isPageBuilderDeveloper(),
             'kit' => $kit !== null ? Kit::normalize($kit) : ($this->overridesPageBuilderHook('savePageBuilderKit') ? app(KitSource::class)->current() : null),
             'syncedSections' => $this->pageBuilderSyncedSections(),
-            'parts' => array_values(array_filter($this->getPageBuilderParts(), fn (mixed $part): bool => is_array($part) && in_array($part['key'] ?? null, ['header', 'footer'], true))),
+            'parts' => array_values(array_filter($this->getPageBuilderParts(), fn (mixed $part): bool => is_array($part) && is_string($part['key'] ?? null) && (DocumentKind::tryFrom($part['key'])?->isPart() ?? false))),
             'siteInfo' => $siteInfo === null ? null : self::siteInfo($siteInfo),
-            'kind' => in_array($this->getPageBuilderKind(), ['page', 'header', 'footer', 'section', 'card', 'single'], true) ? $this->getPageBuilderKind() : 'page',
+            'kind' => (DocumentKind::tryFrom($this->getPageBuilderKind()) ?? DocumentKind::Page)->value,
         ], fn (mixed $value): bool => $value !== null);
     }
 

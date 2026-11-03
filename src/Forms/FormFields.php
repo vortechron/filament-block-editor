@@ -14,7 +14,17 @@ use Illuminate\Support\Str;
  */
 final class FormFields
 {
-    private const NAME = '/^[a-z][a-z0-9_]{0,39}$/';
+    /**
+     * A field name: what a visitor's answer is sent and stored under.
+     */
+    public const NAME = '[a-z][a-z0-9_]{0,39}';
+
+    public const NAME_LENGTH = 40;
+
+    /**
+     * A field id: letters, digits, dashes and underscores.
+     */
+    public const ID_LENGTH = 40;
 
     /**
      * @return list<array<string, mixed>>
@@ -33,7 +43,7 @@ final class FormFields
             $label = FormDefinition::words($field['label'] ?? null, FormDefinition::MAX_LABEL);
             $name = self::uniqueName(self::name($field['name'] ?? null, $label), $names);
             $names[] = $name;
-            $id = is_string($field['id'] ?? null) ? substr((string) preg_replace('/[^A-Za-z0-9_-]/', '', $field['id']), 0, 40) : '';
+            $id = is_string($field['id'] ?? null) ? substr((string) preg_replace('/[^A-Za-z0-9_-]/', '', $field['id']), 0, self::ID_LENGTH) : '';
 
             $clean[] = [
                 'id' => $id !== '' ? $id : Str::lower(Str::random(8)),
@@ -44,22 +54,27 @@ final class FormFields
                 'required' => filter_var($field['required'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'width' => ($field['width'] ?? null) === 'half' ? 'half' : 'full',
                 ...(in_array($type, FormDefinition::CHOICE_TYPES, true) ? ['options' => self::options($field['options'] ?? null)] : []),
-                ...($type === 'textarea' ? ['rows' => is_numeric($field['rows'] ?? null) ? max(2, min(12, (int) $field['rows'])) : 4] : []),
+                ...($type === 'textarea' ? ['rows' => self::rows($field['rows'] ?? null)] : []),
             ];
         }
 
         return $clean;
     }
 
+    private static function rows(mixed $rows): int
+    {
+        return is_numeric($rows) ? max(FormDefinition::MIN_ROWS, min(FormDefinition::MAX_ROWS, (int) $rows)) : FormDefinition::DEFAULT_ROWS;
+    }
+
     private static function name(mixed $name, string $label): string
     {
-        if (is_string($name) && preg_match(self::NAME, $name) === 1) {
+        if (is_string($name) && preg_match('/^'.self::NAME.'$/', $name) === 1) {
             return $name;
         }
 
-        $fromLabel = substr(Str::slug(is_string($name) && $name !== '' ? $name : $label, '_'), 0, 40);
+        $fromLabel = substr(Str::slug(is_string($name) && $name !== '' ? $name : $label, '_'), 0, self::NAME_LENGTH);
 
-        return preg_match(self::NAME, $fromLabel) === 1 ? $fromLabel : 'field';
+        return preg_match('/^'.self::NAME.'$/', $fromLabel) === 1 ? $fromLabel : 'field';
     }
 
     /**
@@ -70,7 +85,7 @@ final class FormFields
         $unique = $name;
 
         for ($number = 2; in_array($unique, $taken, true); $number++) {
-            $unique = substr($name, 0, 40 - strlen("_{$number}"))."_{$number}";
+            $unique = substr($name, 0, self::NAME_LENGTH - strlen("_{$number}"))."_{$number}";
         }
 
         return $unique;

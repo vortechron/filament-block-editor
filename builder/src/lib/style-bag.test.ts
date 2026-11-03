@@ -29,7 +29,8 @@ describe('a style value, as the server keeps it', () => {
         expect(cleanStyleValue('color', '#aabbcc80')).toBe('#aabbcc80');
         expect(cleanStyleValue('background_color', 'transparent')).toBe('transparent');
         expect(cleanStyleValue('border_color', 'kit:primary')).toBe('kit:primary');
-        expect(cleanStyleValue('color', 'kit:Gold')).toBeNull();
+        // The server stores a kit colour in lower case too.
+        expect(cleanStyleValue('color', 'kit:Gold')).toBe('kit:gold');
         expect(cleanStyleValue('color', 'red')).toBeNull();
         expect(cleanStyleValue('color', 'rgb(0,0,0)')).toBeNull();
     });

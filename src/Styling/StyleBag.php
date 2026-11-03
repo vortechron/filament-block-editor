@@ -24,38 +24,66 @@ final class StyleBag
     public const SHADOWS = ['none', 'sm', 'md', 'lg', 'xl'];
 
     /**
-     * Each key: its CSS property and its value type. "length+" is a length
-     * of at least 0; "enum:a,b" a listed word.
+     * Each key: its CSS property and the kind of value it takes (see
+     * cleanValue()). Exported to the builder by Support\BuilderRules.
      *
      * @var array<string, array{0: string, 1: string}>
      */
-    private const KEYS = [
-        'padding_top' => ['padding-top', 'length+'],
-        'padding_right' => ['padding-right', 'length+'],
-        'padding_bottom' => ['padding-bottom', 'length+'],
-        'padding_left' => ['padding-left', 'length+'],
+    public const KEYS = [
+        'padding_top' => ['padding-top', 'length'],
+        'padding_right' => ['padding-right', 'length'],
+        'padding_bottom' => ['padding-bottom', 'length'],
+        'padding_left' => ['padding-left', 'length'],
         'margin_top' => ['margin-top', 'length'],
         'margin_bottom' => ['margin-bottom', 'length'],
-        'width' => ['width', 'length+'],
-        'max_width' => ['max-width', 'length+'],
-        'min_height' => ['min-height', 'length+'],
-        'gap' => ['gap', 'length+'],
+        'width' => ['width', 'length'],
+        'max_width' => ['max-width', 'length'],
+        'min_height' => ['min-height', 'length'],
+        'gap' => ['gap', 'length'],
         'color' => ['color', 'color'],
         'background_color' => ['background-color', 'color'],
         'border_color' => ['border-color', 'color'],
         'font_family' => ['font-family', 'font'],
-        'font_size' => ['font-size', 'length+'],
+        'font_size' => ['font-size', 'length'],
         'letter_spacing' => ['letter-spacing', 'length'],
         'font_weight' => ['font-weight', 'weight'],
         'line_height' => ['line-height', 'line_height'],
-        'text_transform' => ['text-transform', 'enum:none,uppercase,lowercase,capitalize'],
-        'text_align' => ['text-align', 'enum:left,center,right,justify'],
-        'border_width' => ['border-width', 'length+'],
-        'border_style' => ['border-style', 'enum:none,solid,dashed,dotted'],
+        'text_transform' => ['text-transform', 'choice'],
+        'text_align' => ['text-align', 'choice'],
+        'border_width' => ['border-width', 'length'],
+        'border_style' => ['border-style', 'choice'],
         'radius' => ['border-radius', 'radius'],
         'shadow' => ['box-shadow', 'shadow'],
         'opacity' => ['opacity', 'opacity'],
     ];
+
+    /**
+     * Keys whose length must be 0 or more. Only margins and letter spacing
+     * may go below zero.
+     */
+    public const NON_NEGATIVE = [
+        'padding_top', 'padding_right', 'padding_bottom', 'padding_left', 'width', 'max_width', 'min_height', 'gap',
+        'font_size', 'line_height', 'border_width', 'radius',
+    ];
+
+    /**
+     * The words a "choice" key allows.
+     *
+     * @var array<string, list<string>>
+     */
+    public const CHOICES = [
+        'text_transform' => ['none', 'uppercase', 'lowercase', 'capitalize'],
+        'text_align' => ['left', 'center', 'right', 'justify'],
+        'border_style' => ['none', 'solid', 'dashed', 'dotted'],
+    ];
+
+    public const LINE_HEIGHT_MIN = 0.8;
+
+    public const LINE_HEIGHT_MAX = 3;
+
+    public const OPACITY_MIN = 0;
+
+    public const OPACITY_MAX = 1;
 
     /**
      * Keys that a section's words have their own value for (.sf-rich), so
@@ -144,12 +172,12 @@ final class StyleBag
 
         $clean = [];
 
-        foreach (self::KEYS as $key => [, $type]) {
+        foreach (array_keys(self::KEYS) as $key) {
             if (! array_key_exists($key, $values) || ($only !== null && ! in_array($key, $only, true))) {
                 continue;
             }
 
-            $value = self::cleanValue($type, $values[$key]);
+            $value = self::cleanValue($key, $values[$key]);
 
             if ($value !== null) {
                 $clean[$key] = $value;
@@ -159,22 +187,21 @@ final class StyleBag
         return $clean;
     }
 
-    private static function cleanValue(string $type, mixed $value): ?string
+    private static function cleanValue(string $key, mixed $value): ?string
     {
-        if (str_starts_with($type, 'enum:')) {
-            return is_string($value) && in_array($value, explode(',', substr($type, 5)), true) ? $value : null;
-        }
+        $value = is_string($value) ? trim($value) : $value;
+        $negative = ! in_array($key, self::NON_NEGATIVE, true);
 
-        return match ($type) {
-            'length' => CssValue::length($value, negative: true),
-            'length+' => CssValue::length($value),
+        return match (self::KEYS[$key][1]) {
+            'length' => CssValue::length($value, negative: $negative),
             'color' => CssValue::color($value),
             'font' => CssValue::font($value),
             'weight' => CssValue::fontWeight($value),
-            'line_height' => CssValue::number($value, 0.8, 3) ?? CssValue::length($value),
-            'radius' => $value === 'kit:radius' ? $value : CssValue::length($value),
+            'line_height' => CssValue::number($value, self::LINE_HEIGHT_MIN, self::LINE_HEIGHT_MAX) ?? CssValue::length($value, negative: $negative),
+            'choice' => is_string($value) && in_array($value, self::CHOICES[$key], true) ? $value : null,
+            'radius' => $value === 'kit:radius' ? $value : CssValue::length($value, negative: $negative),
             'shadow' => is_string($value) && in_array($value, self::SHADOWS, true) ? $value : null,
-            'opacity' => CssValue::number($value, 0, 1),
+            'opacity' => CssValue::number($value, self::OPACITY_MIN, self::OPACITY_MAX),
             default => null,
         };
     }

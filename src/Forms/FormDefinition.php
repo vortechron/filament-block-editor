@@ -40,6 +40,33 @@ final class FormDefinition
     public const MAX_LABEL = 200;
 
     /**
+     * The longest each piece of text may be, in characters.
+     */
+    public const NAME_LENGTH = 100;
+
+    public const SUBMIT_LENGTH = 60;
+
+    public const SUCCESS_LENGTH = 500;
+
+    public const SUBJECT_LENGTH = 200;
+
+    public const MESSAGE_LENGTH = 1000;
+
+    public const EMAIL_LENGTH = 200;
+
+    public const WEBHOOK_LENGTH = 500;
+
+    /**
+     * A textarea's height in rows: from MIN_ROWS to MAX_ROWS, DEFAULT_ROWS
+     * when it has none.
+     */
+    public const MIN_ROWS = 2;
+
+    public const MAX_ROWS = 12;
+
+    public const DEFAULT_ROWS = 4;
+
+    /**
      * @param  array<string, mixed>  $form  a normalized form
      */
     private function __construct(private readonly array $form) {}
@@ -85,13 +112,13 @@ final class FormDefinition
         $submit = is_array($raw['submit'] ?? null) ? $raw['submit'] : [];
 
         return [
-            'name' => self::words($raw['name'] ?? null, 100),
+            'name' => self::words($raw['name'] ?? null, self::NAME_LENGTH),
             'fields' => FormFields::clean($raw['fields'] ?? null),
             'submit' => [
-                'text' => self::words($submit['text'] ?? null, 60),
+                'text' => self::words($submit['text'] ?? null, self::SUBMIT_LENGTH),
                 'align' => in_array($submit['align'] ?? null, self::ALIGNS, true) ? $submit['align'] : 'left',
             ],
-            'success' => self::words($raw['success'] ?? null, 500),
+            'success' => self::words($raw['success'] ?? null, self::SUCCESS_LENGTH),
             'actions' => self::cleanActions($raw['actions'] ?? null),
         ];
     }
@@ -227,8 +254,8 @@ final class FormDefinition
         $url = $action['url'] ?? null;
 
         return match ($type) {
-            'email' => ($to = self::email($to)) === null ? null : ['type' => 'email', 'to' => $to, 'subject' => self::words($action['subject'] ?? null, 200)],
-            'whatsapp' => ($to = self::phone($to)) === null ? null : ['type' => 'whatsapp', 'to' => $to, 'message' => self::words($action['message'] ?? null, 1000)],
+            'email' => ($to = self::email($to)) === null ? null : ['type' => 'email', 'to' => $to, 'subject' => self::words($action['subject'] ?? null, self::SUBJECT_LENGTH)],
+            'whatsapp' => ($to = self::phone($to)) === null ? null : ['type' => 'whatsapp', 'to' => $to, 'message' => self::words($action['message'] ?? null, self::MESSAGE_LENGTH)],
             'redirect' => ($url = Urls::link($url) ?? DynamicValues::reference($url)) === null ? null : ['type' => 'redirect', 'url' => $url],
             'webhook' => ($url = self::webhook($url)) === null ? null : ['type' => 'webhook', 'url' => $url],
         };
@@ -239,7 +266,7 @@ final class FormDefinition
      */
     private static function email(string $to): ?string
     {
-        return DynamicValues::reference($to) ?? (strlen($to) <= 200 && filter_var($to, FILTER_VALIDATE_EMAIL) !== false ? $to : null);
+        return DynamicValues::reference($to) ?? (strlen($to) <= self::EMAIL_LENGTH && filter_var($to, FILTER_VALIDATE_EMAIL) !== false ? $to : null);
     }
 
     /**
@@ -257,6 +284,6 @@ final class FormDefinition
      */
     private static function webhook(mixed $url): ?string
     {
-        return is_string($url) && strlen($url) <= 500 && str_starts_with($url, 'https://') && filter_var($url, FILTER_VALIDATE_URL) !== false ? $url : null;
+        return is_string($url) && strlen($url) <= self::WEBHOOK_LENGTH && str_starts_with($url, 'https://') && filter_var($url, FILTER_VALIDATE_URL) !== false ? $url : null;
     }
 }

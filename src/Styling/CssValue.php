@@ -10,7 +10,8 @@ use Vortechron\FilamentBlockEditor\Design\Fonts;
  * so nothing but these shapes ever reaches a stylesheet:
  *
  * - length: `0`, or a number with at most 3 decimals and a unit px, rem,
- *   em, %, vw or vh. At most 2000px, 200rem or em, 100% / vw / vh.
+ *   em, %, vw or vh. At most 2000px, 200rem or em, 100% / vw / vh. Stored
+ *   in lower case with a leading zero (`.5REM` is `0.5rem`).
  * - colour: `#rgb`, `#rrggbb`, `#rrggbbaa` (lower case), `transparent`,
  *   or `kit:<key>`, a design kit colour.
  * - font: `kit:heading`, `kit:body`, or a key of Design\Fonts.
@@ -18,19 +19,33 @@ use Vortechron\FilamentBlockEditor\Design\Fonts;
 final class CssValue
 {
     /**
-     * The largest length per unit.
+     * The length units, each with the largest number it allows.
      */
-    private const MAX_LENGTH = ['px' => 2000, 'rem' => 200, 'em' => 200, '%' => 100, 'vw' => 100, 'vh' => 100];
+    public const LENGTH_UNITS = ['px' => 2000, 'rem' => 200, 'em' => 200, '%' => 100, 'vw' => 100, 'vh' => 100];
+
+    public const FONT_WEIGHTS = ['300', '400', '500', '600', '700', '800', '900'];
 
     public const KIT_KEY = '[a-z0-9-]{1,30}';
 
+    /**
+     * A number with no sign: up to 4 digits and at most 3 decimals, or
+     * only decimals (`.5`).
+     */
+    private const NUMBER = '\d{1,4}(?:\.\d{1,3})?|\.\d{1,3}';
+
+    /**
+     * A length, stored in lower case with a leading zero (`.5REM` is
+     * `0.5rem`). Negative only when `$negative`.
+     */
     public static function length(mixed $value, bool $negative = false): ?string
     {
         if ($value === 0 || $value === '0') {
             return '0';
         }
 
-        if (! is_string($value) || preg_match('/^(-?)(\d{1,4}(?:\.\d{1,3})?|\.\d{1,3})(px|rem|em|%|vw|vh)$/', strtolower(trim($value)), $match) !== 1) {
+        $units = implode('|', array_map(fn (string $unit): string => preg_quote($unit, '/'), array_keys(self::LENGTH_UNITS)));
+
+        if (! is_string($value) || preg_match('/^(-?)('.self::NUMBER.')('.$units.')$/', strtolower(trim($value)), $match) !== 1) {
             return null;
         }
 
@@ -38,7 +53,7 @@ final class CssValue
             return null;
         }
 
-        return (float) $match[2] <= self::MAX_LENGTH[$match[3]] ? $match[1].$match[2].$match[3] : null;
+        return (float) $match[2] <= self::LENGTH_UNITS[$match[3]] ? $match[1].self::leadingZero($match[2]).$match[3] : null;
     }
 
     /**
@@ -75,11 +90,19 @@ final class CssValue
 
         $text = is_string($value) ? trim($value) : (string) $value;
 
-        if (preg_match('/^(\d{1,4}(?:\.\d{1,3})?|\.\d{1,3})$/', $text) !== 1) {
+        if (preg_match('/^'.self::NUMBER.'$/', $text) !== 1) {
             return null;
         }
 
-        return (float) $text >= $min && (float) $text <= $max ? $text : null;
+        return (float) $text >= $min && (float) $text <= $max ? self::leadingZero($text) : null;
+    }
+
+    /**
+     * `.5` as `0.5`.
+     */
+    private static function leadingZero(string $number): string
+    {
+        return str_starts_with($number, '.') ? '0'.$number : $number;
     }
 
     /**
@@ -89,7 +112,7 @@ final class CssValue
     {
         $text = is_int($value) ? (string) $value : (is_string($value) ? trim($value) : '');
 
-        return in_array($text, ['300', '400', '500', '600', '700', '800', '900'], true) ? $text : null;
+        return in_array($text, self::FONT_WEIGHTS, true) ? $text : null;
     }
 
     /**

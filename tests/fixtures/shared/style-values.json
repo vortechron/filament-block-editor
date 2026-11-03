@@ -1,0 +1,329 @@
+{
+    "about": "A value in a style bag: each case is cleaned by Styling\\StyleBag (PHP) and builder/src/lib/style-bag.ts, which must both give output (null: dropped). Run by tests/Unit/SharedFixturesTest.php and builder/tests/shared-fixtures.test.ts.",
+    "cases": [
+        {
+            "name": "a px length",
+            "key": "padding_top",
+            "input": "24px",
+            "output": "24px"
+        },
+        {
+            "name": "zero",
+            "key": "padding_top",
+            "input": "0",
+            "output": "0"
+        },
+        {
+            "name": "zero as a number",
+            "key": "padding_right",
+            "input": 0,
+            "output": "0"
+        },
+        {
+            "name": "rem with three decimals",
+            "key": "padding_left",
+            "input": "1.125rem",
+            "output": "1.125rem"
+        },
+        {
+            "name": "four decimals are too many",
+            "key": "padding_top",
+            "input": "1.1234rem",
+            "output": null
+        },
+        {
+            "name": "a leading dot gets its zero",
+            "key": "gap",
+            "input": ".5rem",
+            "output": "0.5rem"
+        },
+        {
+            "name": "a negative leading dot gets its zero",
+            "key": "margin_top",
+            "input": "-.5rem",
+            "output": "-0.5rem"
+        },
+        {
+            "name": "an upper case unit is stored in lower case",
+            "key": "width",
+            "input": "24PX",
+            "output": "24px"
+        },
+        {
+            "name": "spaces around are trimmed",
+            "key": "width",
+            "input": " 24px ",
+            "output": "24px"
+        },
+        {
+            "name": "px at its limit",
+            "key": "min_height",
+            "input": "2000px",
+            "output": "2000px"
+        },
+        {
+            "name": "px over its limit",
+            "key": "min_height",
+            "input": "2001px",
+            "output": null
+        },
+        {
+            "name": "rem over its limit",
+            "key": "padding_top",
+            "input": "201rem",
+            "output": null
+        },
+        {
+            "name": "percent over its limit",
+            "key": "width",
+            "input": "101%",
+            "output": null
+        },
+        {
+            "name": "viewport height",
+            "key": "min_height",
+            "input": "80vh",
+            "output": "80vh"
+        },
+        {
+            "name": "five digits are too many",
+            "key": "padding_top",
+            "input": "00010px",
+            "output": null
+        },
+        {
+            "name": "a number with no unit",
+            "key": "padding_top",
+            "input": "12",
+            "output": null
+        },
+        {
+            "name": "a number type with no unit",
+            "key": "padding_top",
+            "input": 12,
+            "output": null
+        },
+        {
+            "name": "calc is not a length",
+            "key": "padding_top",
+            "input": "calc(1px + 2px)",
+            "output": null
+        },
+        {
+            "name": "a negative margin",
+            "key": "margin_top",
+            "input": "-12px",
+            "output": "-12px"
+        },
+        {
+            "name": "negative letter spacing",
+            "key": "letter_spacing",
+            "input": "-0.02em",
+            "output": "-0.02em"
+        },
+        {
+            "name": "no negative padding",
+            "key": "padding_top",
+            "input": "-12px",
+            "output": null
+        },
+        {
+            "name": "no negative font size",
+            "key": "font_size",
+            "input": "-1rem",
+            "output": null
+        },
+        {
+            "name": "no negative corners",
+            "key": "radius",
+            "input": "-4px",
+            "output": null
+        },
+        {
+            "name": "a font size",
+            "key": "font_size",
+            "input": "1.125rem",
+            "output": "1.125rem"
+        },
+        {
+            "name": "a short hex colour in lower case",
+            "key": "color",
+            "input": "#ABC",
+            "output": "#abc"
+        },
+        {
+            "name": "a hex colour with alpha",
+            "key": "border_color",
+            "input": "#AABBCC80",
+            "output": "#aabbcc80"
+        },
+        {
+            "name": "transparent",
+            "key": "background_color",
+            "input": "TRANSPARENT",
+            "output": "transparent"
+        },
+        {
+            "name": "a kit colour",
+            "key": "color",
+            "input": "kit:primary",
+            "output": "kit:primary"
+        },
+        {
+            "name": "a kit colour is stored in lower case",
+            "key": "color",
+            "input": "kit:Gold",
+            "output": "kit:gold"
+        },
+        {
+            "name": "a named colour",
+            "key": "color",
+            "input": "red",
+            "output": null
+        },
+        {
+            "name": "rgb()",
+            "key": "color",
+            "input": "rgb(0,0,0)",
+            "output": null
+        },
+        {
+            "name": "the kit heading font",
+            "key": "font_family",
+            "input": "kit:heading",
+            "output": "kit:heading"
+        },
+        {
+            "name": "a section font",
+            "key": "font_family",
+            "input": "serif",
+            "output": "serif"
+        },
+        {
+            "name": "the theme font is not a style",
+            "key": "font_family",
+            "input": "theme",
+            "output": null
+        },
+        {
+            "name": "a font weight",
+            "key": "font_weight",
+            "input": "700",
+            "output": "700"
+        },
+        {
+            "name": "a font weight as a number",
+            "key": "font_weight",
+            "input": 300,
+            "output": "300"
+        },
+        {
+            "name": "a font weight between steps",
+            "key": "font_weight",
+            "input": "650",
+            "output": null
+        },
+        {
+            "name": "a unitless line height",
+            "key": "line_height",
+            "input": "1.5",
+            "output": "1.5"
+        },
+        {
+            "name": "a line height with a leading dot",
+            "key": "line_height",
+            "input": ".9",
+            "output": "0.9"
+        },
+        {
+            "name": "a line height below 0.8",
+            "key": "line_height",
+            "input": "0.5",
+            "output": null
+        },
+        {
+            "name": "a line height as a number",
+            "key": "line_height",
+            "input": 2,
+            "output": "2"
+        },
+        {
+            "name": "a line height as a length",
+            "key": "line_height",
+            "input": "28px",
+            "output": "28px"
+        },
+        {
+            "name": "no negative line height",
+            "key": "line_height",
+            "input": "-1px",
+            "output": null
+        },
+        {
+            "name": "a text transform",
+            "key": "text_transform",
+            "input": "uppercase",
+            "output": "uppercase"
+        },
+        {
+            "name": "a text align",
+            "key": "text_align",
+            "input": "justify",
+            "output": "justify"
+        },
+        {
+            "name": "a border style not in the list",
+            "key": "border_style",
+            "input": "double",
+            "output": null
+        },
+        {
+            "name": "the kit radius",
+            "key": "radius",
+            "input": "kit:radius",
+            "output": "kit:radius"
+        },
+        {
+            "name": "a shadow",
+            "key": "shadow",
+            "input": "lg",
+            "output": "lg"
+        },
+        {
+            "name": "a raw shadow",
+            "key": "shadow",
+            "input": "0 0 4px #000",
+            "output": null
+        },
+        {
+            "name": "opacity",
+            "key": "opacity",
+            "input": "0.5",
+            "output": "0.5"
+        },
+        {
+            "name": "opacity with a leading dot gets its zero",
+            "key": "opacity",
+            "input": ".5",
+            "output": "0.5"
+        },
+        {
+            "name": "opacity as a number",
+            "key": "opacity",
+            "input": 0.5,
+            "output": "0.5"
+        },
+        {
+            "name": "opacity of one",
+            "key": "opacity",
+            "input": 1,
+            "output": "1"
+        },
+        {
+            "name": "opacity over one",
+            "key": "opacity",
+            "input": "1.5",
+            "output": null
+        }
+    ]
+}
