@@ -21,6 +21,7 @@ import {
 } from './chip-style';
 import { DynamicValuePicker } from './dynamic-value-picker';
 import {
+    chipSpacing,
     docFromText,
     nodesFromText,
     shortCodeSchema,
@@ -172,11 +173,20 @@ export function ShortCodeField({
             return;
         }
 
-        const chip = shortCodeSchema.nodes.shopValue.create({ key });
         const state = editor.state;
-        const transaction = hasBeenFocused.current
-            ? state.tr.replaceSelectionWith(chip, false)
-            : state.tr.setSelection(Selection.atEnd(state.doc)).replaceSelectionWith(chip, false);
+        const start = hasBeenFocused.current ? state.tr : state.tr.setSelection(Selection.atEnd(state.doc));
+        const { from, to } = start.selection;
+        const doc = start.doc;
+        const spacing = chipSpacing(
+            doc.textBetween(Math.max(from - 1, 0), from, '\n', '\uFFFC'),
+            doc.textBetween(to, Math.min(to + 1, doc.content.size), '\n', '\uFFFC'),
+        );
+        const pieces = [
+            ...(spacing.before ? [shortCodeSchema.text(' ')] : []),
+            shortCodeSchema.nodes.shopValue.create({ key }),
+            ...(spacing.after ? [shortCodeSchema.text(' ')] : []),
+        ];
+        const transaction = start.replaceWith(from, to, pieces);
 
         editor.dispatch(transaction.scrollIntoView());
         editor.focus();

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { docFromText, textFromDoc } from './short-code-doc';
+import { chipSpacing, docFromText, textFromDoc } from './short-code-doc';
 
 /** The node types of the box's one line, in order. */
 const nodesOf = (text: string) => {
@@ -34,5 +34,15 @@ describe('the words of a text field with shop values', () => {
         ]) {
             expect(textFromDoc(docFromText(text))).toBe(text);
         }
+    });
+});
+
+describe('chipSpacing', () => {
+    it('puts a space between a picked shop value and the words it touches', () => {
+        expect(chipSpacing('u', '')).toEqual({ before: true, after: false });
+        expect(chipSpacing('', '')).toEqual({ before: false, after: false });
+        expect(chipSpacing(' ', 'h')).toEqual({ before: false, after: true });
+        expect(chipSpacing('￼', '.')).toEqual({ before: true, after: false });
+        expect(chipSpacing('\n', ' ')).toEqual({ before: false, after: false });
     });
 });

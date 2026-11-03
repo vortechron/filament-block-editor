@@ -40,3 +40,52 @@ export function withNewSectionBlockIds<T extends Section>(section: T): T {
         data: { ...rich.data, document: withNewBlockIds(rich.data.document) },
     } as T;
 }
+
+/**
+ * The document with an id on every block that has none, through columns
+ * and children; ids already there stay. Words saved by code, like a
+ * migration, have no ids, and the builder finds items by id (the
+ * Structure tree, the item panel). The same document when nothing is
+ * missing.
+ */
+export function withMissingBlockIds(document: RichDocument): RichDocument {
+    let changed = false;
+    const next = document.map((block) => {
+        const children = Array.isArray(block.children)
+            ? withMissingBlockIds(block.children as RichDocument)
+            : block.children;
+        const hasId = typeof block.id === 'string' && block.id !== '';
+
+        if (hasId && children === block.children) {
+            return block;
+        }
+
+        changed = true;
+
+        return {
+            ...block,
+            id: hasId ? block.id : newBlockId(),
+            ...(Array.isArray(children) ? { children } : {}),
+        };
+    });
+
+    return changed ? next : document;
+}
+
+/** The page with an id on every block of its words (withMissingBlockIds()). */
+export function withMissingPageBlockIds<T extends { sections: readonly Section[] }>(value: T): T {
+    return {
+        ...value,
+        sections: value.sections.map((section) =>
+            section.type === 'rich'
+                ? {
+                      ...section,
+                      data: {
+                          ...section.data,
+                          document: withMissingBlockIds(section.data.document),
+                      },
+                  }
+                : section,
+        ),
+    };
+}

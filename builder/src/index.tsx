@@ -9,6 +9,7 @@ import { normalizeKit } from './lib/kit';
 import { normalizeKind, normalizeParts, normalizeSiteInfo } from './lib/site-parts';
 import { normalizeSyncedSections } from './lib/synced-sections';
 import { normalizeTemplates, normalizeValue } from './lib/page-value';
+import { withMissingPageBlockIds } from './lib/block-ids';
 import { uploadWith } from './lib/upload';
 import { translate } from './lib/i18n';
 import type {
@@ -51,7 +52,8 @@ export function mountPageBuilder(
 
     const locale = isLocale(options.locale) ? options.locale : 'ms';
     const strings = { ...(options.strings ?? {}) };
-    const initialValue = normalizeValue(options.value);
+    // Words saved by code have no block ids; the builder finds items by id.
+    const initialValue = withMissingPageBlockIds(normalizeValue(options.value));
     const kitDefaults = normalizeKit(options.kitDefaults);
     const templates = normalizeTemplates(
         options.templates && options.templates.length > 0

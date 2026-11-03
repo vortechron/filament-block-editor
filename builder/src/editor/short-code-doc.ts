@@ -78,3 +78,15 @@ export function textFromFragment(fragment: Fragment): string {
 
     return joinShortCodes(parts);
 }
+
+/**
+ * Where a picked shop value needs a space so it does not stick to the
+ * words around it: before it after a word or another value (`￼`), and
+ * after it before a letter or a digit. '' is the edge of the box.
+ */
+export function chipSpacing(charBefore: string, charAfter: string): { before: boolean; after: boolean } {
+    return {
+        before: charBefore !== '' && !/\s/u.test(charBefore),
+        after: /[\p{L}\p{N}]/u.test(charAfter),
+    };
+}

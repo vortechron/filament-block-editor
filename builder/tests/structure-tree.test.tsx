@@ -72,6 +72,33 @@ describe('the Structure tree', () => {
         expect(screen.getByRole('button', { name: 'Hide items of section 1', expanded: true })).toBeTruthy();
     });
 
+    it('lists the items of words saved without block ids, as a page made by a migration is', () => {
+        mountBuilder({
+            value: {
+                version: 2,
+                sections: [
+                    {
+                        id: 'noids001',
+                        type: 'rich',
+                        data: {
+                            layout: 'plain',
+                            document: [
+                                { type: 'heading', props: { level: 2 }, content: text('Tentang kami'), children: [] },
+                                { type: 'paragraph', props: {}, content: text('Kedai kecil'), children: [] },
+                            ],
+                        },
+                    },
+                ],
+            } as unknown as PageValueInput,
+        });
+        const rows = openStructure();
+
+        fireEvent.click(rows.getByRole('button', { name: 'Show items of section 1' }));
+
+        expect(rows.getByRole('button', { name: /^Heading.*Tentang kami/ })).toBeTruthy();
+        expect(rows.getByRole('button', { name: /^Text.*Kedai kecil/ })).toBeTruthy();
+    });
+
     it('shows the items inside columns under the column list', () => {
         mountBuilder({ value: PAGE });
         const rows = openStructure();
