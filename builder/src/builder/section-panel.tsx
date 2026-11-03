@@ -1,39 +1,40 @@
-import {
-    ArrowDown,
-    ArrowUp,
-    CopyPlus,
-    Eye,
-    EyeOff,
-    Paintbrush,
-    Trash2,
-    Type,
-} from 'lucide-react';
+import { Paintbrush, Palette, SlidersHorizontal, Type } from 'lucide-react';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
+import { withDataPart } from '@/lib/page-value';
 import { cn } from '@/lib/utils';
+import type { RichSection, SectionData } from '@/types';
 import { blockTitle } from '../editor/block-meta';
 import {
     hasInvalidBackgroundColor,
     RichLookFields,
 } from '../editor/rich-look-fields';
-import { ActionButton } from './action-button';
 import { useBuilderContext } from './builder-context';
 import { ItemGrid } from './catalog-tiles';
 import { RefSectionPanel } from './ref-section-panel';
+import { SectionActions } from './section-actions';
 import { LAYOUT_ICONS, LAYOUT_LABELS } from './section-thumbs';
 import { SectionWords } from './section-words';
+import { AdvancedFields } from './style/advanced-fields';
+import { StylePanel } from './style/style-panel';
+import type { SectionTab } from './types';
+
+const TABS: { name: SectionTab; label: string; icon: typeof Type }[] = [
+    { name: 'content', label: 'Content', icon: Type },
+    { name: 'look', label: 'Look', icon: Palette },
+    { name: 'style', label: 'Style', icon: Paintbrush },
+    { name: 'advanced', label: 'Advanced', icon: SlidersHorizontal },
+];
 
 /**
  * The picked section: type its words, add items to it, change its look
- * (layout, background, space, style, link name), or hide, copy, move and
- * delete it. The words stay open on the Style tab too, out of sight, so
- * the editor keeps the cursor.
+ * (layout, background, space, presets), its open style per device and
+ * its advanced settings, or hide, copy, move and delete it. The words
+ * stay open on the other tabs too, out of sight, so the editor keeps the
+ * cursor.
  */
 export function SectionPanel() {
-    const t = useT();
-    const { builder, onDeleteSection } = useBuilderContext();
-    const { accent } = useHost();
-    const { sectionTab: tab, setSectionTab: setTab } = builder;
+    const { builder } = useBuilderContext();
     const index = builder.blocks.findIndex(
         (block) => block.id === builder.selection.sectionId,
     );
@@ -44,13 +45,34 @@ export function SectionPanel() {
 
     const block = builder.blocks[index];
 
-    if (block.type === 'ref') {
-        return <RefSectionPanel block={block} index={index} />;
-    }
+    return block.type === 'ref' ? (
+        <RefSectionPanel block={block} index={index} />
+    ) : (
+        <RichSectionPanel block={block} index={index} />
+    );
+}
 
+function RichSectionPanel({ block, index }: { block: RichSection; index: number }) {
+    const t = useT();
+    const { builder } = useBuilderContext();
+    const { accent } = useHost();
+    const { sectionTab: tab, setSectionTab: setTab } = builder;
     const Icon = LAYOUT_ICONS[block.data.layout];
-    const isHidden = block.hidden === true;
-    const count = builder.blocks.length;
+
+    /** Only the look changes here. The words come from the latest document. */
+    function updateData(update: (data: SectionData) => SectionData) {
+        builder.updateSection(block.id, (current) =>
+            current.type === 'rich'
+                ? {
+                      ...current,
+                      data: {
+                          ...update(current.data),
+                          document: current.data.document,
+                      },
+                  }
+                : current,
+        );
+    }
 
     return (
         <div className="grid grid-cols-1 gap-4">
@@ -65,66 +87,22 @@ export function SectionPanel() {
                     <p className="text-muted-foreground text-xs">
                         {t('Section :number of :count', {
                             number: index + 1,
-                            count,
+                            count: builder.blocks.length,
                         })}{' '}
                         · {t(LAYOUT_LABELS[block.data.layout])}
-                        {isHidden && ` · ${t('Hidden')}`}
+                        {block.hidden === true && ` · ${t('Hidden')}`}
                     </p>
                 </div>
             </div>
 
-            <div className="bg-muted/60 flex items-center gap-1 rounded-xl border p-1">
-                <ActionButton
-                    label={
-                        isHidden ? t('Show on the page') : t('Hide from the page')
-                    }
-                    onClick={() => builder.toggleHidden(block.id)}
-                    isActive={isHidden}
-                >
-                    {isHidden ? <EyeOff /> : <Eye />}
-                </ActionButton>
-                <ActionButton
-                    label={t('Move up')}
-                    disabled={index === 0}
-                    onClick={() => builder.moveSection(block.id, -1)}
-                >
-                    <ArrowUp />
-                </ActionButton>
-                <ActionButton
-                    label={t('Move down')}
-                    disabled={index === count - 1}
-                    onClick={() => builder.moveSection(block.id, 1)}
-                >
-                    <ArrowDown />
-                </ActionButton>
-                <ActionButton
-                    label={t('Duplicate')}
-                    disabled={!builder.canAddSection}
-                    onClick={() => builder.duplicateSection(block.id)}
-                >
-                    <CopyPlus />
-                </ActionButton>
-                <span className="flex-1" />
-                <ActionButton
-                    label={t('Delete section')}
-                    destructive
-                    onClick={() => onDeleteSection(block.id)}
-                >
-                    <Trash2 />
-                </ActionButton>
-            </div>
+            <SectionActions block={block} index={index} />
 
             <div
                 role="tablist"
                 aria-label={t('Section settings')}
-                className="grid grid-cols-2 border-b"
+                className="grid grid-cols-4 border-b"
             >
-                {(
-                    [
-                        ['content', t('Content'), Type],
-                        ['style', t('Style'), Paintbrush],
-                    ] as const
-                ).map(([name, label, TabIcon]) => (
+                {TABS.map(({ name, label, icon: TabIcon }) => (
                     <button
                         key={name}
                         type="button"
@@ -132,14 +110,14 @@ export function SectionPanel() {
                         aria-selected={tab === name}
                         onClick={() => setTab(name)}
                         className={cn(
-                            '-mb-px flex h-10 items-center justify-center gap-2 border-b-2 text-sm font-medium transition-colors',
+                            '-mb-px flex h-11 flex-col items-center justify-center gap-0.5 border-b-2 text-[11px] font-medium transition-colors',
                             tab === name
                                 ? 'text-foreground border-[var(--builder-select)]'
                                 : 'text-muted-foreground hover:text-foreground border-transparent',
                         )}
                     >
                         <TabIcon className="size-4" />
-                        {label}
+                        {t(label)}
                     </button>
                 ))}
             </div>
@@ -147,7 +125,7 @@ export function SectionPanel() {
             {hasInvalidBackgroundColor(block.data) && (
                 <p role="alert" className="text-destructive text-sm">
                     {t(
-                        'The background colour code is not valid. Fix it on the Style tab.',
+                        'The background colour code is not valid. Fix it on the Look tab.',
                     )}
                 </p>
             )}
@@ -171,23 +149,27 @@ export function SectionPanel() {
                     onPick={(key) => builder.addItem(key)}
                 />
             </div>
-            {tab === 'style' && (
+            {tab === 'look' && (
                 <RichLookFields
                     data={block.data}
                     accent={accent}
-                    onChange={(data) =>
-                        // Only the look changes here. The words come from
-                        // the latest document, which may be newer.
-                        builder.updateSection(block.id, (current) =>
-                            current.type === 'rich'
-                                ? {
-                                      ...current,
-                                      data: {
-                                          ...data,
-                                          document: current.data.document,
-                                      },
-                                  }
-                                : current,
+                    onChange={(data) => updateData(() => data)}
+                />
+            )}
+            {tab === 'style' && (
+                <StylePanel
+                    bag={block.data.style}
+                    onChange={(style) =>
+                        updateData((data) => withDataPart(data, 'style', style))
+                    }
+                />
+            )}
+            {tab === 'advanced' && (
+                <AdvancedFields
+                    advanced={block.data.advanced}
+                    onChange={(advanced) =>
+                        updateData((data) =>
+                            withDataPart(data, 'advanced', advanced),
                         )
                     }
                 />

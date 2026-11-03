@@ -20,8 +20,11 @@ export type SidebarPanel =
     | { name: 'section' }
     | { name: 'item' };
 
-/** The picked section's tabs: its words and items, or its look. */
-export type SectionTab = 'content' | 'style';
+/**
+ * The picked section's tabs: its words and items, its simple look
+ * (layout, background, presets), its open style, and advanced settings.
+ */
+export type SectionTab = 'content' | 'look' | 'style' | 'advanced';
 
 /** How wide the canvas is: a laptop screen, a tablet or a phone. */
 export type Device = 'desktop' | 'tablet' | 'phone';

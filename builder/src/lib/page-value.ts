@@ -187,6 +187,20 @@ export function normalizeSectionData(
     };
 }
 
+/**
+ * The section data with its style or advanced part set, or left out when
+ * `value` is null. Never changes `data`.
+ */
+export function withDataPart<K extends 'style' | 'advanced'>(
+    data: SectionData,
+    key: K,
+    value: SectionData[K] | null,
+): SectionData {
+    const { [key]: _old, ...rest } = data;
+
+    return (value ? { ...rest, [key]: value } : rest) as SectionData;
+}
+
 /** Same pattern as the PHP side: lower-case words joined by dashes. */
 export function isAnchor(value: unknown): value is string {
     return (

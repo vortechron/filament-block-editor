@@ -258,29 +258,6 @@ export function withStyleValue(
 }
 
 /**
- * What `variant` shows for `key` when it has no value of its own: the
- * phone takes the tablet's, the tablet and hover take the laptop's.
- */
-export function inheritedStyleValue(
-    bag: StyleBag | null | undefined,
-    variant: StyleVariant,
-    key: StyleKey,
-): string | null {
-    const order: StyleVariant[] =
-        variant === 'phone' ? ['tablet', 'desktop'] : variant === 'desktop' ? [] : ['desktop'];
-
-    for (const from of order) {
-        const value = bag?.[from]?.[key];
-
-        if (value !== undefined) {
-            return value;
-        }
-    }
-
-    return null;
-}
-
-/**
  * Does `variant` set `key` to something else than the laptop value? On the
  * laptop, any value of its own differs from the theme's.
  */

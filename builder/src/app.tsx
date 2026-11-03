@@ -7,6 +7,7 @@ import {
 } from 'react';
 import { BuilderContext } from './builder/builder-context';
 import { BuilderTopBar } from './builder/builder-top-bar';
+import { useKitState } from './builder/kit/use-kit-state';
 import { Canvas } from './builder/canvas';
 import { BuilderDragAndDrop } from './builder/drag-and-drop';
 import { MobileDock } from './builder/mobile-dock';
@@ -108,6 +109,7 @@ function Builder({
         onChange?.(value);
     });
     const builder = useBuilder({ form, templates });
+    const kit = useKitState();
     const [device, setDevice] = useState<Device>('desktop');
     const [isDockOpen, setIsDockOpen] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -189,6 +191,8 @@ function Builder({
                     form,
                     templates,
                     device: isDesktop ? device : 'phone',
+                    setDevice,
+                    kit,
                     isDesktop,
                     onDeleteSection: setDeleteId,
                     revealPanel: (panel) => {
