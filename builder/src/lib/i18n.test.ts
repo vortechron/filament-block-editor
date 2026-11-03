@@ -121,6 +121,14 @@ describe('the Malay dictionary', () => {
         expect(words).not.toMatch(/\bpesanan\b/);
     });
 
+    it('says Ubah for Edit, as every edit button does', () => {
+        const english = Object.entries(ms).filter(([, malay]) => /\bEdit\b/.test(malay));
+
+        expect(english).toEqual([]);
+        expect(translate('Edit header', 'ms', {})).toBe('Ubah header');
+        expect(translate('Edit footer', 'ms', {})).toBe('Ubah footer');
+    });
+
     it('has no seller words in the English texts either', () => {
         const texts = sourceTexts().join('\n').toLowerCase();
 

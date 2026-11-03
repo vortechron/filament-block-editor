@@ -375,7 +375,7 @@ type PageBuilderAdapter = {
   (from `dynamicValues` of type text) inserts one; link fields offer the link values; image fields offer the image
   values when there are any.
 - **Synced and saved sections (B2):** "Simpan sebagai templat" and "Jadikan segerak" on a section (when
-  `saveSection` exists); a `ref` section shows as "Segerak: {title}" with "Edit seksyen segerak" (its `editUrl`)
+  `saveSection` exists); a `ref` section shows as "Segerak: {title}" with "Ubah seksyen segerak" (its `editUrl`)
   and "Putuskan" (replace it with a copy of its `section`).
 - **Header and footer (B2):** the canvas marks elements with `data-part="header|footer"` as clickable. The panel
   says "Bahagian ini sama di semua halaman", links to its `editUrl`, and shows the shop info form from `siteInfo`
@@ -686,3 +686,6 @@ type PageBuilderAdapter = {
    tap adds `{ id: <new id>, type: "ref", ref }` after the picked section, like a template; dragging it onto the
    page works like a template too. The group is hidden when there are none, follows the search box (by title),
    and is never offered when `kind` is `section` (only one level of `ref` is followed, section 5).
+3. **"Edit" is "Ubah" in Malay everywhere.** "Edit header" and "Edit footer" (B2) were left in English; they are now
+   "Ubah header" and "Ubah footer". Section 10's "Edit seksyen segerak" is now "Ubah seksyen segerak", like "Ubah
+   seksyen", "Ubah item" and "Ubah borang". The i18n test fails on any Malay text with the English word "Edit".
