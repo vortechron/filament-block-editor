@@ -1,7 +1,8 @@
-{{-- The core map block (Blocks\CoreBlocks). Only a Google Maps embed address is drawn as a map; the address always links to a Google Maps search. --}}
+{{-- The core map block (Blocks\CoreBlocks). Only a Google Maps embed address is drawn as a map; the address always links to a Google Maps search. With no address of its own, it shows the shop's (site.address). --}}
 @php
     $embed = is_string($values['embed_url']) && str_starts_with($values['embed_url'], 'https://www.google.com/maps') ? $values['embed_url'] : null;
     $address = trim((string) $values['address']);
+    $address = $address !== '' ? $address : (string) app(\Vortechron\FilamentBlockEditor\Content\DynamicValues::class)->resolve('site.address', $context);
 @endphp
 @if ($embed === null && $address === '')
     @if ($context->forBuilder)

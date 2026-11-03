@@ -58,6 +58,7 @@ final class CoreBlocks
                     'sm' => self::t('map.small'), 'md' => self::t('map.medium'), 'lg' => self::t('map.large'),
                 ])->default('md'),
             ])
+            ->usesSiteInfo('contact')
             ->view('filament-block-editor::core.map');
     }
 

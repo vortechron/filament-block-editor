@@ -4,6 +4,7 @@ namespace Vortechron\FilamentBlockEditor\Tests\Feature;
 
 use Vortechron\FilamentBlockEditor\BlockNote\Blocks;
 use Vortechron\FilamentBlockEditor\Blocks\BlockRegistry;
+use Vortechron\FilamentBlockEditor\Content\DynamicValues;
 use Vortechron\FilamentBlockEditor\Rendering\PageRenderer;
 use Vortechron\FilamentBlockEditor\Rendering\RenderContext;
 use Vortechron\FilamentBlockEditor\Support\Icons;
@@ -74,6 +75,20 @@ class CoreBlocksTest extends TestCase
         $this->assertFalse($this->select($html, '.fbe-faq details')[1]->hasAttribute('open'));
         $this->assertStringContainsString('Ya.<br>', $html);
         $this->assertStringNotContainsString('<script>', $html);
+    }
+
+    public function test_a_map_with_no_address_of_its_own_shows_the_shop_address(): void
+    {
+        app(DynamicValues::class)->register('site.address', 'Alamat', fn (): string => 'No. 12, Jalan Merdeka', settings: 'contact');
+
+        $shop = $this->draw('fbe-map');
+        $own = $this->draw('fbe-map', ['address' => 'Jalan Lain']);
+
+        $this->assertSame(['No. 12, Jalan Merdeka'], array_map(trim(...), $this->texts($shop, '.fbe-map-address span')));
+        $this->assertSame('https://www.google.com/maps/search/?api=1&query=No.%2012%2C%20Jalan%20Merdeka', $this->first($shop, '.fbe-map-address a')->getAttribute('href'));
+        $this->assertSame(['Jalan Lain'], array_map(trim(...), $this->texts($own, '.fbe-map-address span')));
+        // Its panel in the builder shows the shop's contact group.
+        $this->assertSame(['contact'], collect(app(BlockRegistry::class)->definitions())->firstWhere('kind', 'fbe-map')['siteInfo']);
     }
 
     public function test_the_map_draws_only_a_google_maps_embed(): void
