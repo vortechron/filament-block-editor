@@ -52,13 +52,27 @@ class PageRendererTest extends TestCase
             $this->section('offer1', [Blocks::heading(2, 'Promosi Raya sudah tamat')], hidden: true),
         ];
 
-        foreach ([new RenderContext, new RenderContext(isPreview: true), new RenderContext(forBuilder: true, isPreview: true)] as $context) {
+        foreach ([new RenderContext, new RenderContext(isPreview: true)] as $context) {
             $html = $this->render($sections, $context);
 
             $this->assertStringContainsString('Kulit cerah dalam 7 hari', $html);
             $this->assertStringNotContainsString('Promosi Raya sudah tamat', $html);
             $this->assertStringNotContainsString('data-block-id="offer1"', $html);
+            $this->assertStringNotContainsString('data-hidden', $html);
         }
+    }
+
+    public function test_the_builder_canvas_draws_a_hidden_section_marked_hidden(): void
+    {
+        $html = $this->render([
+            $this->section('hero1', [Blocks::heading(1, 'Kulit cerah dalam 7 hari')]),
+            $this->section('offer1', [Blocks::heading(2, 'Promosi Raya sudah tamat')], ['anchor' => 'promosi'], hidden: true),
+        ], new RenderContext(forBuilder: true, isPreview: true));
+
+        $this->assertSame(['hero1', 'offer1'], array_map(fn ($e) => $e->getAttribute('data-block-id'), $this->select($html, '[data-block-id]')));
+        $this->assertFalse($this->first($html, '[data-block-id="hero1"]')->hasAttribute('data-hidden'));
+        $this->assertTrue($this->first($html, '[data-block-id="offer1"]')->hasAttribute('data-hidden'));
+        $this->assertSame(['Promosi Raya sudah tamat'], $this->texts($html, '[data-block-id="offer1"][data-hidden] h2'));
     }
 
     public function test_it_normalizes_the_sections_it_is_given(): void

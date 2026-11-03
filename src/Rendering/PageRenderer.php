@@ -15,8 +15,9 @@ use Vortechron\FilamentBlockEditor\Enums\SectionLayout;
  * is still empty. The page builder's canvas finds sections by these wrappers
  * and items by `data-item` (see RenderContext).
  *
- * Hidden sections are left off the page for everyone, the builder's canvas
- * included: a hidden section stays in the builder's lists, not on the page.
+ * Hidden sections are left off the page for visitors and previews. The
+ * builder's canvas (`forBuilder`) draws them with `data-hidden` on the
+ * wrapper, so the builder can show them dimmed.
  *
  * Draw the result inside an element with the `sf-page` class (the
  * `<x-filament-block-editor::page>` component does), because the stylesheet
@@ -33,17 +34,30 @@ final class PageRenderer
     {
         $html = '';
 
-        foreach (PageContent::visible(PageValue::normalize($sections)['sections']) as $section) {
+        $sections = PageValue::normalize($sections)['sections'];
+
+        foreach ($context->forBuilder ? $sections : PageContent::visible($sections) as $section) {
             if ($section['type'] !== PageContent::TYPE) {
                 continue;
             }
 
-            $html .= '<div data-block-id="'.e($section['id']).'"'
-                .($context->isPreview ? ' data-empty-label="'.e(__('filament-block-editor::preview.empty_section')).'"' : '')
-                .'>'.$this->section($section['data'], $context).'</div>';
+            $html .= $this->wrapper($section, $context).$this->section($section['data'], $context).'</div>';
         }
 
         return $html;
+    }
+
+    /**
+     * The opening tag every section is drawn in.
+     *
+     * @param  array<string, mixed>  $section
+     */
+    private function wrapper(array $section, RenderContext $context): string
+    {
+        return '<div data-block-id="'.e($section['id']).'"'
+            .(($section['hidden'] ?? false) === true ? ' data-hidden' : '')
+            .($context->isPreview ? ' data-empty-label="'.e(__('filament-block-editor::preview.empty_section')).'"' : '')
+            .'>';
     }
 
     /**
