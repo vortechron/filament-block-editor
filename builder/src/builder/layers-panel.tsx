@@ -14,25 +14,55 @@ import {
     verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Eye, EyeOff, GripVertical, Lock, Plus } from 'lucide-react';
+import {
+    ChevronRight,
+    Eye,
+    EyeOff,
+    GripVertical,
+    Lock,
+    Plus,
+} from 'lucide-react';
+import { useState } from 'react';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
 import { isLocked } from '@/lib/locks';
 import { cn } from '@/lib/utils';
 import { MAX_SECTIONS } from '@/lib/page-value';
-import type { Section } from '@/types';
+import type { PartKey, Section } from '@/types';
 import { useBuilderContext } from './builder-context';
+import { scrollFrameTo } from './frame-dom';
 import { sectionIcon, sectionKind, useSectionTitle } from './section-meta';
+import { ItemTree, PartLine } from './structure-tree-rows';
+import {
+    buildStructureTree,
+    itemPath,
+    type SectionNode,
+} from './structure-tree';
 import { TemplateMenu } from './template-menu';
 
 /**
- * Every section in page order. Drag a row by its handle to move the
- * section, tap the eye to hide it from the page, tap the row to edit it.
+ * The page as a tree, in page order. The header is the top line and the
+ * footer the bottom one. Drag a section by its handle to move it, tap the
+ * eye to hide it from the page, tap its row to edit it, and open it with
+ * its arrow to see its items; tapping an item opens that item's settings.
  */
 export function LayersPanel({ onPicked }: { onPicked?: () => void }) {
     const t = useT();
     const { builder, templates } = useBuilderContext();
+    const { developer, ownBlocks, parts } = useHost();
     const { blocks, selection } = builder;
+    // What the user opened or closed by hand. The picked section is open
+    // until then. Local to this tab, so it is gone when the tab closes.
+    const [toggled, setToggled] = useState<Readonly<Record<string, boolean>>>(
+        {},
+    );
+    const nodes = buildStructureTree(blocks, {
+        ownBlocks,
+        canOpenItems: (section) =>
+            section.type === 'rich' && !isLocked(section, 'content', developer),
+    });
+    const header = parts.find((part) => part.key === 'header');
+    const footer = parts.find((part) => part.key === 'footer');
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
         useSensor(KeyboardSensor, {
@@ -52,6 +82,28 @@ export function LayersPanel({ onPicked }: { onPicked?: () => void }) {
         }
     }
 
+    function isPartOpen(part: PartKey) {
+        return builder.panel.name === 'part' && builder.panel.part === part;
+    }
+
+    function pickPart(part: PartKey) {
+        builder.selectPart(part);
+        onPicked?.();
+    }
+
+    /** The same as tapping the item on the canvas: its settings open. */
+    function pickItem(node: SectionNode, itemId: string) {
+        builder.selectItem(node.id, itemId);
+        scrollFrameTo({
+            sectionId: node.id,
+            path:
+                node.section.type === 'rich'
+                    ? itemPath(node.section.data.document, itemId)
+                    : null,
+        });
+        onPicked?.();
+    }
+
     return (
         <div className="grid grid-cols-1 gap-3">
             <p className="text-muted-foreground text-xs">
@@ -59,6 +111,15 @@ export function LayersPanel({ onPicked }: { onPicked?: () => void }) {
                     'Drag the handle to change the order. Tap a section to edit it.',
                 )}
             </p>
+
+            {header && (
+                <PartLine
+                    part="header"
+                    title={header.title}
+                    isSelected={isPartOpen('header')}
+                    onPick={() => pickPart('header')}
+                />
+            )}
 
             {blocks.length === 0 ? (
                 <p className="text-muted-foreground rounded-xl border border-dashed p-6 text-center text-sm">
@@ -75,27 +136,59 @@ export function LayersPanel({ onPicked }: { onPicked?: () => void }) {
                         strategy={verticalListSortingStrategy}
                     >
                         <ol className="grid grid-cols-1 gap-1.5">
-                            {blocks.map((block, index) => (
+                            {nodes.map((node, index) => (
                                 <LayerRow
-                                    key={block.id}
-                                    block={block}
+                                    key={node.id}
+                                    block={node.section}
+                                    node={node}
                                     index={index}
+                                    isOpen={
+                                        node.canExpand &&
+                                        (toggled[node.id] ??
+                                            selection.sectionId === node.id)
+                                    }
+                                    onToggleOpen={() =>
+                                        setToggled((current) => ({
+                                            ...current,
+                                            [node.id]: !(
+                                                current[node.id] ??
+                                                selection.sectionId === node.id
+                                            ),
+                                        }))
+                                    }
+                                    pickedItemId={
+                                        selection.sectionId === node.id
+                                            ? selection.itemId
+                                            : null
+                                    }
+                                    onPickItem={(itemId) =>
+                                        pickItem(node, itemId)
+                                    }
                                     isSelected={
-                                        selection.sectionId === block.id
+                                        selection.sectionId === node.id
                                     }
                                     onPick={() => {
-                                        builder.selectSection(block.id);
-                                        builder.scrollToSection(block.id);
+                                        builder.selectSection(node.id);
+                                        builder.scrollToSection(node.id);
                                         onPicked?.();
                                     }}
                                     onToggleHidden={() =>
-                                        builder.toggleHidden(block.id)
+                                        builder.toggleHidden(node.id)
                                     }
                                 />
                             ))}
                         </ol>
                     </SortableContext>
                 </DndContext>
+            )}
+
+            {footer && (
+                <PartLine
+                    part="footer"
+                    title={footer.title}
+                    isSelected={isPartOpen('footer')}
+                    onPick={() => pickPart('footer')}
+                />
             )}
 
             <div className="flex items-center justify-between gap-2 pt-1">
@@ -126,15 +219,25 @@ export function LayersPanel({ onPicked }: { onPicked?: () => void }) {
 
 function LayerRow({
     block,
+    node,
     index,
     isSelected,
+    isOpen,
+    pickedItemId,
     onPick,
+    onPickItem,
+    onToggleOpen,
     onToggleHidden,
 }: {
     block: Section;
+    node: SectionNode;
     index: number;
     isSelected: boolean;
+    isOpen: boolean;
+    pickedItemId: string | null;
     onPick: () => void;
+    onPickItem: (itemId: string) => void;
+    onToggleOpen: () => void;
     onToggleHidden: () => void;
 }) {
     const t = useT();
@@ -161,12 +264,15 @@ function LayerRow({
                 transform: CSS.Transform.toString(transform),
                 transition,
             }}
+            className={cn(isDragging && 'relative z-10')}
+        >
+        <div
             className={cn(
                 'group/row bg-card flex items-center gap-1 rounded-xl border p-1 pr-1.5 transition-[border-color,box-shadow]',
                 isSelected
                     ? 'border-[var(--builder-select)] shadow-[0_0_0_1px_var(--builder-select)]'
                     : 'hover:border-input',
-                isDragging && 'relative z-10 shadow-lg',
+                isDragging && 'shadow-lg',
             )}
         >
             {canMove ? (
@@ -187,6 +293,32 @@ function LayerRow({
                 >
                     <Lock className="size-3.5" />
                 </span>
+            )}
+            {node.canExpand ? (
+                <button
+                    type="button"
+                    onClick={onToggleOpen}
+                    aria-expanded={isOpen}
+                    aria-label={
+                        isOpen
+                            ? t('Hide items of section :number', {
+                                  number: index + 1,
+                              })
+                            : t('Show items of section :number', {
+                                  number: index + 1,
+                              })
+                    }
+                    className="text-muted-foreground hover:bg-muted hover:text-foreground grid size-6 shrink-0 place-items-center rounded-md"
+                >
+                    <ChevronRight
+                        className={cn(
+                            'size-4 transition-transform',
+                            isOpen && 'rotate-90',
+                        )}
+                    />
+                </button>
+            ) : (
+                <span aria-hidden className="size-6 shrink-0" />
             )}
             <button
                 type="button"
@@ -248,6 +380,14 @@ function LayerRow({
                         <Eye className="size-4" />
                     )}
                 </button>
+            )}
+        </div>
+            {isOpen && (
+                <ItemTree
+                    items={node.items}
+                    pickedItemId={pickedItemId}
+                    onPick={onPickItem}
+                />
             )}
         </li>
     );
