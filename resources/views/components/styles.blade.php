@@ -3,7 +3,7 @@
     CSS variables. Put it in the page <head>.
 
     <x-filament-block-editor::styles />
-    <x-filament-block-editor::styles :kit="$kit" />   {{-- a kit of your own --}}
+    <x-filament-block-editor::styles :kit="$kit" />   (a kit of your own)
 
     The kit comes from the bound Design\KitSource (the package defaults, or
     the host's stored kit). A host font the kit uses is linked too. The page

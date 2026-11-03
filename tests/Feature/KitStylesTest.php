@@ -68,6 +68,14 @@ class KitStylesTest extends TestCase
         $this->assertLessThan(strpos($html, '<style'), strpos($html, '<link'));
     }
 
+    public function test_the_styles_component_prints_no_words_from_its_own_comment(): void
+    {
+        $html = Blade::render('<x-filament-block-editor::styles />');
+
+        $this->assertStringNotContainsString('KitSource', $html);
+        $this->assertStringNotContainsString('--}}', $html);
+    }
+
     public function test_the_styles_component_follows_the_kit_source_and_its_override(): void
     {
         app(KitSource::class)->override(['colors' => ['primary' => '#14532d']]);
