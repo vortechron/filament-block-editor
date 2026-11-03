@@ -304,6 +304,7 @@ app(BlockRegistry::class)->register(
             Field::number('limit')->min(1)->max(12),
             Field::list('items')->fields([Field::text('name')])->maxItems(6),
         ])
+        ->usesSiteInfo('contact')                // optional: the shop info groups the view reads
         ->view('blocks.stationery-board'),
 );
 ```
@@ -325,6 +326,9 @@ The view gets three variables:
   values are kept, so a block that is missing for now does not lose its data.
 - For an edge-to-edge block, set the section to `padding: none` and `width: full`.
 - The builder gets `app(BlockRegistry::class)->definitions()` (a list of `OwnBlock::toArray()`) as JSON.
+- `usesSiteInfo('contact', 'hours')` names the shop info groups (the keys of `getPageBuilderSiteInfo()`'s
+  groups) that the view reads. `toArray()` sends them as `siteInfo` (left out when there are none), and the
+  builder shows those groups of the shop info form in the block's panel. See "Shop info in the builder".
 
 Field types: `text`, `textarea`, `select` (`options`), `toggle`, `number` (`min`, `max`), `image`, `link`,
 `list` (`fields`, `maxItems`, lists may nest).
@@ -386,9 +390,9 @@ use Vortechron\FilamentBlockEditor\Rendering\RenderContext;
 
 app(DynamicValues::class)
     ->register('site.phone', 'Telefon', fn (RenderContext $context) => $settings->phone)
-    ->register('site.whatsapp', 'WhatsApp', fn () => 'https://wa.me/60123456789', type: 'link', group: 'Hubungan');
+    ->register('site.whatsapp', 'WhatsApp', fn () => 'https://wa.me/60123456789', type: 'link', group: 'Hubungan', settings: 'contact');
 
-app(DynamicValues::class)->definitions();   // for the builder: key, label, type, group, preview
+app(DynamicValues::class)->definitions();   // for the builder: key, label, type, group, preview (and settings)
 app(DynamicValues::class)->resolve('site.phone', new RenderContext);
 ```
 
@@ -400,6 +404,10 @@ app(DynamicValues::class)->resolve('site.phone', new RenderContext);
   `@entry.photo`, resolved, then checked by `Urls::media()`.
 - Values in the RenderContext win: `(new RenderContext)->withValues(['entry.title' => 'Kopi'])`.
 - `definitions(?RenderContext $context)` reads each `preview` with that context's values.
+- `settings` (optional) is the shop info group the value comes from, such as `contact`. `definitions()`
+  includes it only when it is set. The builder uses it to show that group of the shop info form wherever the
+  value is used (a chip, a button link, a form action). Host definitions from `getPageBuilderDynamicValues()`
+  may carry it too.
   `drawWith(array $values, Closure $draw)` adds values for one draw only, under the context's own.
 
 In the Filament builder (`InteractsWithPageBuilder`), two hooks add values for one builder:
@@ -423,6 +431,38 @@ protected function getPageBuilderRenderValues(): array
 Draw `renderPageBuilderPreview()` with `$this->getPageBuilderPreviewContext()`: a
 `RenderContext(forBuilder: true, isPreview: true)` with the render values in it. A host that makes its own
 context still gets them in the preview (`previewPageBuilder()` draws inside `DynamicValues::drawWith()`).
+
+## Shop info in the builder
+
+The shop info form (`getPageBuilderSiteInfo()`, saved by `savePageBuilderSiteInfo()`) shows in four places:
+
+- the top bar's "Shop info" ("Maklumat kedai") button opens the whole form;
+- the header and footer panel shows the whole form;
+- a picked item's panel shows the groups it uses: an own block's `usesSiteInfo()`, and the `settings` group of
+  each dynamic value in its words, links, pictures and form actions (`@site.email`, `@site.whatsapp_number`);
+  a form shows them in its "After sending" part;
+- the section panel shows every group used anywhere in the section.
+
+While the owner types, the builder previews with the unsaved values: `previewPageBuilder($value, $kit,
+$siteInfo)`, where `$siteInfo` is `['contact' => ['phone' => ...], ...]`. After the access check, the trait
+draws through this hook, whose default ignores the values:
+
+```php
+use Closure;
+use Vortechron\FilamentBlockEditor\Content\DynamicValues;
+
+protected function withPageBuilderSiteInfo(array $values, Closure $draw): string
+{
+    // The values come straight from the builder: clean them, and never save them here.
+    $phone = is_string($values['contact']['phone'] ?? null) ? trim($values['contact']['phone']) : null;
+
+    return app(DynamicValues::class)->drawWith(['site.phone' => $phone], $draw);
+}
+```
+
+`$draw()` adds your render values (`getPageBuilderRenderValues()`) inside this hook, so a key there wins over
+the same key here: keep `site.*` out of the render values. Override your settings source for the draw instead,
+when your header and footer read the settings directly (set it, call `$draw()`, put it back in a `finally`).
 
 ## Forms
 
@@ -460,7 +500,7 @@ Five own blocks every site gets (turn them off with `'core_blocks' => false` in 
 | Kind | What |
 | --- | --- |
 | `fbe-faq` | A heading and questions that open one by one |
-| `fbe-map` | An address and a Google Maps embed (only `https://www.google.com/maps...` is drawn) |
+| `fbe-map` | An address and a Google Maps embed (only `https://www.google.com/maps...` is drawn). With no address of its own it shows `site.address`; its panel shows the shop's `contact` group |
 | `fbe-icon-list` | Items with an icon, a title and words, in 1 to 4 columns, plain or boxed |
 | `fbe-pricing` | Up to 6 plans with a price, features (one per line), a button, and a highlight |
 | `fbe-testimonials` | Quotes with stars, a name, a role and a photo |

@@ -689,3 +689,33 @@ type PageBuilderAdapter = {
 3. **"Edit" is "Ubah" in Malay everywhere.** "Edit header" and "Edit footer" (B2) were left in English; they are now
    "Ubah header" and "Ubah footer". Section 10's "Edit seksyen segerak" is now "Ubah seksyen segerak", like "Ubah
    seksyen", "Ubah item" and "Ubah borang". The i18n test fails on any Malay text with the English word "Edit".
+
+### Shop info everywhere, 3 November 2026
+
+Before this, the shop info form could only be reached by tapping the header or footer.
+
+1. **PHP.** `OwnBlock::usesSiteInfo(string ...$groups)` names the settings groups a block's view reads;
+   `toArray()` adds `siteInfo` (left out when empty). `DynamicValues::register()` takes an optional named
+   `settings` (a group key); `definitions()` adds it only when set, so section 6's definition gains
+   `settings?: string`. Host definitions from `getPageBuilderDynamicValues()` pass it through.
+2. **Preview with unsaved shop info.** Section 10's adapter becomes
+   `preview(value, extra?: { kit?: Kit; siteInfo?: Record<string, Record<string, unknown>> })`.
+   `previewPageBuilder($value, ?array $kit = null, ?array $siteInfo = null)`: after `authorizePageBuilder()`,
+   when `$siteInfo` is given, it draws through the new hook
+   `withPageBuilderSiteInfo(array $values, Closure $draw): string` (default: `$draw()`) with the values by group
+   (non-array groups dropped). The host cleans them and never saves them. The builder sends `siteInfo` with
+   every preview (canvas and Preview dialog) when it has shop info and `saveSiteInfo`, like the kit.
+3. **The map block** (`fbe-map`) draws `site.address` when its own address is empty, and declares
+   `usesSiteInfo('contact')`.
+4. **One card, four places** (`SiteInfoForm` with an optional list of group keys, a "Dikongsi" badge, and the
+   "Berubah di semua halaman" note above its save button). The top bar's "Maklumat kedai" button, next to
+   "Reka bentuk" (an icon on phones), opens the whole form as a sidebar panel; the header and footer panel shows
+   the whole form as before; a picked item shows the groups it uses (an own block's `siteInfo`, chips in its
+   words, `@key` links, pictures and form actions, through each value's `settings`); a section's Content tab
+   shows the union for the whole section (not shown for a `ref` section). The groups come from one pure helper,
+   `siteInfoGroupsFor()` in `builder/src/lib/site-info-groups.ts`.
+5. **Form block:** the card sits in the form's "After sending" ("Selepas dihantar") part, right under the
+   actions, instead of a link to the item panel: the owner sees the shop email or WhatsApp number where they
+   pick "The shop email". A form never shows a second card at the end of its item panel.
+6. **Not done:** a synced (`ref`) section's panel shows no card; a `link` field's or chip's value with no
+   `settings` group shows none either.

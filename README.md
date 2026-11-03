@@ -119,6 +119,7 @@ protected function savePageBuilderKit(array $kit): void { setting(['kit' => $kit
 protected function savePageBuilderSection(array $section, string $title, bool $synced): array { /* ... */ return ['ok' => true, 'id' => $id, 'template' => null]; }
 protected function getPageBuilderSiteInfo(): ?array { /* groups of Fields and their values */ }
 protected function savePageBuilderSiteInfo(array $values): void { /* validate and save */ }
+protected function withPageBuilderSiteInfo(array $values, Closure $draw): string { return $draw(); }  // preview with unsaved shop info
 protected function getPageBuilderSyncedSections(): array { return []; }   // [['id', 'title', 'editUrl', 'section']]
 protected function getPageBuilderParts(): array { return []; }            // [['key' => 'header', 'title', 'editUrl']]
 protected function getPageBuilderKind(): string { return 'page'; }        // an Enums\DocumentKind value
@@ -128,6 +129,13 @@ protected function getPageBuilderRenderValues(): array { return []; }    // ['pa
 
 The builder always gets the current kit (`kit`) and `Kit::defaults()` (`kitDefaults`, with your config),
 for its colour and font pickers; the design panel shows only when you override `savePageBuilderKit()`.
+
+With shop info (`getPageBuilderSiteInfo()` and `savePageBuilderSiteInfo()`), the top bar gets a "Shop info"
+button, and every item or section that shows shop info gets the groups it uses in its panel. They come from an
+own block's `usesSiteInfo('contact')` and the `settings` group of each dynamic value it uses
+(`register(..., settings: 'contact')`). The canvas follows the form before it is saved: draw your preview with
+the unsaved values in `withPageBuilderSiteInfo()`, and never save them there. More in
+[docs/php.md](docs/php.md#shop-info-in-the-builder).
 
 Register the route like any resource page (`'build' => BuildPage::route('/{record}/build')`) and add
 `FilamentBlockEditorPlugin::make()` to the panel. Uploads go to `config('filament-block-editor.disk')`
@@ -161,7 +169,8 @@ app(BlockRegistry::class)->register(
 ```
 
 Field types: `text`, `textarea`, `select`, `toggle`, `number`, `image`, `link`, `list`. Values are cleaned by the
-definition before your view sees them. Mark a field `->developerOnly()` to keep it to developers. A section with `width: full` and `padding: none` lets your block draw edge
+definition before your view sees them. A block that shows shop info names its groups with
+`->usesSiteInfo('contact', 'hours')`, so its panel shows those groups of the shop info form. Mark a field `->developerOnly()` to keep it to developers. A section with `width: full` and `padding: none` lets your block draw edge
 to edge. More in [docs/php.md](docs/php.md#your-own-blocks).
 
 ## Use the builder anywhere else
@@ -179,7 +188,8 @@ preview (the PHP layer does that for Laravel; another stack draws the same HTML 
     value: { sections: await (await fetch('/api/pages/1')).json() },
     adapter: {
       save: (value) => fetch('/api/pages/1', { method: 'PUT', body: JSON.stringify(value) }).then(() => ({ ok: true })),
-      preview: (value) => fetch('/api/pages/1/preview', { method: 'POST', body: JSON.stringify(value) }).then((r) => r.text()),
+      // extra: { kit, siteInfo } — unsaved design and shop info to draw with, never to save
+      preview: (value, extra) => fetch('/api/pages/1/preview', { method: 'POST', body: JSON.stringify({ value, ...extra }) }).then((r) => r.text()),
       upload: (file) => { const body = new FormData(); body.append('file', file); return fetch('/api/uploads', { method: 'POST', body }).then((r) => r.json()); },
     },
     blocks: [/* own block definitions, from BlockRegistry::definitions() */],
