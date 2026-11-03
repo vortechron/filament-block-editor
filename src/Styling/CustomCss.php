@@ -7,20 +7,30 @@ namespace Vortechron\FilamentBlockEditor\Styling;
  * `selector` stands for the element itself (Elementor's rule), so
  * `selector .bn-button { ... }` styles the buttons inside it.
  *
- * clean() drops the whole value when any part fails, so a value either
- * reaches the page as written (minus comments) or not at all:
+ * It is developer only, but it is still checked hard, because CSS that can
+ * reach other elements (an attribute selector on the form's token, plus a
+ * url()) can leak data. clean() drops the whole value when any check fails:
  *
  * - no `<` at all, so it can never close the <style> it is printed in;
- * - no `@import`, `expression(`, `javascript:`, `behavior:` or `-moz-binding`,
+ * - every rule's selectors each start with `selector`, also inside
+ *   `@media` and `@supports`, the only at-rules allowed; plain
+ *   declarations with no rule apply to the element;
+ * - `url()` only with a path on this site (`/path`); no `image-set()`,
+ *   `src()`, `expression(`, `javascript:`, `behavior:` or `-moz-binding`,
  *   checked after CSS escapes are decoded;
- * - `url()` only with `https://` or a path on this site (`/path`);
- * - braces in balance, and at most MAX_LENGTH characters.
+ * - braces in balance, none hidden in a quote or behind a backslash, no
+ *   nested rules, and at most MAX_LENGTH characters.
  */
 final class CustomCss
 {
     public const MAX_LENGTH = 5000;
 
-    private const BANNED = '~@import|expression\s*\(|javascript\s*:|behavior\s*:|-moz-binding~';
+    private const BANNED = '~@import|expression\s*\(|javascript\s*:|behavior\s*:|-moz-binding|image-set\s*\(|(?<![\w-])src\s*\(~';
+
+    /**
+     * How deep @media and @supports may nest.
+     */
+    private const MAX_DEPTH = 3;
 
     public static function clean(mixed $css): ?string
     {
@@ -36,11 +46,13 @@ final class CustomCss
 
         $decoded = strtolower(self::decodeEscapes($css));
 
-        if (str_contains($decoded, '<') || preg_match(self::BANNED, $decoded) === 1 || ! self::urlsAllowed($decoded) || ! self::balanced($css)) {
+        if (str_contains($decoded, '<') || preg_match(self::BANNED, $decoded) === 1 || ! self::urlsAllowed($decoded) || ! self::bracesShown($css, $decoded)) {
             return null;
         }
 
-        return trim($css);
+        $masked = self::withoutStrings($css);
+
+        return $masked !== null && self::wellFormed($masked) ? trim($css) : null;
     }
 
     /**
@@ -78,7 +90,7 @@ final class CustomCss
     }
 
     /**
-     * Every url() points at https:// or a path on this site, and is closed.
+     * Every url() is closed and points at a path on this site.
      */
     private static function urlsAllowed(string $decoded): bool
     {
@@ -87,7 +99,7 @@ final class CustomCss
         }
 
         foreach ($matches[2] as $url) {
-            if (preg_match('~^(https://|/(?!/))~', trim($url)) !== 1) {
+            if (preg_match('~^/(?!/)~', trim($url)) !== 1) {
                 return false;
             }
         }
@@ -95,22 +107,150 @@ final class CustomCss
         return true;
     }
 
-    private static function balanced(string $css): bool
+    /**
+     * No brace comes from an escape (`\}`, `\7d`): the braces seen are the
+     * braces the browser reads.
+     */
+    private static function bracesShown(string $css, string $decoded): bool
+    {
+        return preg_match('/\\\\[{}]/', $css) !== 1
+            && substr_count($css, '{') === substr_count($decoded, '{')
+            && substr_count($css, '}') === substr_count($decoded, '}');
+    }
+
+    /**
+     * The CSS with each quoted string emptied, so commas and words inside
+     * strings do not count. Null when a string holds a brace or a quote
+     * is never closed.
+     */
+    private static function withoutStrings(string $css): ?string
+    {
+        $hidesBrace = false;
+        $masked = (string) preg_replace_callback('/"(?:[^"\\\\\n]|\\\\.)*"|\'(?:[^\'\\\\\n]|\\\\.)*\'/s', function (array $match) use (&$hidesBrace): string {
+            $hidesBrace = $hidesBrace || strpbrk($match[0], '{}') !== false;
+
+            return '""';
+        }, $css);
+
+        return $hidesBrace || strpbrk(str_replace('""', '', $masked), '"\'') !== false ? null : $masked;
+    }
+
+    /**
+     * Plain declarations, or a run of rules on the element and @media or
+     *
+     * @supports blocks of them.
+     */
+    private static function wellFormed(string $css): bool
+    {
+        if (strpbrk($css, '{}') === false) {
+            return ! str_contains($css, '@');
+        }
+
+        return self::rules($css, 0);
+    }
+
+    private static function rules(string $css, int $depth): bool
+    {
+        $at = 0;
+        $length = strlen($css);
+
+        while (true) {
+            while ($at < $length && ctype_space($css[$at])) {
+                $at++;
+            }
+
+            if ($at >= $length) {
+                return true;
+            }
+
+            $open = strpos($css, '{', $at);
+            $close = $open === false ? false : self::closing($css, $open);
+
+            if ($open === false || $close === null) {
+                return false;
+            }
+
+            $prelude = trim(substr($css, $at, $open - $at));
+            $body = substr($css, $open + 1, $close - $open - 1);
+
+            if (strpbrk($prelude, '};') !== false || ! self::rule($prelude, $body, $depth)) {
+                return false;
+            }
+
+            $at = $close + 1;
+        }
+    }
+
+    private static function rule(string $prelude, string $body, int $depth): bool
+    {
+        if (str_starts_with($prelude, '@')) {
+            return preg_match('/^@(media|supports)(?![\w-])/i', $prelude) === 1 && $depth < self::MAX_DEPTH && self::rules($body, $depth + 1);
+        }
+
+        if (strpbrk($body, '{}') !== false || $prelude === '') {
+            return false;
+        }
+
+        foreach (self::selectors($prelude) as $selector) {
+            if (preg_match('/^selector(?![\w-])/', trim($selector)) !== 1) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * The position of the brace that closes the one at `$open`.
+     */
+    private static function closing(string $css, int $open): ?int
     {
         $depth = 0;
 
-        foreach (str_split($css) as $character) {
-            $depth += match ($character) {
+        for ($at = $open, $length = strlen($css); $at < $length; $at++) {
+            $depth += match ($css[$at]) {
                 '{' => 1,
                 '}' => -1,
                 default => 0,
             };
 
-            if ($depth < 0) {
-                return false;
+            if ($depth === 0) {
+                return $at;
             }
         }
 
-        return $depth === 0;
+        return null;
+    }
+
+    /**
+     * A selector list split at its top-level commas (not the ones inside
+     * `:is(a, b)`).
+     *
+     * @return list<string>
+     */
+    private static function selectors(string $prelude): array
+    {
+        $selectors = [];
+        $current = '';
+        $depth = 0;
+
+        foreach (str_split($prelude) as $character) {
+            $depth += match ($character) {
+                '(', '[' => 1,
+                ')', ']' => -1,
+                default => 0,
+            };
+
+            if ($character === ',' && $depth === 0) {
+                $selectors[] = $current;
+                $current = '';
+
+                continue;
+            }
+
+            $current .= $character;
+        }
+
+        return [...$selectors, $current];
     }
 }
