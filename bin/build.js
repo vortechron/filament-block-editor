@@ -28,6 +28,26 @@ const tailwindPlugin = {
 };
 
 /**
+ * BlockNote loads emoji-mart and its emoji data (about 500 kB) for its ":"
+ * emoji picker. The builder turns the picker off (page-block-editor.tsx),
+ * and without code splitting the import would still land in the one file,
+ * so both resolve to an empty module.
+ */
+const noEmojiPickerPlugin = {
+    name: 'fbe-no-emoji-picker',
+    setup(build) {
+        build.onResolve({ filter: /^(emoji-mart|@emoji-mart\/data)$/ }, (args) => ({
+            path: args.path,
+            namespace: 'fbe-empty',
+        }));
+        build.onLoad({ filter: /.*/, namespace: 'fbe-empty' }, () => ({
+            contents: 'export default {};',
+            loader: 'js',
+        }));
+    },
+};
+
+/**
  * The page builder: one ES module with React and BlockNote inside, and
  * one stylesheet. Hosts load both; neither needs a build on their side.
  */
@@ -51,7 +71,7 @@ async function buildBuilder() {
             'process.env.NODE_ENV': JSON.stringify(isDev ? 'development' : 'production'),
         },
         loader: { '.woff': 'empty', '.woff2': 'empty', '.ttf': 'empty', '.svg': 'dataurl', '.png': 'dataurl' },
-        plugins: [tailwindPlugin],
+        plugins: [tailwindPlugin, noEmojiPickerPlugin],
         logLevel: 'info',
     });
 

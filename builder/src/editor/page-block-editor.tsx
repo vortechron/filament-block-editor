@@ -94,6 +94,10 @@ export function PageBlockEditor({
                 editor={editor}
                 theme="light"
                 slashMenu={false}
+                // No ":" emoji picker: its data is a quarter of the builder's
+                // file (bin/build.js leaves it out). Phones and computers
+                // have their own emoji keyboards.
+                emojiPicker={false}
                 sideMenu={false}
                 filePanel={false}
                 formattingToolbar={false}

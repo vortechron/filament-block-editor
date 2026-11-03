@@ -56,10 +56,15 @@ export function pageSlashMenuItems(
         }),
     );
 
+    // The emoji entry opens the emoji picker, which the builder leaves out.
+    const blockNoteItems = (getDefaultReactSlashMenuItems(editor) as SlashItem[]).filter(
+        (item) => item.key !== 'emoji',
+    );
+
     return [
         ...topItems,
         ...combineByGroup(
-            getDefaultReactSlashMenuItems(editor) as SlashItem[],
+            blockNoteItems,
             columns,
             kitBlocks,
             extraItems,
