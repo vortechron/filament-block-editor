@@ -7,6 +7,8 @@ use Illuminate\Support\Str;
 use Vortechron\FilamentBlockEditor\BlockNote\BlockNoteDocument;
 use Vortechron\FilamentBlockEditor\Enums\SectionFont;
 use Vortechron\FilamentBlockEditor\Enums\SectionLayout;
+use Vortechron\FilamentBlockEditor\Styling\Advanced;
+use Vortechron\FilamentBlockEditor\Styling\StyleBag;
 use Vortechron\FilamentBlockEditor\Support\Urls;
 
 /**
@@ -221,6 +223,10 @@ final class PageContent
     }
 
     /**
+     * The fields, then `style` (Styling\StyleBag) and `advanced`
+     * (Styling\Advanced) when they hold anything: on top of the simple
+     * look fields, and winning over them when both set the same thing.
+     *
      * @param  array<mixed>  $data
      * @return array<string, mixed>
      */
@@ -232,7 +238,14 @@ final class PageContent
             $clean[$name] = self::cleanValue($spec, $data[$name] ?? null);
         }
 
-        return $clean;
+        $style = StyleBag::clean($data['style'] ?? null);
+        $advanced = Advanced::clean($data['advanced'] ?? null);
+
+        return [
+            ...$clean,
+            ...($style === [] ? [] : ['style' => $style]),
+            ...($advanced === [] ? [] : ['advanced' => $advanced]),
+        ];
     }
 
     private static function cleanValue(string $spec, mixed $value): mixed

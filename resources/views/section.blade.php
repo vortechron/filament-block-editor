@@ -5,10 +5,14 @@
     $data    the cleaned section data (Content\PageContent)
     $layout  the Enums\SectionLayout
     $html    the layout's HTML (Rendering\SectionLayoutRenderer)
+    $classes extra classes: fbe-s-{id} and the advanced class names (Rendering\SectionLook)
+    $inlineBackground  false when the style bag draws the background colour
 --}}
 @use('Vortechron\FilamentBlockEditor\BlockNote\BlockNoteRenderer')
 @use('Vortechron\FilamentBlockEditor\Enums\SectionFont')
 @php
+    $classes ??= [];
+    $inlineBackground ??= true;
     $background = $data['background'] ?? 'none';
     $color = $background === 'color' ? BlockNoteRenderer::hexColor($data['background_color'] ?? null) : null;
     $pictureUrl = $background === 'image' ? ($data['image'] ?? null) : null;
@@ -56,8 +60,9 @@
             'sf-button-'.$button => $button !== null,
             'sf-text-color' => $textColor !== null,
             'sf-dark-text' => $textColor !== null && BlockNoteRenderer::isDarkColor($textColor),
+            ...$classes,
         ])
-        style="--sf-pad: {{ $padding }};@if ($color !== null) background-color: {{ $color }};@endif @if ($textColor !== null) --sf-custom-text: {{ $textColor }};@endif"
+        style="--sf-pad: {{ $padding }};@if ($color !== null && $inlineBackground) background-color: {{ $color }};@endif @if ($textColor !== null) --sf-custom-text: {{ $textColor }};@endif"
         data-block="rich"
         data-layout="{{ $layout->value }}"
     >

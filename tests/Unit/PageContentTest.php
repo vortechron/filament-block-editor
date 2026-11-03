@@ -313,6 +313,26 @@ class PageContentTest extends TestCase
         $this->assertArrayNotHasKey('lock', $open);
     }
 
+    public function test_a_section_keeps_its_cleaned_style_and_advanced_settings(): void
+    {
+        $data = PageContent::normalize([['type' => 'rich', 'data' => [
+            'style' => ['desktop' => ['padding_top' => '24px', 'color' => 'red'], 'tablet' => ['padding_top' => '</style>']],
+            'advanced' => ['class' => 'wide', 'css' => 'selector { color: red }', 'hide_on' => ['phone'], 'id' => 'x'],
+        ]]])[0]['data'];
+
+        $this->assertSame(['desktop' => ['padding_top' => '24px']], $data['style']);
+        $this->assertSame(['class' => 'wide', 'css' => 'selector { color: red }', 'hide_on' => ['phone']], $data['advanced']);
+    }
+
+    public function test_a_section_with_no_style_or_advanced_settings_looks_the_same_as_in_format_one(): void
+    {
+        $data = PageContent::normalize([['type' => 'rich', 'data' => ['style' => ['desktop' => ['padding_top' => 'x']], 'advanced' => ['class' => '']]]])[0]['data'];
+
+        $this->assertArrayNotHasKey('style', $data);
+        $this->assertArrayNotHasKey('advanced', $data);
+        $this->assertSame(PageContent::normalize([['type' => 'rich', 'data' => []]])[0]['data'], $data);
+    }
+
     public function test_the_rules_accept_ref_sections_and_refuse_bad_refs(): void
     {
         $this->assertTrue(Validator::make(['sections' => [['type' => 'ref', 'ref' => 4]]], PageContent::rules())->passes());

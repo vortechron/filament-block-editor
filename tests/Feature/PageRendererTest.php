@@ -323,6 +323,64 @@ class PageRendererTest extends TestCase
         $this->assertSame($bare, app(PageRenderer::class)->render(['version' => 2, 'sections' => $sections], new RenderContext));
     }
 
+    public function test_a_section_with_style_gets_its_class_and_the_page_one_style_tag_before_the_sections(): void
+    {
+        $html = $this->render([
+            $this->section('st1', [Blocks::paragraph('A')], ['style' => ['desktop' => ['padding_top' => '24px'], 'phone' => ['padding_top' => '12px']]]),
+            $this->section('st2', [Blocks::paragraph('B')], ['advanced' => ['class' => 'price-card wide', 'hide_on' => ['tablet']]]),
+            $this->section('plain', [Blocks::paragraph('C')]),
+        ]);
+
+        $this->assertSame(1, substr_count($html, '<style'));
+        $this->assertStringStartsWith('<style data-fbe-style>', $html);
+        $this->assertStringContainsString('.sf-page .fbe-s-st1{padding-top:24px}', $html);
+        $this->assertStringContainsString('@media (max-width: 767px){.sf-page .fbe-s-st1{padding-top:12px}}', $html);
+        $this->assertStringContainsString('@media (min-width: 768px) and (max-width: 1024px){.sf-page .fbe-s-st2{display:none}}', $html);
+        $this->assertSame('sf-rich-section sf-layout-plain fbe-s-st1', $this->first($html, '[data-block-id="st1"] section')->getAttribute('class'));
+        $this->assertSame('sf-rich-section sf-layout-plain fbe-s-st2 price-card wide', $this->first($html, '[data-block-id="st2"] section')->getAttribute('class'));
+        $this->assertSame('sf-rich-section sf-layout-plain', $this->first($html, '[data-block-id="plain"] section')->getAttribute('class'));
+    }
+
+    public function test_a_page_with_no_style_has_no_style_tag(): void
+    {
+        $html = $this->render([$this->section('plain', [Blocks::paragraph('C')], ['background' => 'color', 'background_color' => '#ffeecc'])]);
+
+        $this->assertStringNotContainsString('<style', $html);
+        $this->assertStringNotContainsString('fbe-s-', $html);
+    }
+
+    public function test_a_style_background_colour_wins_over_the_preset_one(): void
+    {
+        $html = $this->render([$this->section('bg1', [Blocks::paragraph('A')], [
+            'background' => 'color',
+            'background_color' => '#ffeecc',
+            'style' => ['phone' => ['background_color' => '#000000']],
+        ])]);
+
+        $section = $this->first($html, 'section');
+
+        $this->assertStringNotContainsString('background-color', $section->getAttribute('style'));
+        $this->assertStringContainsString('.sf-page .fbe-s-bg1{background-color:#ffeecc}', $html);
+        $this->assertStringContainsString('@media (max-width: 767px){.sf-page .fbe-s-bg1{background-color:#000000}}', $html);
+        $this->assertStringContainsString('sf-has-bg', $section->getAttribute('class'));
+    }
+
+    public function test_a_style_text_alignment_wins_over_the_align_preset(): void
+    {
+        $html = $this->render([$this->section('al1', [Blocks::paragraph('A')], ['align' => 'center', 'style' => ['phone' => ['text_align' => 'left']]])]);
+
+        $this->assertStringNotContainsString('sf-align-center', $this->first($html, 'section')->getAttribute('class'));
+        $this->assertStringContainsString('.sf-page .fbe-s-al1{text-align:center}', $html);
+        $this->assertStringContainsString('{.sf-page .fbe-s-al1{text-align:left}}', $html);
+    }
+
+    public function test_section_custom_css_is_drawn_with_selector_replaced(): void
+    {
+        $html = $this->render([$this->section('css1', [Blocks::paragraph('A')], ['advanced' => ['css' => 'selector .bn-button{letter-spacing:.1em}']])]);
+
+        $this->assertStringContainsString('.sf-page .fbe-s-css1 .bn-button{letter-spacing:.1em}', $html);
+    }
+
     public function test_a_page_without_sections_is_empty(): void
     {
         $this->assertSame('', $this->render([]));

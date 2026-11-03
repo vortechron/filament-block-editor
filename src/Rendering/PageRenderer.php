@@ -5,6 +5,7 @@ namespace Vortechron\FilamentBlockEditor\Rendering;
 use Vortechron\FilamentBlockEditor\Content\PageContent;
 use Vortechron\FilamentBlockEditor\Content\PageValue;
 use Vortechron\FilamentBlockEditor\Enums\SectionLayout;
+use Vortechron\FilamentBlockEditor\Styling\StyleSheet;
 
 /**
  * Draws a page as HTML: a page value of any format (Content\PageValue), or
@@ -19,6 +20,10 @@ use Vortechron\FilamentBlockEditor\Enums\SectionLayout;
  * builder's canvas (`forBuilder`) draws them with `data-hidden` on the
  * wrapper, so the builder can show them dimmed.
  *
+ * A section with its own `style` or `advanced` settings gets the class
+ * `fbe-s-{id}`, and the page one `<style data-fbe-style>` before the
+ * sections with their rules (Styling\StyleSheet).
+ *
  * Draw the result inside an element with the `sf-page` class (the
  * `<x-filament-block-editor::page>` component does), because the stylesheet
  * reads its colours and fonts from there.
@@ -32,19 +37,21 @@ final class PageRenderer
      */
     public function render(array $sections, RenderContext $context): string
     {
-        $html = '';
-
         $sections = PageValue::normalize($sections)['sections'];
 
-        foreach ($context->forBuilder ? $sections : PageContent::visible($sections) as $section) {
-            if ($section['type'] !== PageContent::TYPE) {
-                continue;
+        return StyleSheet::collect(function () use ($sections, $context): string {
+            $html = '';
+
+            foreach ($context->forBuilder ? $sections : PageContent::visible($sections) as $section) {
+                if ($section['type'] !== PageContent::TYPE) {
+                    continue;
+                }
+
+                $html .= $this->wrapper($section, $context).$this->section($section['id'], $section['data'], $context).'</div>';
             }
 
-            $html .= $this->wrapper($section, $context).$this->section($section['data'], $context).'</div>';
-        }
-
-        return $html;
+            return $html;
+        });
     }
 
     /**
@@ -63,14 +70,17 @@ final class PageRenderer
     /**
      * @param  array<string, mixed>  $data
      */
-    private function section(array $data, RenderContext $context): string
+    private function section(string $id, array $data, RenderContext $context): string
     {
         $layout = SectionLayout::tryFrom((string) ($data['layout'] ?? '')) ?? SectionLayout::Plain;
+        $look = SectionLook::apply($id, $data, $context);
 
         return view('filament-block-editor::section', [
-            'data' => $data,
+            'data' => $look->data,
             'layout' => $layout,
             'html' => $this->layouts->render($data['document'] ?? [], $layout, $context),
+            'classes' => $look->classes,
+            'inlineBackground' => $look->inlineBackground,
         ])->render();
     }
 }
