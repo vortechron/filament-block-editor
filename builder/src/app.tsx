@@ -308,6 +308,7 @@ function Builder({
                 onOpenChange={setIsPreviewOpen}
                 draft={JSON.stringify(form.data)}
                 kit={kit.canSave ? JSON.stringify(kit.kit) : null}
+                siteInfo={siteInfo.canSave ? JSON.stringify(siteInfo.values) : null}
                 initialDevice={device}
                 isDesktop={isDesktop}
             />

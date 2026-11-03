@@ -281,14 +281,22 @@ export type SaveSectionResult =
     | { ok: true; id: number | string; template?: SectionTemplateInput }
     | { ok: false; errors: Record<string, string> };
 
+/** What the preview is drawn with besides the page: unsaved site values. */
+export type PreviewExtra = {
+    kit?: Kit;
+    siteInfo?: SiteInfo['values'];
+};
+
 /** How the builder talks to the host. */
 export type PageBuilderAdapter = {
     save: (value: PageValue) => Promise<SaveResult>;
     /**
      * A full HTML document of the page, drawn with the builder's markers.
-     * `extra.kit` is the design kit with changes not saved yet.
+     * `extra.kit` is the design kit with changes not saved yet, and
+     * `extra.siteInfo` the shop info form's values (by group), not saved
+     * yet either. Draw with them; never save them here.
      */
-    preview: (value: PageValue, extra?: { kit?: Kit }) => Promise<string>;
+    preview: (value: PageValue, extra?: PreviewExtra) => Promise<string>;
     upload: (
         file: File,
         kind: UploadKind,

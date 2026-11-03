@@ -167,6 +167,29 @@ describe('the Shop info button in the top bar', () => {
     });
 });
 
+describe('the canvas while the shop info is typed', () => {
+    it('is drawn again with the unsaved shop info, and nothing is saved', async () => {
+        const adapter = siteInfoAdapter();
+
+        mountWithShopInfo([HEADING], adapter);
+        fireEvent.click(within(screen.getByRole('banner')).getByRole('button', { name: 'Shop info' }));
+
+        const form = await screen.findByRole('region', { name: 'Shop info' });
+
+        fireEvent.change(within(form).getByLabelText('Shop phone'), { target: { value: '013-000 1111' } });
+
+        await waitFor(
+            () =>
+                expect(adapter.preview.mock.calls.at(-1)?.[1]?.siteInfo?.contact).toEqual({
+                    phone: '013-000 1111',
+                    email: 'kedai@example.com',
+                }),
+            { timeout: 2000 },
+        );
+        expect(adapter.saveSiteInfo).not.toHaveBeenCalled();
+    });
+});
+
 describe('without a shop info form', () => {
     it.each([
         ['the host sends no shop info', { siteInfo: null, adapter: siteInfoAdapter() }],

@@ -33,6 +33,7 @@ const PHOTO_WAIT_MS = 400;
 export function PageFrame({
     draft,
     kit = null,
+    siteInfo = null,
     reloads = 0,
     marks,
     onPick,
@@ -41,6 +42,8 @@ export function PageFrame({
     draft: string;
     /** The design kit as JSON, with changes not saved yet, or null. */
     kit?: string | null;
+    /** The shop info as JSON, with changes not saved yet, or null. */
+    siteInfo?: string | null;
     /** Draws the page again when it goes up, like after the shop info is saved. */
     reloads?: number;
     /**
@@ -52,7 +55,7 @@ export function PageFrame({
     onPick: (pick: FramePick) => void;
 }) {
     const t = useT();
-    const { html, isUpdating, isStale } = useDraftPreview(draft, kit, reloads);
+    const { html, isUpdating, isStale } = useDraftPreview(draft, { kit, siteInfo, reloads });
     const { pickedSectionId, pickedItemPath, scale } = marks;
     const frameA = useRef<HTMLIFrameElement>(null);
     const frameB = useRef<HTMLIFrameElement>(null);

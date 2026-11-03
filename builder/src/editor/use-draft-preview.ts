@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useHost } from '@/lib/host';
 import { normalizeValue } from '@/lib/page-value';
-import type { Kit, PageValue } from '@/types';
+import type { Kit, PageValue, PreviewExtra, SiteInfo } from '@/types';
 
 /** Wait this long after the last key press before asking for a new preview. */
 const TYPING_PAUSE_MS = 450;
@@ -14,6 +14,15 @@ export type DraftPreview = {
     isStale: boolean;
 };
 
+export type DraftExtras = {
+    /** The design kit as JSON, with changes not saved yet, or null. */
+    kit?: string | null;
+    /** The shop info form's values as JSON, with changes not saved yet, or null. */
+    siteInfo?: string | null;
+    /** Asks again when it goes up, though nothing in the page changed. */
+    reloads?: number;
+};
+
 /**
  * Asks the host to draw the builder's unsaved page value and returns the
  * page HTML. A new request starts when the user stops typing; the answer
@@ -21,16 +30,13 @@ export type DraftPreview = {
  *
  * `draft` is the page value as a JSON string, so a new request only
  * starts when something in it really changed. The same goes for `kit`,
- * the design kit, which is sent along so its unsaved changes show, and
- * for `reloads`, raised when something outside the page changed (the
- * shop info the header shows).
+ * the design kit, and `siteInfo`, the shop info, which are sent along so
+ * their unsaved changes show, and for `reloads`, raised when something
+ * outside the page changed (the shop info was saved).
  */
 export function useDraftPreview(
     draft: string,
-    /** The design kit as JSON, with changes not saved yet, or null. */
-    kit: string | null = null,
-    /** Asks again when it goes up, though nothing in the page changed. */
-    reloads = 0,
+    { kit = null, siteInfo = null, reloads = 0 }: DraftExtras = {},
 ): DraftPreview {
     const { adapter } = useHost();
     const [html, setHtml] = useState<string | null>(null);
@@ -49,12 +55,11 @@ export function useDraftPreview(
                         const value = normalizeValue(
                             JSON.parse(draft) as PageValue,
                         );
+                        const extra = previewExtra(kit, siteInfo);
 
-                        return kit === null
+                        return extra === null
                             ? adapter.preview(value)
-                            : adapter.preview(value, {
-                                  kit: JSON.parse(kit) as Kit,
-                              });
+                            : adapter.preview(value, extra);
                     })
                     .then((page) => {
                         if (!isCurrent) {
@@ -88,7 +93,19 @@ export function useDraftPreview(
             isCurrent = false;
             window.clearTimeout(timer);
         };
-    }, [adapter, draft, kit, reloads]);
+    }, [adapter, draft, kit, siteInfo, reloads]);
 
     return { html, isUpdating, isStale };
+}
+
+/** The unsaved kit and shop info for the preview, or null with neither. */
+function previewExtra(kit: string | null, siteInfo: string | null): PreviewExtra | null {
+    if (kit === null && siteInfo === null) {
+        return null;
+    }
+
+    return {
+        ...(kit === null ? {} : { kit: JSON.parse(kit) as Kit }),
+        ...(siteInfo === null ? {} : { siteInfo: JSON.parse(siteInfo) as SiteInfo['values'] }),
+    };
 }

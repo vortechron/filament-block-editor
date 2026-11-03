@@ -45,8 +45,9 @@ export function Canvas({ notices }: { notices: ReactNode }) {
     const { viewUrl, parts } = useHost();
     const { builder, form, device, isDesktop, revealPanel, kit, siteInfo } =
         useBuilderContext();
-    // Only a kit that can change is sent with the preview.
+    // Only a kit and shop info that can change are sent with the preview.
     const kitDraft = kit.canSave ? JSON.stringify(kit.kit) : null;
+    const siteInfoDraft = siteInfo.canSave ? JSON.stringify(siteInfo.values) : null;
     const { blocks, selection } = builder;
     const showsFrame = isDesktop;
     const pageBox = useRef<HTMLDivElement>(null);
@@ -164,6 +165,7 @@ export function Canvas({ notices }: { notices: ReactNode }) {
                             <PageFrame
                                 draft={JSON.stringify(form.data)}
                                 kit={kitDraft}
+                                siteInfo={siteInfoDraft}
                                 reloads={siteInfo.reloads}
                                 marks={marks}
                                 onPick={handlePick}

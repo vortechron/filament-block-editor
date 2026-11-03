@@ -17,6 +17,7 @@ export function PreviewDialog({
     onOpenChange,
     draft,
     kit,
+    siteInfo,
     initialDevice,
     isDesktop,
 }: {
@@ -25,6 +26,8 @@ export function PreviewDialog({
     draft: string;
     /** The design kit as JSON, with changes not saved yet, or null. */
     kit: string | null;
+    /** The shop info as JSON, with changes not saved yet, or null. */
+    siteInfo: string | null;
     initialDevice: Device;
     isDesktop: boolean;
 }) {
@@ -119,6 +122,7 @@ export function PreviewDialog({
                                 <LivePreview
                                     draft={draft}
                                     kit={kit}
+                                    siteInfo={siteInfo}
                                     editingBlockId={null}
                                     className="h-full grid-rows-[auto_minmax(0,1fr)_auto] rounded-2xl bg-white p-3"
                                     frameClassName="h-full"

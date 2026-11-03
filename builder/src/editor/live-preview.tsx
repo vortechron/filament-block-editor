@@ -54,6 +54,7 @@ function showEditing(
 export function LivePreview({
     draft,
     kit = null,
+    siteInfo = null,
     editingBlockId,
     className,
     frameClassName,
@@ -62,12 +63,14 @@ export function LivePreview({
     draft: string;
     /** The design kit as JSON, with changes not saved yet, or null. */
     kit?: string | null;
+    /** The shop info as JSON, with changes not saved yet, or null. */
+    siteInfo?: string | null;
     editingBlockId: string | null;
     className?: string;
     frameClassName?: string;
 }) {
     const t = useT();
-    const { html, isUpdating, isStale } = useDraftPreview(draft, kit);
+    const { html, isUpdating, isStale } = useDraftPreview(draft, { kit, siteInfo });
     const frameRef = useRef<HTMLIFrameElement>(null);
     const scrollTop = useRef(0);
     // The section the preview last scrolled to, so it scrolls once per section.
