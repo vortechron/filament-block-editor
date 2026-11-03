@@ -3,23 +3,23 @@ import '@vortechron/blocknote-kit/style.css';
 import '../styles/section-look.css';
 import '../styles/section-look-style.css';
 import type { BlockNoteEditor } from '@blocknote/core';
-import { type Appearance, BlockEditor } from '@vortechron/blocknote-kit';
+import type { Appearance } from '@vortechron/blocknote-kit';
 import { type CSSProperties, useRef } from 'react';
 import { useT } from '@/lib/i18n';
 import type { RichDocument, SectionData } from '@/types';
 import { accentTokens } from './accent-tokens';
 import { addLineBelowOnTap } from './add-line-below';
 import { layoutSlashMenuItems } from './layout-slash-items';
+import { PageBlockEditor } from './page-block-editor';
 import {
     type PageBlocksInfo,
     PageBlocksContext,
-    pageBlockSpecs,
     pageSlashMenuItems,
 } from './page-blocks';
 
 /**
- * The BlockNote editor from @vortechron/blocknote-kit, for a section's
- * words. It is a plain document on white, in the page's accent colour:
+ * The BlockNote editor from @vortechron/blocknote-kit (with the page
+ * schema, see page-block-editor.tsx), for a section's words. It is a plain document on white, in the page's accent colour:
  * the page on the canvas already shows the section's real layout and
  * style, so the editor does not try to look like it (section-look.css
  * gives the page's own blocks their look).
@@ -58,18 +58,15 @@ export default function RichEditor({
                     addLineBelowOnTap(event, blockEditorRef.current)
                 }
             >
-                <BlockEditor
+                <PageBlockEditor
                     initialContent={data.document}
-                    onEditorReady={(readyEditor: BlockNoteEditor) => {
+                    onEditorReady={(readyEditor) => {
                         blockEditorRef.current = readyEditor;
                         onEditorReady?.(readyEditor);
                     }}
-                    onChange={(document) =>
-                        onDocumentChange(document as RichDocument)
-                    }
+                    onChange={onDocumentChange}
                     uploadFile={uploadFile}
                     appearance={WORDS_APPEARANCE}
-                    blockSpecs={pageBlockSpecs}
                     slashMenuItems={(slashEditor) =>
                         pageSlashMenuItems(
                             slashEditor,

@@ -8,6 +8,7 @@ import { iconByName } from '@/lib/icons';
 import { useT } from '@/lib/i18n';
 import type { OwnBlockDefinition } from '@/types';
 import { GalleryBlock, galleryUrls, MAX_GALLERY_PHOTOS } from './gallery-block';
+import { LOOK_PROP_SCHEMA } from './look-prop';
 import type { Translate } from './helpers';
 
 /**
@@ -17,7 +18,8 @@ import type { Translate } from './helpers';
  * (Blocks\BlockRegistry for own blocks). Keep the two in step.
  *
  * Loaded with the editor only (see rich-editor.tsx), because BlockNote is
- * large.
+ * large. Each one declares the `look` prop itself: BlockNote draws a React
+ * block with the prop schema it was made with (see page-schema.ts).
  */
 
 export type PageBlocksInfo = {
@@ -36,7 +38,7 @@ export const BUTTON_VARIANTS = ['solid', 'outline'] as const;
 const gallery = createReactBlockSpec(
     {
         type: 'gallery',
-        propSchema: { images: { default: '' } },
+        propSchema: { images: { default: '' }, ...LOOK_PROP_SCHEMA },
         content: 'none',
     },
     {
@@ -79,6 +81,7 @@ const button = createReactBlockSpec(
             text: { default: '' },
             url: { default: '' },
             variant: { default: 'solid', values: BUTTON_VARIANTS },
+            ...LOOK_PROP_SCHEMA,
         },
         content: 'none',
     },
@@ -103,6 +106,7 @@ const ownBlock = createReactBlockSpec(
         propSchema: {
             kind: { default: '' },
             values: { default: '{}' },
+            ...LOOK_PROP_SCHEMA,
         },
         content: 'none',
     },
