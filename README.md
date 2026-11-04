@@ -26,7 +26,7 @@ It started as the page builder of [NakJual](https://nakjual.com) and is made gen
 
 ```bash
 composer config repositories.vortechron-block-editor vcs https://github.com/vortechron/filament-block-editor.git
-composer require vortechron/filament-block-editor:^2.7
+composer require vortechron/filament-block-editor:^2.8
 php artisan filament:assets   # with Filament
 # or, without Filament:
 php artisan vendor:publish --tag=filament-block-editor-assets
@@ -220,6 +220,11 @@ link are Malay in the live page and in the builder's preview, while the builder'
 Ready-made sections keep English names and get Malay words. A new form or button starts in the site's language
 too (the `contentLocale` option): the labels, button and thank-you message visitors read are Malay, while the
 form's name and the email subject, which only the owner sees, stay English. Unset, both are the app's language.
+
+Every new item starts with words in the site's language, so it never lands blank on the page: a heading says "Tajuk
+anda", a text "Tulis ayat anda di sini.", a question has an answer, each new column a line. The item panel changes a
+text item's words in a plain box (bold, colours, links and shop info chips stay in the section's editor), and a
+slideshow's photos are added, moved and removed on its Settings tab.
 
 ## Ready-made blocks
 
