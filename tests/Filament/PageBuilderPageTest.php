@@ -37,6 +37,20 @@ class PageBuilderPageTest extends FilamentTestCase
         $this->assertArrayNotHasKey('viewUrl', $options);
     }
 
+    public function test_an_english_panel_for_a_malay_site_gets_english_words_and_malay_sections(): void
+    {
+        $this->signIn();
+        app()->setLocale('en');
+        config(['filament-block-editor.content_locale' => 'ms']);
+
+        $options = Livewire::test(DemoBuilder::class)->instance()->getPageBuilderOptions();
+        $hero = collect($options['templates'])->firstWhere('key', 'hero');
+
+        $this->assertSame('en', $options['locale']);
+        $this->assertSame('Hero', $hero['label']);
+        $this->assertStringContainsString('Hubungi kami', json_encode($hero['section']));
+    }
+
     public function test_saving_cleans_the_sections_and_hands_them_to_the_page(): void
     {
         $this->signIn();

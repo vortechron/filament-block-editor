@@ -2,6 +2,7 @@
 
 namespace Vortechron\FilamentBlockEditor\Blocks;
 
+use Vortechron\FilamentBlockEditor\Rendering\ContentLocale;
 use Vortechron\FilamentBlockEditor\Rendering\RenderContext;
 
 /**
@@ -100,7 +101,7 @@ final class BlockRegistry
     private function missing(string $kind): string
     {
         return '<figure class="bn-media-empty" data-empty-media="block"><span>'
-            .e(__('filament-block-editor::preview.missing_block', ['kind' => $kind]))
+            .e(__('filament-block-editor::preview.missing_block', ['kind' => $kind], ContentLocale::panel()))
             .'</span></figure>';
     }
 }

@@ -12,6 +12,7 @@ use Vortechron\FilamentBlockEditor\Content\PageContent;
 use Vortechron\FilamentBlockEditor\Content\PageValue;
 use Vortechron\FilamentBlockEditor\Design\Kit;
 use Vortechron\FilamentBlockEditor\Design\KitSource;
+use Vortechron\FilamentBlockEditor\Rendering\ContentLocale;
 use Vortechron\FilamentBlockEditor\Support\Assets;
 use Vortechron\FilamentBlockEditor\Templates\SectionTemplates;
 
@@ -112,6 +113,15 @@ trait InteractsWithPageBuilder
     }
 
     /**
+     * The language of the words a ready-made section puts on the page: the
+     * site's (Rendering\ContentLocale), which may differ from the builder's.
+     */
+    protected function getPageBuilderContentLocale(): string
+    {
+        return str_starts_with(ContentLocale::site(), 'ms') ? 'ms' : 'en';
+    }
+
+    /**
      * Everything mountPageBuilder() needs except the adapter, which the view
      * wires to this page.
      *
@@ -124,7 +134,7 @@ trait InteractsWithPageBuilder
         return array_filter([
             'value' => PageValue::normalize($this->getPageBuilderValue()),
             'blocks' => app(BlockRegistry::class)->definitions(),
-            'templates' => SectionTemplates::all($locale),
+            'templates' => SectionTemplates::all($locale, $this->getPageBuilderContentLocale()),
             'locale' => $locale,
             'title' => (string) $this->getTitle(),
             'backUrl' => $this->getPageBuilderBackUrl(),

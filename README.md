@@ -26,7 +26,7 @@ It started as the page builder of [NakJual](https://nakjual.com) and is made gen
 
 ```bash
 composer config repositories.vortechron-block-editor vcs https://github.com/vortechron/filament-block-editor.git
-composer require vortechron/filament-block-editor:^2.4
+composer require vortechron/filament-block-editor:^2.5
 php artisan filament:assets   # with Filament
 # or, without Filament:
 php artisan vendor:publish --tag=filament-block-editor-assets
@@ -208,6 +208,15 @@ preview (the PHP layer does that for Laravel; another stack draws the same HTML 
 
 The full option list and the adapter types are in [docs/v1-architecture.md](docs/v1-architecture.md) and
 `builder/src/index.ts`.
+
+## Languages
+
+The builder speaks the app's language: Bahasa Melayu when `app()->getLocale()` starts with `ms`, English
+otherwise. The page speaks the site's: set `SITE_LOCALE` (`content_locale` in the config) when the two differ,
+for example `APP_LOCALE=en` and `SITE_LOCALE=ms` for an English panel and a Malay site. `PageRenderer` then draws
+every page in the site's language (`Rendering\ContentLocale::run()`), so a form's button and messages and the map
+link are Malay in the live page and in the builder's preview, while the builder's own notes stay English.
+Ready-made sections keep English names and get Malay words. Unset, both are the app's language.
 
 ## Ready-made blocks
 

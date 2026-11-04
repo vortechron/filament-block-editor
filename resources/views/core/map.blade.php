@@ -6,7 +6,7 @@
 @endphp
 @if ($embed === null && $address === '')
     @if ($context->forBuilder)
-        <figure class="bn-media-empty" data-empty-media="map"><span>{{ __('filament-block-editor::core.map.empty') }}</span></figure>
+        <figure class="bn-media-empty" data-empty-media="map"><span>{{ __('filament-block-editor::core.map.empty', [], \Vortechron\FilamentBlockEditor\Rendering\ContentLocale::panel()) }}</span></figure>
     @endif
 @else
 <div class="fbe-map fbe-map-{{ $values['height'] }}">

@@ -31,6 +31,9 @@ use Vortechron\FilamentBlockEditor\Styling\StyleSheet;
  * while a synced section is drawn, refs inside it are not followed. A
  * missing one draws nothing for visitors and a placeholder in the builder.
  *
+ * The page is drawn in the site's language (ContentLocale), and the
+ * builder's notes in the panel's.
+ *
  * Draw the result inside an element with the `sf-page` class (the
  * `<x-filament-block-editor::page>` component does), because the stylesheet
  * reads its colours and fonts from there.
@@ -51,7 +54,7 @@ final class PageRenderer
     {
         $sections = PageValue::normalize($sections)['sections'];
 
-        return StyleSheet::collect(function () use ($sections, $context): string {
+        return ContentLocale::run(fn (): string => StyleSheet::collect(function () use ($sections, $context): string {
             $html = '';
 
             foreach ($context->forBuilder ? $sections : PageContent::visible($sections) as $section) {
@@ -61,7 +64,7 @@ final class PageRenderer
             }
 
             return $html;
-        });
+        }));
     }
 
     /**
@@ -76,7 +79,7 @@ final class PageRenderer
         if (($section['type'] ?? null) !== PageContent::TYPE) {
             return $context->forBuilder
                 ? $this->wrapper($ref, $context, $marks).'<figure class="bn-media-empty" data-empty-media="section"><span>'
-                    .e(__('filament-block-editor::preview.missing_section')).'</span></figure></div>'
+                    .e(__('filament-block-editor::preview.missing_section', [], ContentLocale::panel())).'</span></figure></div>'
                 : '';
         }
 
@@ -98,7 +101,7 @@ final class PageRenderer
     {
         return '<div data-block-id="'.e($section['id']).'"'.$marks
             .(($section['hidden'] ?? false) === true ? ' data-hidden' : '')
-            .($context->isPreview ? ' data-empty-label="'.e(__('filament-block-editor::preview.empty_section')).'"' : '')
+            .($context->isPreview ? ' data-empty-label="'.e(__('filament-block-editor::preview.empty_section', [], ContentLocale::panel())).'"' : '')
             .'>';
     }
 

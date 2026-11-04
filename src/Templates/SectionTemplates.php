@@ -33,16 +33,19 @@ final class SectionTemplates
 
     /**
      * Every template, in the language of `$locale` ("ms" or "en"; anything
-     * else is English): the built-in ones, then the host's own.
+     * else is English): the built-in ones, then the host's own. With a
+     * `$contentLocale`, the sections' words are in that language and only
+     * the names and descriptions in `$locale`.
      *
      * @return list<array{key: string, label: string, category: string, description: string, section: array{id: string, type: string, data: array<string, mixed>}}>
      */
-    public static function all(string $locale): array
+    public static function all(string $locale, ?string $contentLocale = null): array
     {
         $locale = in_array($locale, self::LOCALES, true) ? $locale : self::FALLBACK_LOCALE;
+        $contentLocale = in_array($contentLocale ?? $locale, self::LOCALES, true) ? ($contentLocale ?? $locale) : self::FALLBACK_LOCALE;
         $templates = [];
 
-        foreach (BuiltInTemplates::all($locale) as $template) {
+        foreach (BuiltInTemplates::all($locale, $contentLocale) as $template) {
             $templates[$template['key']] = $template;
         }
 
@@ -53,7 +56,7 @@ final class SectionTemplates
                 'label' => $registered['label'],
                 'category' => $registered['category'],
                 'description' => $registered['description'],
-                'section' => self::section($key, $registered['section'], $locale),
+                'section' => self::section($key, $registered['section'], $contentLocale),
             ];
         }
 

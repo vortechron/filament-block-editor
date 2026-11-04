@@ -54,4 +54,18 @@ return [
 
     'core_blocks' => true,
 
+    /*
+    |--------------------------------------------------------------------------
+    | The site's language
+    |--------------------------------------------------------------------------
+    |
+    | The language of the words the package puts on the page itself (a form's
+    | button and messages, the map link, the words of ready-made sections),
+    | when it is not the panel's: SITE_LOCALE=ms for a Malay site run from an
+    | English panel (APP_LOCALE=en). Empty: the app's language for both.
+    |
+    */
+
+    'content_locale' => env('SITE_LOCALE'),
+
 ];

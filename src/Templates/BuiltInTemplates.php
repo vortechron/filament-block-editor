@@ -67,13 +67,15 @@ final class BuiltInTemplates
     /**
      * @return list<array{key: string, label: string, category: string, description: string, section: array{id: string, type: string, data: array<string, mixed>}}>
      */
-    public static function all(string $locale): array
+    public static function all(string $locale, ?string $contentLocale = null): array
     {
-        $copy = $locale === 'ms' ? self::malay() : self::english();
+        $copy = self::copy($locale);
+        $content = self::copy($contentLocale ?? $locale);
 
-        return array_map(function (string $key) use ($copy, $locale): array {
+        return array_map(function (string $key) use ($copy, $content, $locale): array {
             [$category, $layout, $look] = self::SECTIONS[$key];
-            [$label, $description, $document] = $copy[$key];
+            [$label, $description] = $copy[$key];
+            $document = $content[$key][2];
 
             return [
                 'key' => $key,
@@ -87,6 +89,14 @@ final class BuiltInTemplates
                 ]])[0],
             ];
         }, array_keys(self::SECTIONS));
+    }
+
+    /**
+     * @return array<string, array{0: string, 1: string, 2: list<array<string, mixed>>}>
+     */
+    private static function copy(string $locale): array
+    {
+        return $locale === 'ms' ? self::malay() : self::english();
     }
 
     /**

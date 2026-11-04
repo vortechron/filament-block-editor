@@ -24,5 +24,7 @@ development commands: `README.md`. The design and every deviation from it: `docs
 
 ## Rules
 
-- Builder words are in Bahasa Melayu (`builder/src/lang/ms.ts`).
+- The builder speaks the app's language (`builder/src/lang/ms.ts` for Malay, English otherwise); the page speaks
+  `SITE_LOCALE` (`Rendering\ContentLocale`). Our clients run an English panel (`APP_LOCALE=en`) and a Malay site
+  (`SITE_LOCALE=ms`). Words drawn on the page follow the site; notes for the builder use `ContentLocale::panel()`.
 - Local PHP is `php84`. Use `/opt/homebrew/bin/composer`; the Herd composer path has a space in it.

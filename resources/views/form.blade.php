@@ -46,7 +46,7 @@
             <button type="submit" class="bn-button bn-button-solid" @if ($action === null) disabled @endif>{{ $buttonText }}</button>
         </div>
         @if ($action === null && $context->forBuilder)
-            <p class="fbe-form-note">{{ __('filament-block-editor::preview.form_not_connected') }}</p>
+            <p class="fbe-form-note">{{ __('filament-block-editor::preview.form_not_connected', [], \Vortechron\FilamentBlockEditor\Rendering\ContentLocale::panel()) }}</p>
         @endif
     </form>
 @endif
