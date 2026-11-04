@@ -14,6 +14,7 @@ import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { useBuilderContext } from './builder-context';
+import { dropPlaces, type Point } from './drop-places';
 import { builderApp, liveFrame, pageSections } from './frame-dom';
 import { nearestPlace, type Row } from './page-frame-updates';
 import type { ItemKey, ItemPlace, PagePlace } from './types';
@@ -57,7 +58,6 @@ type DropTarget =
           line: Line;
       };
 
-type Point = { x: number; y: number };
 
 /** The page scrolls by itself when a drag comes this close to an edge. */
 const SCROLL_EDGE = 72;
@@ -359,9 +359,8 @@ function sectionTarget(at: Point, boxes: SectionBox[]): DropTarget {
 
 /**
  * The place between two items, in the section under the pointer on the
- * page. Items are the top-level blocks the server marked with
- * `data-item` (a place like "2"). Copies hidden from screen readers, like
- * the ticker's second run, are skipped.
+ * page: the blocks the server marked with `data-item`, inside the column
+ * under the pointer when there is one (dropPlaces()).
  */
 function pageItemTarget(
     at: Point,
@@ -376,21 +375,9 @@ function pageItemTarget(
                 : best,
         );
     const sectionId = section.getAttribute('data-block-id') ?? '';
-    const items = new Map<string, DOMRect>();
-
-    section.querySelectorAll<HTMLElement>('[data-item]').forEach((element) => {
-        const path = element.getAttribute('data-item') ?? '';
-
-        if (
-            path.includes('.') ||
-            items.has(path) ||
-            element.closest('[aria-hidden="true"]')
-        ) {
-            return;
-        }
-
-        items.set(path, toWindow(element.getBoundingClientRect()));
-    });
+    const items = dropPlaces(section, at, (element) =>
+        toWindow(element.getBoundingClientRect()),
+    );
 
     const place = nearestPlace(
         [...items].map(([key, box]) => rowOf(key, box)),
