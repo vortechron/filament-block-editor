@@ -58,7 +58,6 @@ type DropTarget =
           line: Line;
       };
 
-
 /** The page scrolls by itself when a drag comes this close to an edge. */
 const SCROLL_EDGE = 72;
 const SCROLL_STEP = 14;

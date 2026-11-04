@@ -10,8 +10,12 @@ function section(): HTMLElement {
             <div class="bn-column" id="left"><h2 data-item="0.0.0">Title</h2><div data-item="0.0.1">Details</div></div>
             <div class="bn-column" id="right"><div data-item="0.1.0">Map</div></div>
         </div>
+        <div aria-hidden="true"><div class="bn-columns"><div class="bn-column" id="hidden"><p data-item="4.0.0">Copy</p></div></div></div>
         <p data-item="1">Under</p>
-        <div aria-hidden="true"><p data-item="2">Copy</p></div>`;
+        <div aria-hidden="true"><p data-item="2">Copy</p></div>
+        <div class="bn-columns" data-item="3">
+            <div class="bn-column" id="list"><ul><li data-item="3.0.0">One</li><li data-item="3.0.1">Two</li></ul></div>
+        </div>`;
 
     return element;
 }
@@ -25,6 +29,11 @@ const boxes: Record<string, [number, number, number, number]> = {
     '0.1.0': [520, 0, 500, 400],
     '1': [0, 420, 1020, 40],
     '2': [0, 480, 1020, 40],
+    list: [0, 540, 1020, 100],
+    '3': [0, 540, 1020, 100],
+    '3.0.0': [0, 540, 1020, 40],
+    '3.0.1': [0, 590, 1020, 40],
+    hidden: [0, 700, 1020, 40],
 };
 
 function rectOf(element: Element): DOMRect {
@@ -39,7 +48,12 @@ describe('the places a dragged item can land on the page', () => {
         expect([...dropPlaces(section(), { x: 700, y: 50 }, rectOf).keys()]).toEqual(['0.1.0']);
     });
 
+    it('are the items of a list in a column, one by one', () => {
+        expect([...dropPlaces(section(), { x: 200, y: 600 }, rectOf).keys()]).toEqual(['3.0.0', '3.0.1']);
+    });
+
     it('are the top-level items outside a column, without hidden copies', () => {
-        expect([...dropPlaces(section(), { x: 200, y: 440 }, rectOf).keys()]).toEqual(['0', '1']);
+        expect([...dropPlaces(section(), { x: 200, y: 440 }, rectOf).keys()]).toEqual(['0', '1', '3']);
+        expect([...dropPlaces(section(), { x: 200, y: 710 }, rectOf).keys()]).toEqual(['0', '1', '3']);
     });
 });
