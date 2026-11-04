@@ -29,6 +29,7 @@ class PageBuilderPageTest extends FilamentTestCase
         $options = Livewire::test(DemoBuilder::class)->instance()->getPageBuilderOptions();
 
         $this->assertSame('ms', $options['locale']);
+        $this->assertSame('ms', $options['contentLocale']);
         $this->assertSame('Demo page', $options['title']);
         $this->assertNotEmpty($options['value']['sections']);
         $this->assertContains('notice', array_column($options['blocks'], 'kind'));
@@ -47,6 +48,7 @@ class PageBuilderPageTest extends FilamentTestCase
         $hero = collect($options['templates'])->firstWhere('key', 'hero');
 
         $this->assertSame('en', $options['locale']);
+        $this->assertSame('ms', $options['contentLocale']);
         $this->assertSame('Hero', $hero['label']);
         $this->assertStringContainsString('Hubungi kami', json_encode($hero['section']));
     }

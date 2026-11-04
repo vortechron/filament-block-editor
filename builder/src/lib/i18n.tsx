@@ -54,7 +54,11 @@ export function translate(
     );
 }
 
-type I18n = { locale: Locale; strings: Messages };
+/**
+ * The builder's language, the host's texts, and the language of the words
+ * the builder puts on the page (the site's; the builder's when not given).
+ */
+export type I18n = { locale: Locale; strings: Messages; contentLocale?: Locale };
 
 export const I18nContext = createContext<I18n>({ locale: 'ms', strings: {} });
 
@@ -68,4 +72,22 @@ export function useT(): Translate {
 
     return (text, replacements) =>
         translate(text, locale, strings, replacements);
+}
+
+/**
+ * The `t` for words the builder puts on the page, which visitors read: a
+ * new form's labels and button, a new button's words. They are in the
+ * site's language. The host's texts change the builder's own words, so
+ * they apply only when the site and the builder share a language.
+ */
+export function contentTranslator({ locale, strings, contentLocale = locale }: I18n): Translate {
+    const overrides = contentLocale === locale ? strings : {};
+
+    return (text, replacements) =>
+        translate(text, contentLocale, overrides, replacements);
+}
+
+/** Returns contentTranslator() for the builder's languages. */
+export function useContentT(): Translate {
+    return contentTranslator(useContext(I18nContext));
 }

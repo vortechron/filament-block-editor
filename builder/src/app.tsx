@@ -34,6 +34,8 @@ import { TooltipProvider } from './ui/tooltip';
 export type PageBuilderAppProps = {
     host: Host;
     locale: Locale;
+    /** The site's language, for the words the builder puts on the page. */
+    contentLocale?: Locale;
     strings: Record<string, string>;
     initialValue: PageValue;
     templates: SectionTemplate[];
@@ -57,6 +59,7 @@ export type PageBuilderAppProps = {
 export function PageBuilderApp({
     host,
     locale,
+    contentLocale,
     strings,
     initialValue,
     templates,
@@ -65,7 +68,10 @@ export function PageBuilderApp({
     fillScreen,
 }: PageBuilderAppProps) {
     const [portal, setPortal] = useState<HTMLElement | null>(null);
-    const i18n = useMemo(() => ({ locale, strings }), [locale, strings]);
+    const i18n = useMemo(
+        () => ({ locale, strings, contentLocale }),
+        [locale, strings, contentLocale],
+    );
     // The shop values change after the shop info is saved: the host reads
     // them again, so chips and shop info rows show the new values.
     const [dynamicValues, setDynamicValues] = useState(host.dynamicValues);

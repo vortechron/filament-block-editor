@@ -9,9 +9,11 @@ import {
 
 /**
  * The form a new form block starts with: name, phone and message, sent to
- * the shop's email, in the builder's language.
+ * the shop's email. What visitors read (the labels, the button, the thank
+ * you) is in the site's language (`siteT`); the form's name and the
+ * email's subject, which only the owner sees, in the builder's (`t`).
  */
-export function starterForm(t: Translate): FormDefinition {
+export function starterForm(t: Translate, siteT: Translate = t): FormDefinition {
     const field = (
         type: 'text' | 'tel' | 'textarea',
         label: string,
@@ -28,12 +30,12 @@ export function starterForm(t: Translate): FormDefinition {
     return cleanForm({
         name: t('Enquiry form'),
         fields: [
-            field('text', t('Name'), { required: true, width: 'half' }),
-            field('tel', t('Phone'), { required: true, width: 'half' }),
-            field('textarea', t('Message'), { rows: 4 }),
+            field('text', siteT('Name'), { required: true, width: 'half' }),
+            field('tel', siteT('Phone'), { required: true, width: 'half' }),
+            field('textarea', siteT('Message'), { rows: 4 }),
         ],
-        submit: { text: t('Send'), align: 'left' },
-        success: t('Thank you. We will get back to you soon.'),
+        submit: { text: siteT('Send'), align: 'left' },
+        success: siteT('Thank you. We will get back to you soon.'),
         actions: [
             {
                 type: 'email',

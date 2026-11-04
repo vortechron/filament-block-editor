@@ -137,6 +137,7 @@ export function pageSlashMenuItems(
     editor: SlashMenuEditor,
     t: Translate,
     ownBlocks: Iterable<OwnBlockDefinition>,
+    siteT: Translate = t,
 ) {
     const group = t('Page');
     const insert = (type: string, props?: Record<string, unknown>) => () =>
@@ -157,7 +158,7 @@ export function pageSlashMenuItems(
             aliases: ['button', 'link', 'cta', 'butang', 'pautan'],
             group,
             icon: createElement(MousePointerClick, { size: 18 }),
-            onItemClick: insert('button', { text: t('Read more') }),
+            onItemClick: insert('button', { text: siteT('Read more') }),
         },
         {
             title: t('Form'),
@@ -165,7 +166,9 @@ export function pageSlashMenuItems(
             aliases: ['form', 'contact', 'enquiry', 'borang', 'hubungi', 'pertanyaan'],
             group,
             icon: createElement(ClipboardList, { size: 18 }),
-            onItemClick: insert('form', { form: serializeForm(starterForm(t)) }),
+            onItemClick: insert('form', {
+                form: serializeForm(starterForm(t, siteT)),
+            }),
         },
         ...[...ownBlocks].map((definition) => ({
             title: definition.label,

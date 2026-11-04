@@ -331,6 +331,11 @@ export type PageBuilderOptions = {
     blocks?: OwnBlockDefinition[];
     templates?: SectionTemplateInput[];
     locale?: 'ms' | 'en';
+    /**
+     * The language of the words the builder puts on the page (a new form's
+     * labels, a new button): the site's. Left out, the builder's `locale`.
+     */
+    contentLocale?: 'ms' | 'en';
     /** Text overrides, keyed by the builder's English text. */
     strings?: Record<string, string>;
     title?: string;

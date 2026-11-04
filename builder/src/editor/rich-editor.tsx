@@ -5,7 +5,7 @@ import '../styles/section-look-style.css';
 import type { BlockNoteEditor } from '@blocknote/core';
 import type { Appearance } from '@vortechron/blocknote-kit';
 import { type CSSProperties, useRef } from 'react';
-import { useT } from '@/lib/i18n';
+import { useContentT, useT } from '@/lib/i18n';
 import type { RichDocument, SectionData } from '@/types';
 import { accentTokens } from './accent-tokens';
 import { addLineBelowOnTap } from './add-line-below';
@@ -46,6 +46,7 @@ export default function RichEditor({
     onEditorReady?: (editor: BlockNoteEditor) => void;
 }) {
     const t = useT();
+    const siteT = useContentT();
     const blockEditorRef = useRef<BlockNoteEditor | null>(null);
 
     return (
@@ -73,6 +74,7 @@ export default function RichEditor({
                             slashEditor,
                             t,
                             blocks.ownBlocks.values(),
+                            siteT,
                         ),
                         ...shopInfoSlashItems(
                             slashEditor,

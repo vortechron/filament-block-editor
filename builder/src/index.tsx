@@ -52,6 +52,9 @@ export function mountPageBuilder(
     }
 
     const locale = isLocale(options.locale) ? options.locale : 'ms';
+    const contentLocale = isLocale(options.contentLocale)
+        ? options.contentLocale
+        : locale;
     const strings = { ...(options.strings ?? {}) };
     // Words saved by code have no block ids; the builder finds items by id.
     const initialValue = withMissingPageBlockIds(normalizeValue(options.value));
@@ -109,6 +112,7 @@ export function mountPageBuilder(
         <PageBuilderApp
             host={host}
             locale={locale}
+            contentLocale={contentLocale}
             strings={strings}
             initialValue={initialValue}
             templates={templates}

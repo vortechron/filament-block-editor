@@ -9,7 +9,7 @@ import { LAYOUT_LABELS } from '@/builder/section-thumbs';
 import { KIT_SLASH_TEXTS } from '@/editor/slash-menu';
 import ms from '@/lang/ms';
 import { CUSTOM_CSS_PROBLEMS } from './custom-css';
-import { translate } from './i18n';
+import { contentTranslator, translate } from './i18n';
 
 describe('translating the builder', () => {
     it('shows Malay for the ms locale and the English text for en', () => {
@@ -135,5 +135,15 @@ describe('the Malay dictionary', () => {
         expect(texts).not.toMatch(/\bbuyers?\b/);
         expect(texts).not.toMatch(/\bsales page\b/);
         expect(texts).not.toMatch(/\bcheckout\b/);
+    });
+});
+
+describe('the words the builder puts on the page', () => {
+    it('are in the site language, with the host texts only when it is the builder language', () => {
+        const strings = { 'Read more': 'More' };
+
+        expect(contentTranslator({ locale: 'en', strings, contentLocale: 'ms' })('Read more')).toBe('Baca lagi');
+        expect(contentTranslator({ locale: 'en', strings, contentLocale: 'en' })('Read more')).toBe('More');
+        expect(contentTranslator({ locale: 'ms', strings: {} })('Read more')).toBe('Baca lagi');
     });
 });

@@ -1,7 +1,7 @@
 import { useEffect, useEffectEvent, useState } from 'react';
 import { serializeForm } from '@/lib/form-definition';
 import { starterForm } from '@/lib/form-starter';
-import { useT } from '@/lib/i18n';
+import { useContentT, useT } from '@/lib/i18n';
 import type { RichDocument, SectionData } from '@/types';
 import type { PageBlocksInfo } from '../editor/page-blocks';
 import RichEditor from '../editor/rich-editor';
@@ -33,6 +33,7 @@ export default function SectionTextEditor({
     onHandle: (handle: SectionEditorHandle | null) => void;
 }) {
     const t = useT();
+    const siteT = useContentT();
     const [handle, setHandle] = useState<SectionEditorHandle | null>(null);
     const report = useEffectEvent(onHandle);
 
@@ -56,8 +57,8 @@ export default function SectionTextEditor({
             onEditorReady={(editor) =>
                 setHandle(
                     createSectionEditorHandle(editor, {
-                        button: t('Read more'),
-                        form: serializeForm(starterForm(t)),
+                        button: siteT('Read more'),
+                        form: serializeForm(starterForm(t, siteT)),
                     }),
                 )
             }

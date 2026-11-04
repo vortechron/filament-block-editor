@@ -26,7 +26,7 @@ It started as the page builder of [NakJual](https://nakjual.com) and is made gen
 
 ```bash
 composer config repositories.vortechron-block-editor vcs https://github.com/vortechron/filament-block-editor.git
-composer require vortechron/filament-block-editor:^2.5
+composer require vortechron/filament-block-editor:^2.6
 php artisan filament:assets   # with Filament
 # or, without Filament:
 php artisan vendor:publish --tag=filament-block-editor-assets
@@ -200,6 +200,7 @@ preview (the PHP layer does that for Laravel; another stack draws the same HTML 
     blocks: [/* own block definitions, from BlockRegistry::definitions() */],
     templates: [/* from SectionTemplates::all('en') */],
     locale: 'en',
+    contentLocale: 'ms', // the site's language, for words the builder puts on the page
     title: 'Home',
     backUrl: '/admin',
   });
@@ -216,7 +217,9 @@ otherwise. The page speaks the site's: set `SITE_LOCALE` (`content_locale` in th
 for example `APP_LOCALE=en` and `SITE_LOCALE=ms` for an English panel and a Malay site. `PageRenderer` then draws
 every page in the site's language (`Rendering\ContentLocale::run()`), so a form's button and messages and the map
 link are Malay in the live page and in the builder's preview, while the builder's own notes stay English.
-Ready-made sections keep English names and get Malay words. Unset, both are the app's language.
+Ready-made sections keep English names and get Malay words. A new form or button starts in the site's language
+too (the `contentLocale` option): the labels, button and thank-you message visitors read are Malay, while the
+form's name and the email subject, which only the owner sees, stay English. Unset, both are the app's language.
 
 ## Ready-made blocks
 

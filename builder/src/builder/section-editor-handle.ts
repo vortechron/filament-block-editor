@@ -31,17 +31,17 @@ type AnyBlock = Block<any, any, any>;
 const untranslated = (text: string) => text;
 
 /**
+ * What a new item starts with: the button's words, and the starter form's
+ * JSON, in the site's language (contentTranslator()).
+ */
+export type NewItemLabels = { button: string; form: string };
+
+/**
  * Wraps one section's BlockNote editor so the sidebar, the page on the
  * canvas and the drag and drop can add, change and move its items. Every
  * change goes through BlockNote, so the section's onChange saves it like
  * typing does.
  */
-/**
- * What a new item starts with: the button's words, and the starter form's
- * JSON, in the builder's language.
- */
-export type NewItemLabels = { button: string; form: string };
-
 export function createSectionEditorHandle(
     editor: AnyEditor,
     labels: NewItemLabels = { button: 'Read more', form: '' },

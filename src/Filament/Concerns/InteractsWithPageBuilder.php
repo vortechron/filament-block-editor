@@ -136,6 +136,7 @@ trait InteractsWithPageBuilder
             'blocks' => app(BlockRegistry::class)->definitions(),
             'templates' => SectionTemplates::all($locale, $this->getPageBuilderContentLocale()),
             'locale' => $locale,
+            'contentLocale' => $this->getPageBuilderContentLocale(),
             'title' => (string) $this->getTitle(),
             'backUrl' => $this->getPageBuilderBackUrl(),
             'viewUrl' => $this->getPageBuilderViewUrl(),

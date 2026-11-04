@@ -7,7 +7,7 @@ import {
     newFieldId,
     uniqueName,
 } from '@/lib/form-definition';
-import { useT } from '@/lib/i18n';
+import { useContentT, useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
 import { moveItem, replaceItem } from '../../editor/helpers';
 import { FIELD_TYPE_LABELS, FormFieldEditor } from './form-field-editor';
@@ -24,10 +24,11 @@ export function FormFields({
     onChange: (fields: FormField[]) => void;
 }) {
     const t = useT();
+    const siteT = useContentT();
     const [openId, setOpenId] = useState<string | null>(null);
 
     function addField() {
-        const label = t('New field');
+        const label = siteT('New field');
         const field: FormField = {
             id: newFieldId(),
             type: 'text',
