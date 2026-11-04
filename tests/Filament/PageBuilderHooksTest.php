@@ -26,6 +26,7 @@ class PageBuilderHooksTest extends FilamentTestCase
         $this->assertSame(Kit::defaults(), $options['kit']);
         $this->assertSame(Kit::defaults(), $options['kitDefaults']);
         $this->assertArrayNotHasKey('siteInfo', $options);
+        $this->assertArrayNotHasKey('pages', $options);
         $this->assertSame([], $options['syncedSections']);
         $this->assertSame([], $options['parts']);
         $this->assertSame('page', $options['kind']);
@@ -140,6 +141,18 @@ class PageBuilderHooksTest extends FilamentTestCase
         $this->assertSame([['name' => 'phone', 'label' => 'Telefon', 'type' => 'text', 'default' => ''], ['name' => 'email', 'type' => 'text']], $options['siteInfo']['groups'][0]['fields']);
         $this->assertSame(['contact' => ['phone' => '012', 'email' => 'a@b.c']], $options['siteInfo']['values']);
         $this->assertSame(['saveKit' => true, 'saveSection' => true, 'saveSiteInfo' => true], $page->getPageBuilderSupports());
+    }
+
+    public function test_the_pages_a_link_can_point_to_are_cleaned_and_kept_in_order(): void
+    {
+        $this->signIn();
+
+        $options = Livewire::test(FullDemoBuilder::class)->instance()->getPageBuilderOptions();
+
+        $this->assertSame([
+            ['title' => 'Stationery', 'url' => '/stationery'],
+            ['title' => str_repeat('a', 120), 'url' => '/long'],
+        ], $options['pages']);
     }
 
     public function test_the_kit_is_saved_cleaned(): void

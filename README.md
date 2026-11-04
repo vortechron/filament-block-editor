@@ -26,7 +26,7 @@ It started as the page builder of [NakJual](https://nakjual.com) and is made gen
 
 ```bash
 composer config repositories.vortechron-block-editor vcs https://github.com/vortechron/filament-block-editor.git
-composer require vortechron/filament-block-editor:^2.3
+composer require vortechron/filament-block-editor:^2.4
 php artisan filament:assets   # with Filament
 # or, without Filament:
 php artisan vendor:publish --tag=filament-block-editor-assets
@@ -126,6 +126,7 @@ protected function getPageBuilderParts(): array { return []; }            // [['
 protected function getPageBuilderKind(): string { return 'page'; }        // an Enums\DocumentKind value
 protected function getPageBuilderDynamicValues(): array { return []; }   // more values for this builder only
 protected function getPageBuilderRenderValues(): array { return []; }    // ['page.title' => 'Laman Utama'] for the preview
+protected function getPageBuilderPages(): array { return []; }           // [['title' => 'Stationery', 'url' => '/stationery']] for link fields, in menu order
 ```
 
 The builder always gets the current kit (`kit`) and `Kit::defaults()` (`kitDefaults`, with your config),

@@ -805,3 +805,12 @@ The whole shop info form in almost every panel was too big. Changes 4 and 5 of "
    page undo.
 7. **Deviation:** deleting a section still asks first ("Delete this section?"); the note shows after the yes.
    Deleting an item never asked, and still does not.
+
+### Pages in link fields, 4 November 2026
+
+1. **Link fields list the site's pages.** A host hook `getPageBuilderPages()` gives `['title' => ..., 'url' => '/path']`
+   in menu order; PHP keeps entries with a title and a url that starts with `/` (not `//`), and sends them as the
+   option `pages`. A link field's one picker ("Pages and links" when there are pages, else "Shop links") lists a
+   "Pages" group first and stores the page's plain url, not an `@key`.
+2. **Deviation:** a stored page url is just a path, so a page renamed or moved leaves its old link as it was. The line
+   under the field says "Page: Stationery" only while the value equals a page's url.

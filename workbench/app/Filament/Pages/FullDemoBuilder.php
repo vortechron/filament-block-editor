@@ -116,6 +116,19 @@ class FullDemoBuilder extends PageBuilderPage
         return [['key' => 'header', 'title' => 'Header', 'editUrl' => '/admin/parts/header']];
     }
 
+    protected function getPageBuilderPages(): array
+    {
+        return [
+            ['title' => '  Stationery  ', 'url' => '/stationery'],
+            ['title' => '', 'url' => '/empty-title'],
+            ['title' => 'Elsewhere', 'url' => '//evil.example'],
+            ['title' => 'Absolute', 'url' => 'https://example.com'],
+            ['title' => 123, 'url' => '/number-title'],
+            'not an array',
+            ['title' => str_repeat('a', 130), 'url' => '/long'],
+        ];
+    }
+
     protected function getPageBuilderKind(): string
     {
         return 'header';

@@ -6,6 +6,7 @@ import type { Host } from './lib/host';
 import { isLocale } from './lib/i18n';
 import { normalizeDynamicValues } from './lib/dynamic-values';
 import { normalizeKit } from './lib/kit';
+import { normalizePageLinks } from './lib/page-links';
 import { normalizeKind, normalizeParts, normalizeSiteInfo } from './lib/site-parts';
 import { normalizeSyncedSections } from './lib/synced-sections';
 import { normalizeTemplates, normalizeValue } from './lib/page-value';
@@ -92,6 +93,7 @@ export function mountPageBuilder(
         kit: normalizeKit(options.kit, kitDefaults),
         kitDefaults,
         dynamicValues: normalizeDynamicValues(options.dynamicValues),
+        pages: normalizePageLinks(options.pages),
         syncedSections: normalizeSyncedSections(options.syncedSections),
         parts: normalizeParts(options.parts),
         siteInfo:

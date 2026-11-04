@@ -3,7 +3,7 @@ import { type ReactNode, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { HostContext, type Host } from '@/lib/host';
 import { I18nContext } from '@/lib/i18n';
-import type { DynamicValueDefinition, OwnBlockDefinition } from '@/types';
+import type { DynamicValueDefinition, OwnBlockDefinition, PageLinkOption } from '@/types';
 import { OwnBlockForm } from './own-block-form';
 import { DEFAULT_KIT } from '@/lib/kit';
 
@@ -37,7 +37,12 @@ const board: OwnBlockDefinition = {
     ],
 };
 
-function wrap(upload: Host['upload'] = vi.fn(), developer = false, dynamicValues: DynamicValueDefinition[] = []) {
+function wrap(
+    upload: Host['upload'] = vi.fn(),
+    developer = false,
+    dynamicValues: DynamicValueDefinition[] = [],
+    pages: PageLinkOption[] = [],
+) {
     const host: Host = {
         adapter: {
             save: vi.fn(),
@@ -55,6 +60,7 @@ function wrap(upload: Host['upload'] = vi.fn(), developer = false, dynamicValues
         kit: DEFAULT_KIT,
         kitDefaults: DEFAULT_KIT,
         dynamicValues,
+        pages,
         syncedSections: [],
         parts: [],
         siteInfo: null,
@@ -261,6 +267,103 @@ describe('the form for an own block', () => {
         expect(JSON.parse(onChange.mock.calls.at(-1)?.[0]).photo).toBe(
             '/storage/photo.jpg',
         );
+    });
+});
+
+const PAGES: PageLinkOption[] = [
+    { title: 'Stationery', url: '/stationery' },
+    { title: 'Hubungi', url: '/hubungi' },
+];
+
+describe('pages in a link field', () => {
+    function renderLink(values: string, pages: PageLinkOption[], shop: DynamicValueDefinition[] = []) {
+        const onChange = vi.fn();
+
+        function Linked() {
+            const [current, setCurrent] = useState(values);
+
+            return (
+                <OwnBlockForm
+                    definition={board}
+                    values={current}
+                    onChange={(next) => {
+                        setCurrent(next);
+                        onChange(next);
+                    }}
+                />
+            );
+        }
+
+        render(<Linked />, { wrapper: wrap(vi.fn(), false, shop, pages) });
+
+        return onChange;
+    }
+
+    it('list the pages first in the one picker, and store the plain url of the page picked', () => {
+        const onChange = renderLink('{}', PAGES, [
+            { key: 'site.whatsapp', label: 'WhatsApp', type: 'link', group: 'Contact', preview: 'https://wa.me/6012' },
+        ]);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Pages and links' }));
+
+        const groups = screen.getAllByRole('group');
+
+        expect(groups.map((group) => group.getAttribute('aria-label'))).toEqual(['Pages', 'Contact']);
+        expect(within(groups[0]).getByText('/hubungi')).toBeTruthy();
+
+        fireEvent.click(screen.getByRole('option', { name: /Stationery/ }));
+
+        expect(lastValues(onChange).link).toBe('/stationery');
+        expect(screen.getByText('Page: Stationery')).toBeTruthy();
+        expect((screen.getByRole('textbox', { name: 'Link' }) as HTMLInputElement).value).toBe('/stationery');
+    });
+
+    it('still store @key when a shop link is picked', () => {
+        const onChange = renderLink('{}', PAGES, [
+            { key: 'site.whatsapp', label: 'WhatsApp', type: 'link', group: 'Contact', preview: null },
+        ]);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Pages and links' }));
+        fireEvent.click(screen.getByRole('option', { name: /WhatsApp/ }));
+
+        expect(lastValues(onChange).link).toBe('@site.whatsapp');
+    });
+
+    it('show the picker when the site has pages but no shop links', () => {
+        renderLink('{}', PAGES);
+
+        expect(screen.getByRole('button', { name: 'Pages and links' })).toBeTruthy();
+    });
+
+    it('name the page under a link that holds its url, and keep the generic hint for any other', () => {
+        renderLink('{"link":"/hubungi"}', PAGES);
+
+        expect(screen.getByText('Page: Hubungi')).toBeTruthy();
+        cleanup();
+        renderLink('{"link":"/other"}', PAGES);
+
+        expect(screen.queryByText(/^Page:/)).toBeNull();
+        expect(screen.getByText(/A web address/)).toBeTruthy();
+    });
+
+    it('keep "Shop links" and the old behaviour when the site has no pages', () => {
+        const onChange = renderLink('{}', [], [
+            { key: 'site.whatsapp', label: 'WhatsApp', type: 'link', group: 'Contact', preview: null },
+        ]);
+
+        fireEvent.click(screen.getByRole('button', { name: 'Shop links' }));
+
+        expect(screen.queryByRole('group', { name: 'Pages' })).toBeNull();
+
+        fireEvent.click(screen.getByRole('option', { name: /WhatsApp/ }));
+
+        expect(lastValues(onChange).link).toBe('@site.whatsapp');
+    });
+
+    it('show no picker with neither pages nor shop links', () => {
+        renderLink('{}', []);
+
+        expect(screen.queryByRole('button', { name: /links/ })).toBeNull();
     });
 });
 

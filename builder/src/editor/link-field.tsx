@@ -1,7 +1,9 @@
 import { useId } from 'react';
 import { linkOrReference } from '@/blocks/button-url';
 import { dynamicRef } from '@/lib/dynamic-values';
+import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
+import { pageOfUrl } from '@/lib/page-links';
 import { Input } from '@/ui/input';
 import { Label } from '@/ui/label';
 import { DynamicRefChip, isDynamicRef } from './dynamic-picker';
@@ -10,7 +12,8 @@ import { DynamicValuePicker } from './dynamic-value-picker';
 /**
  * A link: typed (https://, #, /, mailto:, tel:), or one of the site's own
  * links picked from "Shop links" and stored as `@key`, which then shows by
- * its label. Used by the button and by own blocks' link fields.
+ * its label. When the host has pages, the same picker lists them first
+ * ("Pages and links") and stores the page's plain url. Used by the button and by own blocks' link fields.
  */
 export function LinkField({
     label,
@@ -25,6 +28,8 @@ export function LinkField({
 }) {
     const t = useT();
     const id = useId();
+    const { pages } = useHost();
+    const page = pageOfUrl(pages, value);
     const isBroken = value.trim() !== '' && linkOrReference(value) === null;
 
     return (
@@ -33,8 +38,10 @@ export function LinkField({
                 <Label htmlFor={id}>{label}</Label>
                 <DynamicValuePicker
                     type="link"
-                    label={t('Shop links')}
+                    label={pages.length > 0 ? t('Pages and links') : t('Shop links')}
                     onPick={(key) => onChange(dynamicRef(key))}
+                    pages={pages}
+                    onPickPage={onChange}
                 />
             </div>
             {isDynamicRef(value) ? (
@@ -62,7 +69,9 @@ export function LinkField({
             ) : (
                 !isDynamicRef(value) && (
                     <p className="text-muted-foreground text-xs">
-                        {hint ?? t('A web address, #link-name, /path, mailto: or tel:')}
+                        {page
+                            ? t('Page: :title', { title: page.title })
+                            : (hint ?? t('A web address, #link-name, /path, mailto: or tel:'))}
                     </p>
                 )
             )}

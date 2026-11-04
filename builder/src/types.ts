@@ -185,6 +185,9 @@ export type DynamicValueDefinition = {
     settings?: string;
 };
 
+/** A page of the site a link can point to, in menu order. */
+export type PageLinkOption = { title: string; url: string };
+
 /** A synced section the host offers, with the section it holds. */
 export type SyncedSectionOption = {
     id: number | string;
@@ -353,6 +356,12 @@ export type PageBuilderOptions = {
     /** The fonts a kit or a style may use, besides the theme's. */
     fonts?: FontChoice[];
     dynamicValues?: DynamicValueDefinition[];
+    /**
+     * The site's pages, in menu order (PHP `getPageBuilderPages()`). A link
+     * field lists them first in its picker and stores the page's `url`
+     * (a path such as `/stationery`).
+     */
+    pages?: PageLinkOption[];
     syncedSections?: SyncedSectionOption[];
     parts?: PagePart[];
     siteInfo?: SiteInfo | null;

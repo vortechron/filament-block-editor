@@ -121,6 +121,16 @@ trait PageBuilderHooks
     }
 
     /**
+     * The site's pages a link can point to, as `['title' => ..., 'url' => '/path']`, in menu order.
+     *
+     * @return list<array<string, mixed>>
+     */
+    protected function getPageBuilderPages(): array
+    {
+        return [];
+    }
+
+    /**
      * What is being built: a DocumentKind value (page, header, footer,
      * section, card or single).
      */
@@ -264,6 +274,7 @@ trait PageBuilderHooks
     {
         $kit = $this->getPageBuilderKit();
         $siteInfo = $this->getPageBuilderSiteInfo();
+        $pages = $this->pageBuilderPages();
 
         return array_filter([
             'developer' => $this->isPageBuilderDeveloper(),
@@ -272,6 +283,7 @@ trait PageBuilderHooks
             'syncedSections' => $this->pageBuilderSyncedSections(),
             'parts' => array_values(array_filter($this->getPageBuilderParts(), fn (mixed $part): bool => is_array($part) && is_string($part['key'] ?? null) && (DocumentKind::tryFrom($part['key'])?->isPart() ?? false))),
             'siteInfo' => $siteInfo === null ? null : self::siteInfo($siteInfo),
+            'pages' => $pages === [] ? null : $pages,
             'kind' => (DocumentKind::tryFrom($this->getPageBuilderKind()) ?? DocumentKind::Page)->value,
         ], fn (mixed $value): bool => $value !== null);
     }
@@ -310,6 +322,28 @@ trait PageBuilderHooks
         $registered = array_filter($values->definitions($context), fn (array $definition): bool => ! isset($own[$definition['key']]));
 
         return [...array_values($registered), ...array_values($own)];
+    }
+
+    /**
+     * The host's pages without any entry that has no title or a url that
+     * does not stay on the site (it must start with one `/`).
+     *
+     * @return list<array{title: string, url: string}>
+     */
+    private function pageBuilderPages(): array
+    {
+        $pages = [];
+
+        foreach ($this->getPageBuilderPages() as $entry) {
+            $title = is_array($entry) && is_string($entry['title'] ?? null) ? mb_substr(trim($entry['title']), 0, 120) : '';
+            $url = is_array($entry) ? ($entry['url'] ?? null) : null;
+
+            if ($title !== '' && is_string($url) && str_starts_with($url, '/') && ! str_starts_with($url, '//')) {
+                $pages[] = ['title' => $title, 'url' => $url];
+            }
+        }
+
+        return $pages;
     }
 
     /**

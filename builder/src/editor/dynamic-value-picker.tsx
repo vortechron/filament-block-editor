@@ -8,7 +8,9 @@ import {
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
 import { cn } from '@/lib/utils';
-import type { DynamicValueDefinition } from '@/types';
+import type { DynamicValueDefinition, PageLinkOption } from '@/types';
+
+const PAGE_PREFIX = 'page:';
 
 /**
  * A button that opens a search over the site's own values of one type,
@@ -17,19 +19,35 @@ import type { DynamicValueDefinition } from '@/types';
  * a tap picks, Escape closes. It hands back the value's key; the field
  * decides how to store it (`@key` in a link or a picture, a `{key}` chip in
  * words). Nothing shows when the site has no value of that type.
+ *
+ * With `pages`, the same list starts with a "Pages" group (each page's title,
+ * its url as the preview) and a pick of one goes to `onPickPage` with the url.
  */
 export function DynamicValuePicker({
     type,
     label,
     onPick,
+    pages = [],
+    onPickPage,
 }: {
     type: DynamicValueDefinition['type'];
     /** The button's text, already translated, like "Shop links". */
     label: string;
     onPick: (key: string) => void;
+    /** Pages to list before the values. */
+    pages?: readonly PageLinkOption[];
+    onPickPage?: (url: string) => void;
 }) {
+    const t = useT();
     const { dynamicValues } = useHost();
-    const values = dynamicValuesOfType(dynamicValues, type);
+    const pageValues: DynamicValueDefinition[] = pages.map((page) => ({
+        key: PAGE_PREFIX + page.url,
+        label: page.title,
+        type,
+        group: t('Pages'),
+        preview: page.url,
+    }));
+    const values = [...pageValues, ...dynamicValuesOfType(dynamicValues, type)];
     const [isOpen, setIsOpen] = useState(false);
     const button = useRef<HTMLButtonElement>(null);
     const root = useRef<HTMLDivElement>(null);
@@ -84,7 +102,12 @@ export function DynamicValuePicker({
                     values={values}
                     onPick={(key) => {
                         close();
-                        onPick(key);
+
+                        if (key.startsWith(PAGE_PREFIX)) {
+                            onPickPage?.(key.slice(PAGE_PREFIX.length));
+                        } else {
+                            onPick(key);
+                        }
                     }}
                     onClose={close}
                 />

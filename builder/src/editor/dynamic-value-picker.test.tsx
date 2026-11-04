@@ -28,6 +28,7 @@ function wrap(values: DynamicValueDefinition[] = VALUES) {
         kit: DEFAULT_KIT,
         kitDefaults: DEFAULT_KIT,
         dynamicValues: values,
+        pages: [],
         syncedSections: [],
         parts: [],
         siteInfo: null,

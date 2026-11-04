@@ -5,6 +5,7 @@ import type {
     FontChoice,
     Kit,
     OwnBlockDefinition,
+    PageLinkOption,
     PageBuilderAdapter,
     PagePart,
     SiteInfo,
@@ -39,6 +40,8 @@ export type Host = {
     kitDefaults: Kit;
     /** The values the site fills in: shop info in text, links and pictures. */
     dynamicValues: DynamicValueDefinition[];
+    /** The site's pages a link can point to, in menu order. */
+    pages: PageLinkOption[];
     /** The synced sections this page may use, with the section each holds. */
     syncedSections: SyncedSectionOption[];
     /** The header and footer the page shows, each built on its own. */
