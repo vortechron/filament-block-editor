@@ -200,11 +200,11 @@ export function layoutItem(layout: SectionLayout | null): CatalogItem | null {
     };
 }
 
-/** The host's own blocks, as items. */
+/** The host's own blocks, as items; a retired one is not offered. */
 export function ownBlockItems(
     ownBlocks: readonly OwnBlockDefinition[],
 ): CatalogItem[] {
-    return ownBlocks.map((definition) => ({
+    return ownBlocks.filter((definition) => !definition.retired).map((definition) => ({
         key: `own:${definition.kind}`,
         label: definition.label,
         isOwn: true,

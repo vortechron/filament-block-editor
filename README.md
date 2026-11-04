@@ -26,7 +26,7 @@ It started as the page builder of [NakJual](https://nakjual.com) and is made gen
 
 ```bash
 composer config repositories.vortechron-block-editor vcs https://github.com/vortechron/filament-block-editor.git
-composer require vortechron/filament-block-editor:^2.6
+composer require vortechron/filament-block-editor:^2.7
 php artisan filament:assets   # with Filament
 # or, without Filament:
 php artisan vendor:publish --tag=filament-block-editor-assets

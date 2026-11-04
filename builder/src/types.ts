@@ -273,6 +273,8 @@ export type OwnBlockDefinition = {
     siteInfo?: string[];
     /** The shop values the block's view shows, by key, like `['site.phone']`. */
     showsValues?: string[];
+    /** Kept so pages that hold it still draw; not offered in Add or "/". */
+    retired?: boolean;
 };
 
 export type SaveResult =

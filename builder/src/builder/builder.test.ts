@@ -77,6 +77,13 @@ describe('the item catalog', () => {
         ).toBe(true);
     });
 
+    it('leaves a retired own block out of Add, and still names it on the page', () => {
+        const retired = [...ownBlocks, { kind: 'old-board', label: 'Old board', fields: [], retired: true }];
+
+        expect(catalogFor('plain', retired).map((item) => item.key)).not.toContain('own:old-board');
+        expect(describeBlock('ownBlock', { kind: 'old-board' }, retired).label).toBe('Old board');
+    });
+
     it('names a block already on the page', () => {
         expect(describeBlock('heading', { level: 3 }).label).toBe(
             'Small heading',

@@ -306,6 +306,7 @@ app(BlockRegistry::class)->register(
         ])
         ->showsValues('site.phone', 'site.email') // optional: the shop values the view shows
         ->usesSiteInfo('contact')                // optional: a whole shop info group the view reads
+        ->retired()                              // optional: still drawn, no longer offered in Add or "/"
         ->view('blocks.stationery-board'),
 );
 ```

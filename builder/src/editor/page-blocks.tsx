@@ -170,7 +170,7 @@ export function pageSlashMenuItems(
                 form: serializeForm(starterForm(t, siteT)),
             }),
         },
-        ...[...ownBlocks].map((definition) => ({
+        ...[...ownBlocks].filter((definition) => !definition.retired).map((definition) => ({
             title: definition.label,
             subtext: definition.description ?? '',
             aliases: [definition.kind, ...definition.label.toLowerCase().split(/\s+/)],

@@ -35,6 +35,8 @@ final class OwnBlock
 
     private ?string $view = null;
 
+    private bool $retired = false;
+
     /**
      * @var list<string>
      */
@@ -57,6 +59,23 @@ final class OwnBlock
     public static function make(string $kind): self
     {
         return new self($kind);
+    }
+
+    /**
+     * A block kept only so pages that hold it still draw and edit: the
+     * builder no longer offers it in Add or the "/" menu. Retire a block
+     * when a better one replaces it, so old versions still restore.
+     */
+    public function retired(bool $retired = true): self
+    {
+        $this->retired = $retired;
+
+        return $this;
+    }
+
+    public function isRetired(): bool
+    {
+        return $this->retired;
     }
 
     public function label(string $label): self
@@ -199,6 +218,7 @@ final class OwnBlock
             'defaults' => $this->defaults(),
             ...($this->siteInfo === [] ? [] : ['siteInfo' => $this->siteInfo]),
             ...($this->showsValues === [] ? [] : ['showsValues' => $this->showsValues]),
+            ...($this->retired ? ['retired' => true] : []),
         ];
     }
 

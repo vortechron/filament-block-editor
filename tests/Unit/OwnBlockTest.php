@@ -74,6 +74,13 @@ class OwnBlockTest extends TestCase
         $this->assertSame(['contact'], OwnBlock::make('both')->usesSiteInfo('contact')->showsValues('site.address')->toArray()['siteInfo']);
     }
 
+    public function test_a_retired_block_is_marked_for_the_builder_and_still_draws(): void
+    {
+        $this->assertTrue(OwnBlock::make('old')->retired()->toArray()['retired']);
+        $this->assertTrue(OwnBlock::make('old')->retired()->isRetired());
+        $this->assertArrayNotHasKey('retired', $this->board()->toArray());
+    }
+
     public function test_a_shop_value_that_is_not_a_dynamic_value_key_is_refused(): void
     {
         foreach (['phone', 'Site.Phone', '@site.phone', '{site.phone}', 'site.a.b.c.d', ''] as $key) {
