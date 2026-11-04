@@ -19,6 +19,13 @@ return [
         'go_to' => 'Papar gambar :number',
     ],
 
+    // Page buttons under a long list (Rendering\Pager).
+    'pager' => [
+        'page' => 'Halaman :page daripada :total',
+        'previous' => 'Halaman sebelumnya',
+        'next' => 'Halaman seterusnya',
+    ],
+
     // The form block.
     'form' => [
         'submit' => 'Hantar',

@@ -19,6 +19,13 @@ return [
         'go_to' => 'Show photo :number',
     ],
 
+    // Page buttons under a long list (Rendering\Pager).
+    'pager' => [
+        'page' => 'Page :page of :total',
+        'previous' => 'Previous page',
+        'next' => 'Next page',
+    ],
+
     // The form block.
     'form' => [
         'submit' => 'Send',

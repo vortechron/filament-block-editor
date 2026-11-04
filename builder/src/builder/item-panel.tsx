@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp, CopyPlus, PencilLine, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, CopyPlus, PencilLine, Replace, Trash2, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
@@ -7,11 +7,13 @@ import { changeGroup } from '@/lib/page-history';
 import { parseLook } from '../editor/look-prop';
 import { ActionButton } from './action-button';
 import { useBuilderContext } from './builder-context';
+import { ItemGrid } from './catalog-tiles';
 import { describeBlock } from './item-catalog';
 import { ItemSettings } from './item-settings';
 import { ItemTabs } from './item-tabs';
 import { Skeleton } from '@/ui/skeleton';
-import type { ItemSnapshot, SectionEditorHandle } from './types';
+import type { Section, SectionLayout } from '@/types';
+import type { ItemKey, ItemSnapshot, SectionEditorHandle } from './types';
 
 /** The item's props again after every change, for the fields below. */
 function readItem(
@@ -51,6 +53,7 @@ export function ItemPanel() {
     const { sectionId, itemId } = builder.selection;
     const handle = builder.handleFor(sectionId);
     const [version, setVersion] = useState(0);
+    const [replacing, setReplacing] = useState<string | null>(null);
 
     useEffect(
         () => handle?.subscribe(() => setVersion((value) => value + 1)),
@@ -135,6 +138,14 @@ export function ItemPanel() {
                 >
                     <CopyPlus />
                 </ActionButton>
+                <ActionButton
+                    label={t('Replace with another item')}
+                    onClick={() =>
+                        setReplacing(replacing === item.id ? null : item.id)
+                    }
+                >
+                    <Replace />
+                </ActionButton>
                 <span className="flex-1" />
                 <ActionButton
                     label={t('Delete')}
@@ -150,6 +161,17 @@ export function ItemPanel() {
                     <Trash2 />
                 </ActionButton>
             </div>
+
+            {replacing === item.id && (
+                <ReplacePicker
+                    layout={sectionLayout(builder.blocks, sectionId)}
+                    onCancel={() => setReplacing(null)}
+                    onPick={(key) => {
+                        setReplacing(null);
+                        builder.swapItem(sectionId, item.id, key);
+                    }}
+                />
+            )}
 
             <ItemTabs
                 key={item.id}
@@ -174,4 +196,50 @@ export function ItemPanel() {
             </ItemTabs>
         </div>
     );
+}
+
+/**
+ * The items one can put in the picked item's place, like Image where a
+ * drawn picture is. The picked item goes; the new one opens.
+ */
+function ReplacePicker({
+    layout,
+    onPick,
+    onCancel,
+}: {
+    layout: SectionLayout | null;
+    onPick: (key: ItemKey) => void;
+    onCancel: () => void;
+}) {
+    const t = useT();
+
+    return (
+        <section className="grid gap-3 rounded-xl border border-[var(--builder-select)]/30 p-3">
+            <div className="flex items-center justify-between gap-2">
+                <h3 className="text-foreground text-sm font-semibold">
+                    {t('Replace with')}
+                </h3>
+                <button
+                    type="button"
+                    onClick={onCancel}
+                    aria-label={t('Cancel')}
+                    title={t('Cancel')}
+                    className="text-muted-foreground hover:bg-muted hover:text-foreground grid size-7 place-items-center rounded-md"
+                >
+                    <X className="size-4" />
+                </button>
+            </div>
+            <p className="text-muted-foreground text-xs leading-relaxed">
+                {t('The new item goes in the same place. Undo brings the old one back.')}
+            </p>
+            <ItemGrid layout={layout} onPick={onPick} />
+        </section>
+    );
+}
+
+/** The layout of the section an item is in, for its own "New card" tile. */
+function sectionLayout(blocks: Section[], sectionId: string): SectionLayout | null {
+    const section = blocks.find((block) => block.id === sectionId);
+
+    return section?.type === 'rich' ? section.data.layout : null;
 }

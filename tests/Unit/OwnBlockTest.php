@@ -245,4 +245,36 @@ class OwnBlockTest extends TestCase
 
         $this->assertTrue($field->toArray()['developerOnly']);
     }
+
+    public function test_a_select_can_read_its_choices_when_they_are_needed(): void
+    {
+        $choices = ['8' => 'Alat tulis'];
+        $field = Field::select('category')->options(function () use (&$choices): array {
+            return $choices;
+        });
+
+        $this->assertSame([['value' => '8', 'label' => 'Alat tulis']], $field->toArray()['options']);
+        $this->assertSame('8', $field->clean('8'));
+
+        // A category added later is a choice at once, and one taken away is not.
+        $choices = ['' => 'All', '11' => 'Barang sekolah'];
+
+        $this->assertSame([['value' => '', 'label' => 'All'], ['value' => '11', 'label' => 'Barang sekolah']], $field->toArray()['options']);
+        $this->assertSame('11', $field->clean('11'));
+        $this->assertSame('', $field->clean('8'));
+    }
+
+    public function test_a_block_names_the_screen_where_its_data_is_changed(): void
+    {
+        $definition = OwnBlock::make('board')->editedAt('Edit items', fn (): string => '/admin/items')->toArray();
+
+        $this->assertSame(['label' => 'Edit items', 'url' => '/admin/items'], $definition['editedAt']);
+        $this->assertArrayNotHasKey('editedAt', OwnBlock::make('plain')->toArray());
+    }
+
+    public function test_a_screen_address_that_is_not_a_safe_link_is_left_out(): void
+    {
+        $this->assertArrayNotHasKey('editedAt', OwnBlock::make('board')->editedAt('Edit', 'javascript:alert(1)')->toArray());
+        $this->assertArrayNotHasKey('editedAt', OwnBlock::make('board')->editedAt('Edit', fn (): ?string => null)->toArray());
+    }
 }

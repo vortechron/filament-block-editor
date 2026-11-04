@@ -2,10 +2,12 @@
 
 namespace Vortechron\FilamentBlockEditor\Blocks;
 
+use Closure;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Vortechron\FilamentBlockEditor\Content\DynamicValues;
 use Vortechron\FilamentBlockEditor\Rendering\RenderContext;
+use Vortechron\FilamentBlockEditor\Support\Urls;
 
 /**
  * A block the host app defines and draws. The builder shows it in its add
@@ -46,6 +48,13 @@ final class OwnBlock
      * @var list<string>
      */
     private array $showsValues = [];
+
+    private ?string $editedAtLabel = null;
+
+    /**
+     * @var string|(Closure(): ?string)|null
+     */
+    private string|Closure|null $editedAtUrl = null;
 
     private function __construct(public readonly string $kind)
     {
@@ -158,6 +167,36 @@ final class OwnBlock
         return $this;
     }
 
+    /**
+     * The screen where the data this block shows is changed, such as the
+     * Items screen for a list of items. The builder shows a button to it in
+     * the block's settings, so the owner is never left with nothing to
+     * change. Pass a closure when the address needs the routes, which are
+     * not ready while the app boots.
+     *
+     * @param  string|(Closure(): ?string)  $url
+     */
+    public function editedAt(string $label, string|Closure $url): self
+    {
+        $this->editedAtLabel = $label;
+        $this->editedAtUrl = $url;
+
+        return $this;
+    }
+
+    /**
+     * The button to the screen where the block's data is changed, or null.
+     *
+     * @return array{label: string, url: string}|null
+     */
+    public function getEditedAt(): ?array
+    {
+        $url = $this->editedAtUrl instanceof Closure ? ($this->editedAtUrl)() : $this->editedAtUrl;
+        $url = Urls::link($url);
+
+        return $this->editedAtLabel === null || $url === null ? null : ['label' => $this->editedAtLabel, 'url' => $url];
+    }
+
     public function getLabel(): string
     {
         return $this->label;
@@ -219,6 +258,7 @@ final class OwnBlock
             ...($this->siteInfo === [] ? [] : ['siteInfo' => $this->siteInfo]),
             ...($this->showsValues === [] ? [] : ['showsValues' => $this->showsValues]),
             ...($this->retired ? ['retired' => true] : []),
+            ...(($editedAt = $this->getEditedAt()) === null ? [] : ['editedAt' => $editedAt]),
         ];
     }
 

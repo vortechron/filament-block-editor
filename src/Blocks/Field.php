@@ -2,6 +2,7 @@
 
 namespace Vortechron\FilamentBlockEditor\Blocks;
 
+use Closure;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
 use Vortechron\FilamentBlockEditor\Content\DynamicValues;
@@ -14,6 +15,7 @@ use Vortechron\FilamentBlockEditor\Support\Urls;
  *
  *     Field::text('heading')->label('Heading')->default('Stationery')
  *     Field::list('items')->fields([Field::text('name')])->maxItems(6)
+ *     Field::select('category')->options(fn (): array => Category::pluck('name', 'id')->all())
  */
 final class Field
 {
@@ -27,6 +29,11 @@ final class Field
      * @var list<array{value: string, label: string}>
      */
     private array $options = [];
+
+    /**
+     * Reads the choices when they are needed, such as from the database.
+     */
+    private ?Closure $optionsFrom = null;
 
     /**
      * @var list<Field>
@@ -115,24 +122,56 @@ final class Field
     }
 
     /**
-     * The choices of a select: `['value' => 'Label']`, or a list of
-     * `['value' => ..., 'label' => ...]`, or a list of plain strings.
+     * The choices of a select: `['value' => 'Label']` (`[8 => 'Pens']` too,
+     * keyed by id), or a list of
+     * `['value' => ..., 'label' => ...]`, or a list of plain strings. A
+     * closure returning one of those is read each time the choices are
+     * needed (the builder opens, a block is saved or drawn), so choices
+     * from the database, like the shop's categories, are always current.
      *
-     * @param  array<int|string, mixed>  $options
+     * @param  array<int|string, mixed>|Closure(): array<int|string, mixed>  $options
      */
-    public function options(array $options): self
+    public function options(array|Closure $options): self
     {
-        $this->options = [];
+        $this->optionsFrom = $options instanceof Closure ? $options : null;
+        $this->options = $options instanceof Closure ? [] : self::normalOptions($options);
+
+        return $this;
+    }
+
+    /**
+     * @param  array<int|string, mixed>  $options
+     * @return list<array{value: string, label: string}>
+     */
+    private static function normalOptions(array $options): array
+    {
+        $normal = [];
+        // `[8 => 'Pens']` keys by id; only a plain list is a list of values.
+        $plain = array_is_list($options);
 
         foreach ($options as $key => $option) {
-            $this->options[] = match (true) {
+            $normal[] = match (true) {
                 is_array($option) && isset($option['value']) => ['value' => (string) $option['value'], 'label' => (string) ($option['label'] ?? $option['value'])],
-                is_int($key) && is_scalar($option) => ['value' => (string) $option, 'label' => (string) $option],
+                $plain && is_scalar($option) => ['value' => (string) $option, 'label' => (string) $option],
                 default => ['value' => (string) $key, 'label' => is_scalar($option) ? (string) $option : (string) $key],
             };
         }
 
-        return $this;
+        return $normal;
+    }
+
+    /**
+     * @return list<array{value: string, label: string}>
+     */
+    private function choices(): array
+    {
+        if ($this->optionsFrom === null) {
+            return $this->options;
+        }
+
+        $options = ($this->optionsFrom)();
+
+        return is_array($options) ? self::normalOptions($options) : [];
     }
 
     /**
@@ -210,7 +249,7 @@ final class Field
             'name' => $this->name,
             'label' => $this->label,
             'type' => $this->type,
-            ...($this->type === 'select' ? ['options' => $this->options] : []),
+            ...($this->type === 'select' ? ['options' => $this->choices()] : []),
             ...($this->type === 'list' ? ['fields' => array_map(fn (Field $field): array => $field->toArray(), $this->fields)] : []),
             ...($this->type === 'list' && $this->maxItems !== null ? ['maxItems' => $this->maxItems] : []),
             ...($this->type === 'number' && $this->min !== null ? ['min' => $this->min] : []),
@@ -297,7 +336,7 @@ final class Field
     {
         $default = $this->cleanSelect($this->default);
 
-        return $default ?? ($this->options[0]['value'] ?? null);
+        return $default ?? ($this->choices()[0]['value'] ?? null);
     }
 
     private function cleanSelect(mixed $value): ?string
@@ -306,7 +345,7 @@ final class Field
             return null;
         }
 
-        foreach ($this->options as $option) {
+        foreach ($this->choices() as $option) {
             if ($option['value'] === (string) $value) {
                 return $option['value'];
             }

@@ -3,10 +3,12 @@ import { OwnBlockForm } from '@/blocks/own-block-form';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
 import { isPlainWords } from '@/lib/new-item-words';
+import { ownBlockSource } from '@/lib/own-block-source';
 import { Textarea } from '@/ui/textarea';
 import { GalleryBlock, galleryUrls, MAX_GALLERY_PHOTOS } from '../editor/gallery-block';
 import { SegmentedChoice } from '../editor/segmented-choice';
 import { ButtonFields } from './button-fields';
+import { EditElsewhereLink } from './edit-elsewhere-link';
 import { FormEditor } from './form/form-editor';
 import { Group, InfoCard, propText, TextField } from './item-fields';
 import { TextItemSettings } from './item-text-settings';
@@ -203,16 +205,36 @@ function GallerySettings({ item, handle, onChange }: SettingsProps & { handle: S
 
 function OwnBlockSettings({ item, onChange }: SettingsProps) {
     const t = useT();
-    const { ownBlocks } = useHost();
+    const { ownBlocks, developer } = useHost();
     const definition = ownBlocks.find((entry) => entry.kind === item.props.kind);
+    const source = definition ? ownBlockSource(definition, developer) : null;
 
-    return definition ? (
-        <OwnBlockForm
-            definition={definition}
-            values={propText(item.props.values, '{}')}
-            onChange={(values) => onChange({ values })}
-            allowShopValues
-        />
+    return definition && source ? (
+        <div className="grid grid-cols-1 gap-4">
+            {(source.note !== null || source.link !== null || source.isEmpty) && (
+                <InfoCard
+                    action={
+                        source.link && (
+                            <EditElsewhereLink
+                                href={source.link.url}
+                                label={source.link.label}
+                            />
+                        )
+                    }
+                >
+                    {source.note ??
+                        (source.isEmpty
+                            ? t('This block has nothing to set here.')
+                            : t('What it shows is changed on another screen.'))}
+                </InfoCard>
+            )}
+            <OwnBlockForm
+                definition={definition}
+                values={propText(item.props.values, '{}')}
+                onChange={(values) => onChange({ values })}
+                allowShopValues
+            />
+        </div>
     ) : (
         <InfoCard>
             {t('This app has no block of this kind any more. Its values are kept, and the page leaves it out.')}

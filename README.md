@@ -178,6 +178,25 @@ lists them. A `text` or `textarea` value may hold short codes like `Hubungi {sit
 filled in. Mark a field `->developerOnly()` to keep it to developers. A section with `width: full` and `padding: none` lets your block draw edge
 to edge. More in [docs/php.md](docs/php.md#your-own-blocks).
 
+A block that shows data kept somewhere else, like a list of items, names that screen with
+`->editedAt('Edit items', fn () => ItemResource::getUrl())`: its settings then show its description and a button
+there, never an empty tab. A select can read its choices when they are needed, such as from the database:
+`Field::select('category')->options(fn () => Category::pluck('name', 'id')->all())` (keys by id are kept).
+
+For a long list, cut it into pages a visitor flips through with ‹ ›, with no JavaScript:
+
+```php
+use Vortechron\FilamentBlockEditor\Rendering\Pager;
+
+$pages = Pager::pages($items, perPage: 6, paged: $values['pages']);   // only the first page when not paged
+$html = array_map(fn (array $page): string => view('blocks.items-page', ['items' => $page])->render(), $pages);
+
+echo view('filament-block-editor::pager', ['name' => Pager::name($block), 'pages' => $html]);
+```
+
+In the builder, every item has a Replace button: the owner picks another item, like Image where a drawing was, and
+it goes in the same place, in one undo step.
+
 ## Use the builder anywhere else
 
 The builder needs only an element and an adapter. Any backend works, as long as it can draw the page for the

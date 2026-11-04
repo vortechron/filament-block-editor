@@ -275,6 +275,8 @@ export type OwnBlockDefinition = {
     showsValues?: string[];
     /** Kept so pages that hold it still draw; not offered in Add or "/". */
     retired?: boolean;
+    /** The host screen where the data the block shows is changed. */
+    editedAt?: { label: string; url: string };
 };
 
 export type SaveResult =

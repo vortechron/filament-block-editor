@@ -443,6 +443,43 @@ export function useBuilder({
     }
 
     /**
+     * Puts a new item in the place of a picked one, like a photo where a
+     * drawn picture was: one step to undo. The new item opens, as after Add.
+     */
+    function swapItem(sectionId: string, itemId: string, key: ItemKey) {
+        const section = blocks.find((block) => block.id === sectionId);
+
+        if (section?.type === 'ref' || locked(sectionId, 'content')) {
+            return;
+        }
+
+        const layout = section?.data.layout ?? 'plain';
+
+        withHandle(sectionId, (handle) => {
+            const newId = form.asStep(() => {
+                const inserted = handle.insertItem(
+                    key,
+                    { blockId: itemId, placement: 'after' },
+                    layout,
+                );
+
+                if (inserted !== null && inserted !== itemId) {
+                    handle.removeItem(itemId);
+                }
+
+                return inserted;
+            });
+            const item = newId ? handle.getItem(newId) : null;
+
+            if (newId && item) {
+                openItem(handle, sectionId, newId, item.type);
+            } else {
+                selectSection(sectionId);
+            }
+        });
+    }
+
+    /**
      * Changes one section, starting from its latest version. `group`
      * names the change for the undo history, like "words:<id>"; left
      * out, the change is a step of its own.
@@ -595,6 +632,7 @@ export function useBuilder({
         sectionInsertIndex,
         defaultItemTarget,
         addItem,
+        swapItem,
         updateSection,
         replaceSection,
         moveSection,
