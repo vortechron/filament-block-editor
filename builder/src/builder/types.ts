@@ -113,6 +113,8 @@ export type SectionEditorHandle = {
     ) => string | null;
     getItem: (blockId: string) => ItemSnapshot | null;
     updateItem: (blockId: string, props: Record<string, unknown>) => void;
+    /** Replaces a text item's words with plain text. */
+    setItemText: (blockId: string, text: string) => void;
     changeItemType: (
         blockId: string,
         type: string,

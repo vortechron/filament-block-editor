@@ -161,7 +161,16 @@ export function ItemPanel() {
                 )}
                 onLookChange={(look) => update({ look })}
             >
-                <ItemSettings item={item} handle={handle} onChange={update} />
+                <ItemSettings
+                    item={item}
+                    handle={handle}
+                    onChange={update}
+                    onWords={(text) =>
+                        form.inGroup(`words:${sectionId}:${item.id}`, () =>
+                            handle.setItemText(item.id, text),
+                        )
+                    }
+                />
             </ItemTabs>
         </div>
     );

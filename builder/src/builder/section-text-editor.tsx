@@ -1,6 +1,7 @@
 import { useEffect, useEffectEvent, useState } from 'react';
 import { serializeForm } from '@/lib/form-definition';
 import { starterForm } from '@/lib/form-starter';
+import { newItemWords } from '@/lib/new-item-words';
 import { useContentT, useT } from '@/lib/i18n';
 import type { RichDocument, SectionData } from '@/types';
 import type { PageBlocksInfo } from '../editor/page-blocks';
@@ -59,6 +60,7 @@ export default function SectionTextEditor({
                     createSectionEditorHandle(editor, {
                         button: siteT('Read more'),
                         form: serializeForm(starterForm(t, siteT)),
+                        words: newItemWords(siteT),
                     }),
                 )
             }

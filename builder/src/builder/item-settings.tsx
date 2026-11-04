@@ -1,6 +1,10 @@
+import { useId } from 'react';
 import { OwnBlockForm } from '@/blocks/own-block-form';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
+import { isPlainWords } from '@/lib/new-item-words';
+import { Textarea } from '@/ui/textarea';
+import { GalleryBlock, galleryUrls, MAX_GALLERY_PHOTOS } from '../editor/gallery-block';
 import { SegmentedChoice } from '../editor/segmented-choice';
 import { ButtonFields } from './button-fields';
 import { FormEditor } from './form/form-editor';
@@ -39,23 +43,41 @@ type SettingsProps = {
     onChange: (props: Record<string, unknown>) => void;
 };
 
+/** Items whose words the panel can change in a plain text box. */
+const WORD_ITEMS = new Set([
+    'paragraph',
+    'heading',
+    'quote',
+    'bulletListItem',
+    'numberedListItem',
+    'checkListItem',
+    'toggleListItem',
+    'card',
+]);
+
+/** Items whose words may run over several lines. */
+const LONG_WORD_ITEMS = new Set(['paragraph', 'quote']);
+
 /** A full row: the kit's WIDTH_COLUMNS (BlockNoteRenderer::WIDTH_COLUMNS). */
 const FULL_COLUMNS = 12;
 
 /**
- * The picked item's own settings, on the item panel's Settings tab: the
- * button's words and link, an own block's fields, the form, a photo, the
- * shop info the item shows, the kind of text, and the width and space
- * every item has. A form shows its shop info with its actions instead.
+ * The picked item's own settings, on the item panel's Settings tab: a text
+ * item's words, the button's words and link, an own block's fields, the
+ * form, a photo or the slideshow's photos, the shop info the item shows,
+ * the kind of text, and the width and space every item has. A form shows
+ * its shop info with its actions instead.
  */
 export function ItemSettings({
     item,
     handle,
     onChange,
-}: SettingsProps & { handle: SectionEditorHandle }) {
+    onWords,
+}: SettingsProps & { handle: SectionEditorHandle; onWords: (text: string) => void }) {
     return (
         <div className="grid grid-cols-1 gap-5">
-            <KindSettings item={item} onChange={onChange} />
+            <WordsField item={item} onWords={onWords} />
+            <KindSettings item={item} handle={handle} onChange={onChange} />
             {item.type !== 'form' && <SiteInfoRows source={item} back={{ name: 'item' }} />}
             <TextItemSettings item={item} handle={handle} onChange={onChange} />
             <PlacementSettings item={item} onChange={onChange} />
@@ -63,8 +85,41 @@ export function ItemSettings({
     );
 }
 
+/**
+ * A text item's words, in a plain box. Words with bold, colours, links or
+ * shop info chips are changed in the section instead, so none of it is
+ * lost.
+ */
+function WordsField({ item, onWords }: { item: ItemSnapshot; onWords: (text: string) => void }) {
+    const t = useT();
+    const id = useId();
+
+    if (!WORD_ITEMS.has(item.type)) {
+        return null;
+    }
+
+    if (!isPlainWords(item.content)) {
+        return (
+            <InfoCard>
+                {t('These words have bold, colours, links or shop info. Change them in the section, so nothing is lost.')}
+            </InfoCard>
+        );
+    }
+
+    return LONG_WORD_ITEMS.has(item.type) ? (
+        <div className="grid gap-2">
+            <label htmlFor={id} className="text-foreground text-sm font-medium">
+                {t('Words')}
+            </label>
+            <Textarea id={id} rows={4} value={item.text} onChange={(event) => onWords(event.target.value)} className="bg-card" />
+        </div>
+    ) : (
+        <TextField label={t('Words')} value={item.text} onChange={onWords} />
+    );
+}
+
 /** What only this kind of item has. */
-function KindSettings({ item, onChange }: SettingsProps) {
+function KindSettings({ item, handle, onChange }: SettingsProps & { handle: SectionEditorHandle }) {
     const t = useT();
 
     switch (item.type) {
@@ -102,11 +157,7 @@ function KindSettings({ item, onChange }: SettingsProps) {
                 </Group>
             );
         case 'gallery':
-            return (
-                <InfoCard>
-                    {t('Add, remove and reorder the photos in the section. Tap Edit in the section.')}
-                </InfoCard>
-            );
+            return <GallerySettings item={item} handle={handle} onChange={onChange} />;
         case 'card':
             return (
                 <InfoCard>
@@ -124,6 +175,30 @@ function KindSettings({ item, onChange }: SettingsProps) {
         default:
             return null;
     }
+}
+
+/**
+ * The slideshow's photos: add (several at once), move and remove them.
+ * Photos that finish uploading join the ones the slideshow has by then.
+ */
+function GallerySettings({ item, handle, onChange }: SettingsProps & { handle: SectionEditorHandle }) {
+    const t = useT();
+    const { upload } = useHost();
+
+    return (
+        <Group label={t('Photos')}>
+            <GalleryBlock
+                images={propText(item.props.images, '')}
+                uploadFile={(file) => upload(file, 'image')}
+                onAdd={(urls) => {
+                    const now = galleryUrls(propText(handle.getItem(item.id)?.props.images, ''));
+
+                    onChange({ images: [...now, ...urls].slice(0, MAX_GALLERY_PHOTOS).join('\n') });
+                }}
+                onChange={(urls) => onChange({ images: urls.join('\n') })}
+            />
+        </Group>
+    );
 }
 
 function OwnBlockSettings({ item, onChange }: SettingsProps) {

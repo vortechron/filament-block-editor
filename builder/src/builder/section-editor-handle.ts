@@ -10,6 +10,7 @@ import {
     columnSlashMenuItems,
     spacerSlashMenuItem,
 } from '@vortechron/blocknote-kit';
+import type { NewItemWords } from '@/lib/new-item-words';
 import type { SectionLayout } from '@/types';
 import { layoutSlashMenuItems } from '../editor/layout-slash-items';
 import { blockAtPath, pathOfBlock } from './page-frame-updates';
@@ -31,10 +32,11 @@ type AnyBlock = Block<any, any, any>;
 const untranslated = (text: string) => text;
 
 /**
- * What a new item starts with: the button's words, and the starter form's
- * JSON, in the site's language (contentTranslator()).
+ * What a new item starts with: the button's words, the starter form's
+ * JSON and the words of the other items (newItemWords()), in the site's
+ * language (contentTranslator()).
  */
-export type NewItemLabels = { button: string; form: string };
+export type NewItemLabels = { button: string; form: string; words?: NewItemWords };
 
 /**
  * Wraps one section's BlockNote editor so the sidebar, the page on the
@@ -53,6 +55,13 @@ export function createSectionEditorHandle(
         updateItem: (blockId, props) => {
             if (editor.getBlock(blockId)) {
                 editor.updateBlock(blockId, { props });
+            }
+        },
+        setItemText: (blockId, text) => {
+            const block = editor.getBlock(blockId);
+
+            if (block && Array.isArray(block.content)) {
+                editor.updateBlock(blockId, { content: text } as never);
             }
         },
         changeItemType: (blockId, type, props = {}) => {
@@ -136,6 +145,10 @@ function insertItem(
             ? line.id
             : editor.getTextCursorPosition().block.id);
 
+    if (labels.words) {
+        fillNewItem(editor, id, key, labels.words);
+    }
+
     scrollToBlock(editor, id);
 
     return id;
@@ -214,6 +227,63 @@ function runInsert(
     }
 
     return null;
+}
+
+/** The words each kind of new text item starts with. */
+const STARTING_WORDS: Partial<Record<ItemKey, keyof NewItemWords>> = {
+    heading: 'heading',
+    subheading: 'subheading',
+    paragraph: 'paragraph',
+    bulletList: 'bulletList',
+    numberedList: 'numberedList',
+    quote: 'quote',
+    toggle: 'question',
+    card: 'card',
+};
+
+/**
+ * Gives a new item words when it has none, so it shows on the page and
+ * reads as what it is: a heading says "Your heading", a question has an
+ * answer under it, and each new column has a line.
+ */
+function fillNewItem(editor: AnyEditor, blockId: string, key: ItemKey, words: NewItemWords): void {
+    const block = editor.getBlock(blockId);
+
+    if (!block) {
+        return;
+    }
+
+    if (key === 'twoColumns' || key === 'threeColumns') {
+        const row = editor.getParentBlock(editor.getParentBlock(block) ?? block);
+
+        for (const column of row?.type === 'columnList' ? row.children : []) {
+            for (const child of column.children) {
+                if (child.type === 'paragraph' && hasNoWords(child)) {
+                    editor.updateBlock(child, { content: words.column } as never);
+                }
+            }
+        }
+
+        return;
+    }
+
+    const wordsKey = STARTING_WORDS[key];
+
+    if (wordsKey === undefined || !hasNoWords(block)) {
+        return;
+    }
+
+    editor.updateBlock(block, {
+        content: words[wordsKey],
+        ...(key === 'toggle' && block.children.length === 0
+            ? { children: [{ type: 'paragraph', content: words.answer }] }
+            : {}),
+    } as never);
+    editor.setTextCursorPosition(block, 'end');
+}
+
+function hasNoWords(block: AnyBlock): boolean {
+    return Array.isArray(block.content) && inlineText(block.content).trim() === '';
 }
 
 /**
