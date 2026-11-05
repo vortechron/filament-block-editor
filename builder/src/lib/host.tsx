@@ -6,6 +6,7 @@ import type {
     Kit,
     OwnBlockDefinition,
     PageLinkOption,
+    PageMenuEntry,
     PageBuilderAdapter,
     PagePart,
     SiteInfo,
@@ -42,6 +43,8 @@ export type Host = {
     dynamicValues: DynamicValueDefinition[];
     /** The site's pages a link can point to, in menu order. */
     pages: PageLinkOption[];
+    /** The pages one can build, for the title's menu. */
+    pageMenu: PageMenuEntry[];
     /** The synced sections this page may use, with the section each holds. */
     syncedSections: SyncedSectionOption[];
     /** The header and footer the page shows, each built on its own. */

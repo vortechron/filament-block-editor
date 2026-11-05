@@ -1,4 +1,4 @@
-import { MousePointerClick, Search, X } from 'lucide-react';
+import { MousePointerClick, Search } from 'lucide-react';
 import { type ReactNode, useState } from 'react';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
@@ -12,7 +12,6 @@ import {
     SyncedTile,
     TemplateTile,
 } from './catalog-tiles';
-import { useSectionTitle } from './section-meta';
 
 type AddTab = 'sections' | 'items';
 
@@ -84,16 +83,12 @@ export function AddPanel({ onAdded }: { onAdded?: () => void }) {
     const t = useT();
     const { builder, templates, library, isDesktop } = useBuilderContext();
     const { kind } = useHost();
-    const titleOf = useSectionTitle();
     const { selection, blocks } = builder;
     const [tab, setTab] = useState<AddTab>(
         selection.sectionId ? 'items' : 'sections',
     );
     const [query, setQuery] = useState('');
-    const sectionIndex = blocks.findIndex(
-        (block) => block.id === selection.sectionId,
-    );
-    const section = sectionIndex === -1 ? null : blocks[sectionIndex];
+    const section = blocks.find((block) => block.id === selection.sectionId) ?? null;
     const shownTemplates = templates.filter((template) =>
         matchesSearch(query, template.label, template.description),
     );
@@ -147,18 +142,6 @@ export function AddPanel({ onAdded }: { onAdded?: () => void }) {
                     className="border-input focus-visible:border-ring focus-visible:ring-ring/50 bg-card h-9 w-full rounded-lg border pr-3 pl-9 text-sm outline-none focus-visible:ring-[3px]"
                 />
             </label>
-
-            <PlacementNote
-                tab={tab}
-                sectionLabel={
-                    section
-                        ? `${sectionIndex + 1}. ${titleOf(section)}`
-                        : null
-                }
-                hasItem={selection.itemId !== null}
-                onClear={builder.clearSelection}
-            />
-
             {tab === 'sections' ? (
                 shownTemplates.length === 0 && shownSynced.length === 0 ? (
                     <p className="text-muted-foreground py-6 text-center text-sm">
@@ -247,51 +230,5 @@ function TileGroup({ label, children }: { label: string; children: ReactNode }) 
             </h3>
             <div className="grid grid-cols-2 gap-2.5">{children}</div>
         </section>
-    );
-}
-
-/** Says where a tapped tile goes, so nothing lands in a surprising place. */
-function PlacementNote({
-    tab,
-    sectionLabel,
-    hasItem,
-    onClear,
-}: {
-    tab: AddTab;
-    sectionLabel: string | null;
-    hasItem: boolean;
-    onClear: () => void;
-}) {
-    const t = useT();
-
-    const text =
-        sectionLabel === null
-            ? tab === 'sections'
-                ? t('New sections go at the end of the page.')
-                : t('New items go at the end of the last section.')
-            : tab === 'sections'
-              ? t('Adds after :section', { section: sectionLabel })
-              : hasItem
-                ? t('Adds under the picked item in :section', {
-                      section: sectionLabel,
-                  })
-                : t('Adds to the end of :section', { section: sectionLabel });
-
-    return (
-        <div className="text-foreground flex items-start gap-2 rounded-lg border border-[var(--builder-select)]/25 bg-[var(--builder-select)]/[0.06] px-3 py-2 text-xs">
-            <span className="mt-1 size-1.5 shrink-0 rounded-full bg-[var(--builder-select)]" />
-            <span className="min-w-0 flex-1 leading-relaxed">{text}</span>
-            {sectionLabel !== null && (
-                <button
-                    type="button"
-                    onClick={onClear}
-                    aria-label={t('Pick nothing')}
-                    title={t('Pick nothing')}
-                    className="text-muted-foreground hover:bg-card hover:text-foreground -m-1 grid size-6 shrink-0 place-items-center rounded-md"
-                >
-                    <X className="size-3.5" />
-                </button>
-            )}
-        </div>
     );
 }

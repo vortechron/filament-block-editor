@@ -27,6 +27,7 @@ class PageBuilderHooksTest extends FilamentTestCase
         $this->assertSame(Kit::defaults(), $options['kitDefaults']);
         $this->assertArrayNotHasKey('siteInfo', $options);
         $this->assertArrayNotHasKey('pages', $options);
+        $this->assertArrayNotHasKey('pageMenu', $options);
         $this->assertSame([], $options['syncedSections']);
         $this->assertSame([], $options['parts']);
         $this->assertSame('page', $options['kind']);
@@ -153,6 +154,19 @@ class PageBuilderHooksTest extends FilamentTestCase
             ['title' => 'Stationery', 'url' => '/stationery'],
             ['title' => str_repeat('a', 120), 'url' => '/long'],
         ], $options['pages']);
+    }
+
+    public function test_the_pages_to_build_are_cleaned_for_the_title_menu(): void
+    {
+        $this->signIn();
+
+        $options = Livewire::test(FullDemoBuilder::class)->instance()->getPageBuilderOptions();
+
+        $this->assertSame([
+            ['title' => 'Halaman utama', 'url' => '/admin/pages/1/build', 'current' => true],
+            ['title' => 'Hubungi', 'url' => '/admin/pages/7/build', 'current' => false],
+            ['title' => 'Twice current', 'url' => '/admin/pages/8/build', 'current' => false],
+        ], $options['pageMenu']);
     }
 
     public function test_the_kit_is_saved_cleaned(): void

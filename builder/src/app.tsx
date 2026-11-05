@@ -17,6 +17,8 @@ import { MobileDock } from './builder/mobile-dock';
 import { PreviewDialog } from './builder/preview-dialog';
 import { SaveErrors, sectionIndexOfError } from './builder/save-errors';
 import { Sidebar } from './builder/sidebar';
+import { SidebarResizer } from './builder/sidebar-resizer';
+import { clampSidebarWidth, defaultSidebarWidth, useSidebarWidth } from './builder/sidebar-width';
 import { type Device, panelUnder, type SidebarPanel } from './builder/types';
 import { useBuilder } from './builder/use-builder';
 import { useBuilderShortcuts } from './builder/use-builder-shortcuts';
@@ -132,6 +134,9 @@ function Builder({
     const kit = useKitState();
     const siteInfo = useSiteInfoState({ onDynamicValues });
     const [device, setDevice] = useState<Device>('desktop');
+    // The editor panel takes the whole width, with no page beside it.
+    const [isWide, setIsWide] = useState(false);
+    const sidebarWidth = useSidebarWidth();
     const [isDockOpen, setIsDockOpen] = useState(false);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
     const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -254,6 +259,12 @@ function Builder({
             </>
         ) : null;
 
+    // The width the user dragged the panel to, or the default for what it shows.
+    const panelWidth =
+        sidebarWidth.width === null
+            ? defaultSidebarWidth(['section', 'item', 'part'].includes(panelUnder(builder.panel).name))
+            : clampSidebarWidth(sidebarWidth.width, window.innerWidth);
+
     return (
         <>
             <BuilderContext
@@ -282,7 +293,12 @@ function Builder({
                     >
                         <BuilderTopBar
                             device={device}
-                            onDeviceChange={setDevice}
+                            onDeviceChange={(next) => {
+                                setDevice(next);
+                                setIsWide(false);
+                            }}
+                            isWide={isWide}
+                            onWide={() => setIsWide(true)}
                             isDesktop={isDesktop}
                             hasUnsavedChanges={hasUnsavedChanges}
                             recentlySaved={recentlySaved}
@@ -308,23 +324,35 @@ function Builder({
                             {isDesktop && (
                                 <aside
                                     aria-label={t('Editor panels')}
+                                    data-wide={isWide ? 'true' : undefined}
+                                    style={isWide ? undefined : { width: panelWidth }}
                                     className={
-                                        ['section', 'item', 'part'].includes(panelUnder(builder.panel).name)
-                                            ? 'bg-card w-[22rem] shrink-0 border-r transition-[width] duration-200 lg:w-[26rem] xl:w-[28rem]'
-                                            : 'bg-card w-[19.5rem] shrink-0 border-r transition-[width] duration-200 lg:w-[21.5rem] xl:w-[23rem]'
+                                        isWide
+                                            ? 'bg-card min-w-0 flex-1'
+                                            : 'bg-card shrink-0 border-r'
                                     }
                                 >
                                     {sidebar}
                                 </aside>
                             )}
-                            <Canvas
-                                notices={notices}
-                                deleted={deleteNote.kind}
-                                onUndoDelete={() => {
-                                    deleteNote.hide();
-                                    builder.undo();
-                                }}
-                            />
+                            {isDesktop && !isWide && (
+                                <SidebarResizer
+                                    width={panelWidth}
+                                    onResize={sidebarWidth.setWidth}
+                                    onDone={sidebarWidth.keep}
+                                    onReset={sidebarWidth.reset}
+                                />
+                            )}
+                            {(!isDesktop || !isWide) && (
+                                <Canvas
+                                    notices={notices}
+                                    deleted={deleteNote.kind}
+                                    onUndoDelete={() => {
+                                        deleteNote.hide();
+                                        builder.undo();
+                                    }}
+                                />
+                            )}
                         </div>
                         {!isDesktop && (
                             <MobileDock

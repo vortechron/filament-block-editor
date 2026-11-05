@@ -31,6 +31,7 @@ function wrap(values: DynamicValueDefinition[] = VALUES) {
         pages: [],
         syncedSections: [],
         parts: [],
+        pageMenu: [],
         siteInfo: null,
         kind: 'page',
     } satisfies Host;

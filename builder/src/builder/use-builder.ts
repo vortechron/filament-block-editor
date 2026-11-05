@@ -436,6 +436,8 @@ export function useBuilder({
 
             if (itemId && item) {
                 openItem(handle, sectionId, itemId, item.type);
+                // The page shows the new item a moment later: scroll to it then.
+                followInFrame({ sectionId, path: handle.pathOf(itemId) });
             } else {
                 selectSection(sectionId);
             }
@@ -473,6 +475,7 @@ export function useBuilder({
 
             if (newId && item) {
                 openItem(handle, sectionId, newId, item.type);
+                followInFrame({ sectionId, path: handle.pathOf(newId) });
             } else {
                 selectSection(sectionId);
             }

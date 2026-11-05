@@ -7,6 +7,7 @@ import {
     LoaderCircle,
     Monitor,
     Palette,
+    PanelLeftOpen,
     Redo2,
     Smartphone,
     Store,
@@ -28,6 +29,7 @@ import {
 } from '@/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/tooltip';
 import type { Device } from './types';
+import { PageMenu } from './page-menu';
 import { historyShortcuts } from './use-builder-shortcuts';
 
 /**
@@ -44,6 +46,8 @@ import { historyShortcuts } from './use-builder-shortcuts';
 export function BuilderTopBar({
     device,
     onDeviceChange,
+    isWide,
+    onWide,
     isDesktop,
     hasUnsavedChanges,
     recentlySaved,
@@ -59,6 +63,9 @@ export function BuilderTopBar({
 }: {
     device: Device;
     onDeviceChange: (device: Device) => void;
+    /** The editor panel has the whole width, with no page beside it. */
+    isWide: boolean;
+    onWide: () => void;
     isDesktop: boolean;
     hasUnsavedChanges: boolean;
     recentlySaved: boolean;
@@ -118,8 +125,8 @@ export function BuilderTopBar({
                         {kindLabel}
                     </span>
                 )}
-                <h1 className="text-foreground min-w-0 truncate text-sm font-semibold sm:text-[15px] md:max-w-[10rem] lg:max-w-[18rem] xl:max-w-[26rem]">
-                    {title || kindLabel || t('Page')}
+                <h1 className="text-foreground min-w-0 text-sm font-semibold sm:text-[15px] md:max-w-[10rem] lg:max-w-[18rem] xl:max-w-[26rem]">
+                    <PageMenu title={title || kindLabel || t('Page')} />
                 </h1>
             </div>
 
@@ -132,24 +139,32 @@ export function BuilderTopBar({
                     >
                         <DeviceButton
                             label={t('Laptop')}
-                            isActive={device === 'desktop'}
+                            isActive={!isWide && device === 'desktop'}
                             onClick={() => onDeviceChange('desktop')}
                         >
                             <Monitor />
                         </DeviceButton>
                         <DeviceButton
                             label={t('Tablet')}
-                            isActive={device === 'tablet'}
+                            isActive={!isWide && device === 'tablet'}
                             onClick={() => onDeviceChange('tablet')}
                         >
                             <Tablet />
                         </DeviceButton>
                         <DeviceButton
                             label={t('Phone')}
-                            isActive={device === 'phone'}
+                            isActive={!isWide && device === 'phone'}
                             onClick={() => onDeviceChange('phone')}
                         >
                             <Smartphone />
+                        </DeviceButton>
+                        <span aria-hidden="true" className="bg-border mx-0.5 h-5 w-px" />
+                        <DeviceButton
+                            label={t('Edit without the page')}
+                            isActive={isWide}
+                            onClick={onWide}
+                        >
+                            <PanelLeftOpen />
                         </DeviceButton>
                     </div>
                 </div>

@@ -262,6 +262,9 @@ export type OwnBlockField = {
     [key: string]: unknown;
 };
 
+/** A page in the title's menu: its name and the address of its builder. */
+export type PageMenuEntry = { title: string; url: string; current?: boolean };
+
 /** A block the host defines and draws. Mirrors Blocks\OwnBlock::toArray(). */
 export type OwnBlockDefinition = {
     kind: string;
@@ -372,6 +375,12 @@ export type PageBuilderOptions = {
      * (a path such as `/stationery`).
      */
     pages?: PageLinkOption[];
+    /**
+     * The pages one can build, with this one `current` (PHP
+     * `getPageBuilderPageMenu()`). With two or more, a tap on the title
+     * lists them, each a link to its own builder.
+     */
+    pageMenu?: PageMenuEntry[];
     syncedSections?: SyncedSectionOption[];
     parts?: PagePart[];
     siteInfo?: SiteInfo | null;

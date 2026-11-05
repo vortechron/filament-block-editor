@@ -116,6 +116,17 @@ class FullDemoBuilder extends PageBuilderPage
         return [['key' => 'header', 'title' => 'Header', 'editUrl' => '/admin/parts/header']];
     }
 
+    protected function getPageBuilderPageMenu(): array
+    {
+        return [
+            ['title' => 'Halaman utama', 'url' => '/admin/pages/1/build', 'current' => true],
+            ['title' => 'Hubungi', 'url' => '/admin/pages/7/build'],
+            ['title' => 'Elsewhere', 'url' => 'javascript:alert(1)'],
+            ['title' => '', 'url' => '/admin/pages/9/build'],
+            ['title' => 'Twice current', 'url' => '/admin/pages/8/build', 'current' => true],
+        ];
+    }
+
     protected function getPageBuilderPages(): array
     {
         return [

@@ -15,6 +15,7 @@ use Vortechron\FilamentBlockEditor\Design\Kit;
 use Vortechron\FilamentBlockEditor\Design\KitSource;
 use Vortechron\FilamentBlockEditor\Enums\DocumentKind;
 use Vortechron\FilamentBlockEditor\Rendering\RenderContext;
+use Vortechron\FilamentBlockEditor\Support\Urls;
 
 /**
  * The page builder's optional parts: the design kit, saved and synced
@@ -126,6 +127,18 @@ trait PageBuilderHooks
      * @return list<array<string, mixed>>
      */
     protected function getPageBuilderPages(): array
+    {
+        return [];
+    }
+
+    /**
+     * The pages one can build, for the menu under the builder's title:
+     * `['title' => ..., 'url' => <its builder>, 'current' => bool]`, this
+     * page among them. Shown with two or more. None by default.
+     *
+     * @return list<array<string, mixed>>
+     */
+    protected function getPageBuilderPageMenu(): array
     {
         return [];
     }
@@ -284,6 +297,7 @@ trait PageBuilderHooks
             'parts' => array_values(array_filter($this->getPageBuilderParts(), fn (mixed $part): bool => is_array($part) && is_string($part['key'] ?? null) && (DocumentKind::tryFrom($part['key'])?->isPart() ?? false))),
             'siteInfo' => $siteInfo === null ? null : self::siteInfo($siteInfo),
             'pages' => $pages === [] ? null : $pages,
+            'pageMenu' => count($menu = $this->pageBuilderPageMenu()) < 2 ? null : $menu,
             'kind' => (DocumentKind::tryFrom($this->getPageBuilderKind()) ?? DocumentKind::Page)->value,
         ], fn (mixed $value): bool => $value !== null);
     }
@@ -344,6 +358,31 @@ trait PageBuilderHooks
         }
 
         return $pages;
+    }
+
+    /**
+     * The title menu's pages: a name, a safe link (Urls::link()) and at
+     * most one current.
+     *
+     * @return list<array{title: string, url: string, current: bool}>
+     */
+    private function pageBuilderPageMenu(): array
+    {
+        $menu = [];
+        $hasCurrent = false;
+
+        foreach ($this->getPageBuilderPageMenu() as $entry) {
+            $title = is_array($entry) && is_string($entry['title'] ?? null) ? mb_substr(trim($entry['title']), 0, 120) : '';
+            $url = is_array($entry) ? Urls::link($entry['url'] ?? null) : null;
+
+            if ($title !== '' && $url !== null) {
+                $current = ($entry['current'] ?? false) === true && ! $hasCurrent;
+                $hasCurrent = $hasCurrent || $current;
+                $menu[] = ['title' => $title, 'url' => $url, 'current' => $current];
+            }
+        }
+
+        return $menu;
     }
 
     /**

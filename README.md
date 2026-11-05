@@ -196,6 +196,11 @@ $html = array_map(fn (array $page): string => view('blocks.items-page', ['items'
 echo view('filament-block-editor::pager', ['name' => Pager::name($block), 'pages' => $html]);
 ```
 
+The title lists the other pages to build when the host returns them from `getPageBuilderPageMenu()`
+(`['title' => ..., 'url' => <its builder>, 'current' => bool]`); a tap opens one, asking first about unsaved
+changes. Beside the screen sizes, "Edit without the page" gives the editor panel the whole width; otherwise its edge
+drags to any width (kept in the browser; Home or a double-tap resets it).
+
 In the builder, every item has a Replace button: the owner picks another item, like Image where a drawing was, and
 it goes in the same place, in one undo step.
 

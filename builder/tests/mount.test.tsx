@@ -202,7 +202,8 @@ describe('mounting the page builder', () => {
         });
         const tablet = screen.getByRole('radio', { name: 'Tablet' });
 
-        expect(devices.querySelectorAll('[role="radio"]')).toHaveLength(3);
+        // Laptop, tablet, phone, and the editor alone (no page).
+        expect(devices.querySelectorAll('[role="radio"]')).toHaveLength(4);
 
         fireEvent.click(tablet);
 
