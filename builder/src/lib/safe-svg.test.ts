@@ -27,4 +27,14 @@ describe('an icon picture from the host', () => {
         expect(safeSvg('not a picture')).toBeNull();
         expect(safeSvg('')).toBeNull();
     });
+
+    it('drops comments, processing instructions, character data and text, which a browser could read as HTML', () => {
+        const svg = safeSvg(
+            '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><?x ><img src=x onerror=alert(1)>?><!--<img src=x onerror=alert(2)>--><![CDATA[<img src=x onerror=alert(3)>]]>words<path d="M3 3"/></svg>',
+        );
+
+        expect(svg).not.toMatch(/img|onerror|alert|<\?|<!--|CDATA|words/);
+        expect(svg).toContain('<path d="M3 3"');
+    });
 });
+

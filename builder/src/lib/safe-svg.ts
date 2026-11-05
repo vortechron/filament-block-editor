@@ -5,17 +5,20 @@ const ELEMENTS = new Set(['svg', 'g', 'path', 'circle', 'ellipse', 'rect', 'line
 
 /** How those shapes may be drawn: no links, scripts, handlers or styles. */
 const ATTRIBUTES = new Set([
-    'xmlns', 'viewBox', 'width', 'height', 'fill', 'stroke', 'stroke-width', 'stroke-linecap',
+    'viewBox', 'width', 'height', 'fill', 'stroke', 'stroke-width', 'stroke-linecap',
     'stroke-linejoin', 'stroke-miterlimit', 'fill-rule', 'clip-rule', 'opacity', 'fill-opacity',
     'stroke-opacity', 'transform', 'd', 'cx', 'cy', 'r', 'rx', 'ry', 'x', 'y', 'x1', 'x2', 'y1',
     'y2', 'points', 'class', 'aria-hidden', 'focusable',
 ]);
 
 /**
- * An icon picture from the host (Field::icons()) cut down to plain shapes,
- * so it can be drawn in the builder safely: only the shape elements and
- * drawing attributes above are kept, so no script, link, style or event
- * handler survives. Null for anything that is not an `<svg>`.
+ * An icon picture from the host (Field::icons()) rebuilt from plain
+ * shapes, so it can be drawn in the builder safely. Nothing of the
+ * original is kept but the shape elements and drawing attributes above:
+ * no script, link, style, event handler, text, comment, processing
+ * instruction or character data (a browser could read those as HTML when
+ * the picture is put in the page). Null for anything that is not an
+ * `<svg>`.
  */
 export function safeSvg(markup: string): string | null {
     if (!markup.trim().startsWith('<svg')) {
@@ -24,30 +27,33 @@ export function safeSvg(markup: string): string | null {
 
     // A picture written without its namespace is still an SVG.
     const source = /^\s*<svg[^>]*\sxmlns=/.test(markup) ? markup : markup.replace('<svg', `<svg xmlns="${SVG_NS}"`);
-    const doc = new DOMParser().parseFromString(source, 'image/svg+xml');
-    const root = doc.documentElement;
+    const parsed = new DOMParser().parseFromString(source, 'image/svg+xml');
+    const root = parsed.documentElement;
 
-    if (root.localName !== 'svg' || root.namespaceURI !== SVG_NS || doc.getElementsByTagName('parsererror').length > 0) {
+    if (root.localName !== 'svg' || root.namespaceURI !== SVG_NS || parsed.getElementsByTagName('parsererror').length > 0) {
         return null;
     }
 
-    clean(root);
+    const output = document.implementation.createDocument(SVG_NS, null, null);
 
-    return new XMLSerializer().serializeToString(root);
+    return new XMLSerializer().serializeToString(rebuild(root, output));
 }
 
-function clean(element: Element): void {
+/** A fresh copy of an allowed element: its allowed attributes and shapes. */
+function rebuild(element: Element, output: XMLDocument): Element {
+    const copy = output.createElementNS(SVG_NS, element.localName);
+
     for (const attribute of [...element.attributes]) {
-        if (!ATTRIBUTES.has(attribute.name) || /url\(|javascript:/i.test(attribute.value)) {
-            element.removeAttribute(attribute.name);
+        if (attribute.namespaceURI === null && ATTRIBUTES.has(attribute.name) && !/url\(|javascript:/i.test(attribute.value)) {
+            copy.setAttribute(attribute.name, attribute.value);
         }
     }
 
     for (const child of [...element.children]) {
-        if (ELEMENTS.has(child.localName) && child.localName !== 'svg') {
-            clean(child);
-        } else {
-            child.remove();
+        if (child.namespaceURI === SVG_NS && ELEMENTS.has(child.localName) && child.localName !== 'svg') {
+            copy.appendChild(rebuild(child, output));
         }
     }
+
+    return copy;
 }
