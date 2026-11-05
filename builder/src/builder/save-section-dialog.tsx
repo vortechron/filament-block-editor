@@ -135,7 +135,7 @@ export function SaveSectionDialog({
                 <form onSubmit={(event) => void save(event)} className="grid gap-4">
                     <DialogHeader>
                         <DialogTitle>
-                            {isSynced ? t('Make this section synced') : t('Save as a template')}
+                            {isSynced ? t('Make this section synced') : t('Save a copy of this section')}
                         </DialogTitle>
                         <DialogDescription>
                             {isSynced

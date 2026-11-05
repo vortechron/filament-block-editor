@@ -245,9 +245,9 @@ function SelectField({
 
     if (hasIconPictures(options)) {
         return (
-            <Group label={label} hint={hint}>
-                <IconChoice label={label} value={value} options={options} onChange={onChange} />
-            </Group>
+            <Field label={label} htmlFor={id} hint={hint}>
+                <IconChoice id={id} label={label} value={value} options={options} onChange={onChange} />
+            </Field>
         );
     }
 

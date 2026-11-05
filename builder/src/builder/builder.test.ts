@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { moveToIndex } from '../editor/helpers';
 import { matchesSearch } from './catalog-tiles';
 import { catalogFor, describeBlock } from './item-catalog';
+import { mayMakeSynced } from './section-menu';
 
 describe('moving a section in the Structure list', () => {
     const sections = ['hero', 'about', 'services', 'contact'];
@@ -109,3 +110,17 @@ describe('the Add panel search', () => {
         expect(matchesSearch('', 'Anything')).toBe(true);
     });
 });
+
+describe('making a section synced', () => {
+    it('is offered on a page, and for a locked section only to a developer', () => {
+        expect(mayMakeSynced('page', false, false)).toBe(true);
+        expect(mayMakeSynced('page', false, true)).toBe(false);
+        expect(mayMakeSynced('page', true, true)).toBe(true);
+    });
+
+    it('is never offered inside a synced section’s own builder, which already is the synced one', () => {
+        expect(mayMakeSynced('section', true, false)).toBe(false);
+        expect(mayMakeSynced('section', false, false)).toBe(false);
+    });
+});
+

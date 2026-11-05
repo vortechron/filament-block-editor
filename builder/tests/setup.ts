@@ -35,6 +35,10 @@ if (!('ResizeObserver' in window)) {
 }
 
 Element.prototype.scrollIntoView ??= () => {};
+
+// Radix's select asks about pointer capture when it opens.
+Element.prototype.hasPointerCapture ??= () => false;
+Element.prototype.releasePointerCapture ??= () => {};
 window.scrollTo ??= () => {};
 
 // ProseMirror (the text fields with shop values) measures the cursor to

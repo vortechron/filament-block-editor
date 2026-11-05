@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
 import { safeSvg } from '@/lib/safe-svg';
-import { cn } from '@/lib/utils';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/ui/select';
 
 type IconOption = { value: string; label: string; svg?: string };
 
-/** Up to this many icons, each shows its name beside its picture. */
-const NAMED = 4;
+/** Radix keeps "" for "nothing picked", so an empty choice goes by this. */
+const NONE = '__none__';
 
 /** A select whose choices come with pictures (Field::icons()). */
 export function hasIconPictures(options: IconOption[]): boolean {
@@ -13,73 +13,61 @@ export function hasIconPictures(options: IconOption[]): boolean {
 }
 
 /**
- * The icons of a select as pictures to tap, so the owner sees each icon
- * instead of its name. A few show their name beside the picture; many
- * show a grid, with the picked one's name under it.
+ * The icons of a select as a drop-down: each choice shows its picture on
+ * the left and its name on the right, and so does the picked one, so the
+ * owner sees each icon instead of guessing from its name.
  */
 export function IconChoice({
+    id,
     label,
     value,
     options,
     onChange,
 }: {
+    id: string;
     label: string;
     value: string;
     options: IconOption[];
     onChange: (value: string) => void;
 }) {
     const pictures = useMemo(
-        () => options.map((option) => (option.svg ? safeSvg(option.svg) : null)),
+        () => new Map(options.map((option) => [option.value, option.svg ? safeSvg(option.svg) : null])),
         [options],
     );
-    const named = options.length <= NAMED;
     const picked = options.find((option) => option.value === value);
 
     return (
-        <div className="grid gap-2">
-            <div
-                role="radiogroup"
-                aria-label={label}
-                className={cn('grid gap-1.5', named ? 'grid-cols-1' : 'grid-cols-6')}
-            >
-                {options.map((option, index) => {
-                    const isPicked = option.value === value;
-                    const picture = pictures[index];
+        <Select value={value === '' ? NONE : value} onValueChange={(next) => onChange(next === NONE ? '' : next)}>
+            <SelectTrigger id={id} aria-label={label}>
+                <SelectValue>
+                    {picked && <IconRow picture={pictures.get(picked.value) ?? null} label={picked.label} />}
+                </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+                {options.map((option) => (
+                    <SelectItem key={option.value} value={option.value === '' ? NONE : option.value} text={option.label}>
+                        <IconRow picture={pictures.get(option.value) ?? null} label={option.label} />
+                    </SelectItem>
+                ))}
+            </SelectContent>
+        </Select>
+    );
+}
 
-                    return (
-                        <button
-                            key={option.value}
-                            type="button"
-                            role="radio"
-                            aria-checked={isPicked}
-                            aria-label={option.label}
-                            title={option.label}
-                            onClick={() => onChange(option.value)}
-                            className={cn(
-                                'focus-visible:ring-ring/50 flex items-center rounded-md border transition-colors outline-none focus-visible:ring-[3px]',
-                                named ? 'gap-2.5 px-3 py-2 text-left text-sm font-medium' : 'aspect-square justify-center',
-                                isPicked
-                                    ? 'border-foreground bg-secondary text-foreground'
-                                    : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
-                            )}
-                        >
-                            {picture ? (
-                                <span
-                                    aria-hidden="true"
-                                    className="grid size-5 shrink-0 place-items-center [&_svg]:size-full"
-                                    dangerouslySetInnerHTML={{ __html: picture }}
-                                />
-                            ) : (
-                                !named && <span className="truncate px-0.5 text-[10px]">{option.label}</span>
-                            )}
-                            {named && <span className="min-w-0 truncate">{option.label}</span>}
-                        </button>
-                    );
-                })}
-            </div>
-            {!named && picked && (
-                <p className="text-muted-foreground text-xs">{picked.label}</p>
+/** A picture on the left, its name on the right. */
+function IconRow({ picture, label }: { picture: string | null; label: string }) {
+    return (
+        <span className="flex min-w-0 items-center gap-2.5">
+            {picture ? (
+                <span
+                    aria-hidden="true"
+                    className="text-foreground grid size-5 shrink-0 place-items-center [&_svg]:size-full"
+                    dangerouslySetInnerHTML={{ __html: picture }}
+                />
+            ) : (
+                <span aria-hidden="true" className="size-5 shrink-0" />
             )}
-        </div>
+            <span className="truncate">{label}</span>
+        </span>
     );
 }

@@ -463,31 +463,30 @@ describe('an icon choice', () => {
         ],
     });
 
-    it('shows a picture of every icon to tap, not a list of names', () => {
+    it('is a dropdown showing the picked icon’s picture and name', () => {
+        render(<OwnBlockForm definition={badge(12)} values='{"icon":"i4"}' onChange={vi.fn()} />, { wrapper: wrap() });
+
+        const trigger = screen.getByRole('combobox', { name: 'Icon' });
+
+        expect(trigger.textContent).toContain('Icon 4');
+        expect(trigger.querySelector('path')?.getAttribute('d')).toBe('M4 0');
+        expect(screen.queryByRole('radio')).toBeNull();
+    });
+
+    it('lists every icon with its picture on the left and its name on the right, and picks one', async () => {
         const onChange = vi.fn();
 
         render(<OwnBlockForm definition={badge(12)} values="{}" onChange={onChange} />, { wrapper: wrap() });
+        fireEvent.keyDown(screen.getByRole('combobox', { name: 'Icon' }), { key: 'ArrowDown' });
 
-        expect(screen.queryByRole('combobox')).toBeNull();
-        const group = screen.getByRole('radiogroup', { name: 'Icon' });
-        const choices = within(group).getAllByRole('radio');
+        const options = await screen.findAllByRole('option');
 
-        expect(choices).toHaveLength(12);
-        expect(choices[0].getAttribute('aria-checked')).toBe('true');
-        expect(choices[3].querySelector('path')?.getAttribute('d')).toBe('M3 0');
-        expect(screen.getByText('Icon 0')).toBeTruthy();
+        expect(options).toHaveLength(12);
+        expect(options[7].textContent).toBe('Icon 7');
+        expect(options[7].querySelector('svg path')?.getAttribute('d')).toBe('M7 0');
+        expect(options[7].firstElementChild?.querySelector('svg')).toBeTruthy();
 
-        fireEvent.click(screen.getByRole('radio', { name: 'Icon 7' }));
+        fireEvent.keyDown(options[7], { key: 'Enter' });
         expect(JSON.parse(onChange.mock.calls.at(-1)?.[0] as string).icon).toBe('i7');
     });
-
-    it('shows each name beside its picture when there are only a few', () => {
-        render(<OwnBlockForm definition={badge(3)} values="{}" onChange={vi.fn()} />, { wrapper: wrap() });
-
-        const choice = screen.getByRole('radio', { name: 'Icon 2' });
-
-        expect(choice.textContent).toContain('Icon 2');
-        expect(choice.querySelector('svg')).toBeTruthy();
-    });
 });
-

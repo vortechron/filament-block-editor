@@ -12,6 +12,17 @@ import {
 import { SaveSectionDialog, type SaveSectionMode } from './save-section-dialog';
 
 /**
+ * Whether a section may be made synced. Never inside a synced section's
+ * own builder (host kind "section"): that section already is the synced
+ * one, and a synced section inside it would not be drawn (only one level
+ * is followed, docs/v2-plan.md, section 5). A locked section only by a
+ * developer, because the synced section takes its place and its locks.
+ */
+export function mayMakeSynced(kind: string | undefined, developer: boolean, isLocked: boolean): boolean {
+    return kind !== 'section' && (developer || !isLocked);
+}
+
+/**
  * More things to do with a section, when the host can keep sections
  * (`adapter.saveSection`): save it as a template, or make it synced. A
  * locked section is only made synced by a developer, because the synced
@@ -19,14 +30,14 @@ import { SaveSectionDialog, type SaveSectionMode } from './save-section-dialog';
  */
 export function SectionMenu({ block }: { block: RichSection }) {
     const t = useT();
-    const { adapter, developer } = useHost();
+    const { adapter, developer, kind } = useHost();
     const [mode, setMode] = useState<SaveSectionMode | null>(null);
 
     if (typeof adapter.saveSection !== 'function') {
         return null;
     }
 
-    const canMakeSynced = developer || block.lock === undefined;
+    const canMakeSynced = mayMakeSynced(kind, developer, block.lock !== undefined);
 
     return (
         <>
@@ -44,7 +55,7 @@ export function SectionMenu({ block }: { block: RichSection }) {
                 <DropdownMenuContent align="end" className="w-60">
                     <DropdownMenuItem onSelect={() => setMode('template')}>
                         <BookmarkPlus />
-                        {t('Save as template')}
+                        {t('Save a copy')}
                     </DropdownMenuItem>
                     {canMakeSynced && (
                         <DropdownMenuItem onSelect={() => setMode('synced')}>
