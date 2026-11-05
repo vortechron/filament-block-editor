@@ -46,7 +46,7 @@ describe('saving a section', () => {
         const { builder } = mountBuilder({ adapter });
 
         await pickSection(/Selamat datang/);
-        await chooseFromSectionMenu('Save as template');
+        await chooseFromSectionMenu('Save a copy');
         await nameAndSave('Hero kedai');
 
         expect(adapter.saveSection).toHaveBeenCalledTimes(1);
