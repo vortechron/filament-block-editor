@@ -83,7 +83,7 @@ export function ItemGrid({
                         <h3 className="text-muted-foreground px-0.5 text-[11px] font-semibold tracking-wider uppercase">
                             {t(GROUP_LABELS[group])}
                         </h3>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-[repeat(auto-fill,minmax(6.75rem,1fr))] gap-2">
                             {inGroup.map((item) => (
                                 <ItemTile
                                     key={item.key}

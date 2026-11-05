@@ -81,7 +81,7 @@ function categoryName(
  */
 export function AddPanel({ onAdded }: { onAdded?: () => void }) {
     const t = useT();
-    const { builder, templates, library, isDesktop } = useBuilderContext();
+    const { builder, templates, library, isDesktop, isWide } = useBuilderContext();
     const { kind } = useHost();
     const { selection, blocks } = builder;
     const [tab, setTab] = useState<AddTab>(
@@ -209,7 +209,7 @@ export function AddPanel({ onAdded }: { onAdded?: () => void }) {
                 />
             )}
 
-            {isDesktop && (
+            {isDesktop && !isWide && (
                 <p className="text-muted-foreground bg-muted/60 flex items-center gap-2 rounded-lg px-3 py-2.5 text-xs">
                     <MousePointerClick className="size-4 shrink-0" />
                     {t(
@@ -228,7 +228,7 @@ function TileGroup({ label, children }: { label: string; children: ReactNode }) 
             <h3 className="text-muted-foreground px-0.5 text-[11px] font-semibold tracking-wider uppercase">
                 {label}
             </h3>
-            <div className="grid grid-cols-2 gap-2.5">{children}</div>
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(9.5rem,1fr))] gap-2.5">{children}</div>
         </section>
     );
 }

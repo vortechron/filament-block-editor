@@ -157,11 +157,7 @@ function RichSectionPanel({ block, index }: { block: RichSection; index: number 
                             {t('Add to this section')}
                         </p>
                         <p className="text-muted-foreground text-xs">
-                            {builder.selection.itemId
-                                ? t(
-                                      'Tap to add under the picked item, or drag to any place.',
-                                  )
-                                : t('Tap to add at the end, or drag to any place.')}
+                            {t('Tap to add, or drag to any place. The page scrolls to it.')}
                         </p>
                     </div>
                     <ItemGrid

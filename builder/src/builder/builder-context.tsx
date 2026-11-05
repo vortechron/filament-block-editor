@@ -39,6 +39,8 @@ export type BuilderContextValue = {
     revealPanel: (panel: SidebarPanel) => void;
     /** On a phone: the sheet covers the lower part of the canvas. */
     isSheetOpen: boolean;
+    /** The editor panel has the whole width: no page to drop on. */
+    isWide: boolean;
     /** The page, the design or the shop info has changes not saved yet. */
     hasUnsavedChanges: boolean;
     /** Goes to another page of the host, after the builder asked. */

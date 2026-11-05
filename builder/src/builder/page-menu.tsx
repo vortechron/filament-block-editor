@@ -41,7 +41,7 @@ export function PageMenu({ title }: { title: string }) {
                 <DropdownMenuTrigger asChild>
                     <button
                         type="button"
-                        className="hover:bg-muted data-[state=open]:bg-muted -mx-1.5 flex max-w-full min-w-0 items-center gap-1 rounded-md px-1.5 py-1 transition-colors"
+                        className="hover:bg-muted data-[state=open]:bg-muted flex max-w-full min-w-0 items-center gap-1 rounded-md px-1.5 py-1 transition-colors"
                     >
                         <span className="truncate">{title}</span>
                         <ChevronDown className="text-muted-foreground size-4 shrink-0" />

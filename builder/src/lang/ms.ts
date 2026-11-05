@@ -433,8 +433,6 @@ export default {
     'Synced: :title': 'Segerak: :title',
     'Tablet': 'Tablet',
     'Tall': 'Tinggi',
-    'Tap to add at the end, or drag to any place.': 'Ketik untuk tambah di hujung, atau seret ke mana-mana tempat.',
-    'Tap to add under the picked item, or drag to any place.': 'Ketik untuk tambah di bawah item yang dipilih, atau seret ke mana-mana tempat.',
     'Tap to add, or drag onto the page': 'Ketik untuk tambah, atau seret ke halaman',
     'Tap to change. Changes on every page.': 'Ketik untuk ubah. Berubah di semua halaman.',
     'Tap to fill in': 'Ketik untuk isi',
@@ -551,4 +549,5 @@ export default {
     'Drag to resize. Double-tap to reset.': 'Seret untuk ubah saiz. Ketik dua kali untuk set semula.',
     'Edit without the page': 'Sunting tanpa halaman',
     'Build another page': 'Bina halaman lain',
+    'Tap to add, or drag to any place. The page scrolls to it.': 'Ketik untuk tambah, atau seret ke mana-mana tempat. Halaman akan skrol kepadanya.',
 } satisfies Messages;

@@ -282,6 +282,7 @@ function Builder({
                     noteDeleted,
                     revealPanel,
                     isSheetOpen: !isDesktop && isDockOpen,
+                    isWide: isDesktop && isWide,
                     hasUnsavedChanges,
                     leaveTo,
                 }}
