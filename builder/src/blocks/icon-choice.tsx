@@ -40,7 +40,7 @@ export function IconChoice({
             <div
                 role="radiogroup"
                 aria-label={label}
-                className={cn('grid gap-1.5', named ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-6')}
+                className={cn('grid gap-1.5', named ? 'grid-cols-1' : 'grid-cols-6')}
             >
                 {options.map((option, index) => {
                     const isPicked = option.value === value;
