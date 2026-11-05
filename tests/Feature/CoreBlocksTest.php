@@ -34,7 +34,11 @@ class CoreBlocksTest extends TestCase
         }
 
         $this->assertSame(20, collect($definitions['fbe-faq']['fields'])->firstWhere('name', 'items')['maxItems']);
-        $this->assertSame(Icons::names(), array_column(collect(collect($definitions['fbe-icon-list']['fields'])->firstWhere('name', 'items')['fields'])->firstWhere('name', 'icon')['options'], 'value'));
+        $icons = collect(collect($definitions['fbe-icon-list']['fields'])->firstWhere('name', 'items')['fields'])->firstWhere('name', 'icon')['options'];
+        $this->assertSame(Icons::names(), array_column($icons, 'value'));
+        $shield = collect($icons)->firstWhere('value', 'shield-check');
+        $this->assertSame('Shield check', $shield['label']);
+        $this->assertSame(Icons::svg('shield-check'), $shield['svg']);
     }
 
     public function test_the_core_blocks_can_be_turned_off(): void

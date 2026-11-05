@@ -36,6 +36,11 @@ final class Field
     private ?Closure $optionsFrom = null;
 
     /**
+     * Draws each choice of a select as a picture in the builder.
+     */
+    private ?Closure $icons = null;
+
+    /**
      * @var list<Field>
      */
     private array $fields = [];
@@ -140,6 +145,23 @@ final class Field
     }
 
     /**
+     * Shows each choice of a select as a picture in the builder, so the
+     * owner sees the icon instead of its name: the closure gets a choice's
+     * value and returns an inline `<svg>`, or null for none. The builder
+     * keeps only plain shapes from it (no scripts, links or styles).
+     *
+     *     Field::select('icon')->options(Icons::choices())->icons(fn (string $name) => Icons::svg($name))
+     *
+     * @param  Closure(string): ?string  $svg
+     */
+    public function icons(Closure $svg): self
+    {
+        $this->icons = $svg;
+
+        return $this;
+    }
+
+    /**
      * @param  array<int|string, mixed>  $options
      * @return list<array{value: string, label: string}>
      */
@@ -158,6 +180,24 @@ final class Field
         }
 
         return $normal;
+    }
+
+    /**
+     * The choices with their picture, for the builder.
+     *
+     * @return list<array{value: string, label: string, svg?: string}>
+     */
+    private function choicesWithIcons(): array
+    {
+        if ($this->icons === null) {
+            return $this->choices();
+        }
+
+        return array_map(function (array $option): array {
+            $svg = ($this->icons)($option['value']);
+
+            return is_string($svg) && str_starts_with(ltrim($svg), '<svg') ? [...$option, 'svg' => trim($svg)] : $option;
+        }, $this->choices());
     }
 
     /**
@@ -249,7 +289,7 @@ final class Field
             'name' => $this->name,
             'label' => $this->label,
             'type' => $this->type,
-            ...($this->type === 'select' ? ['options' => $this->choices()] : []),
+            ...($this->type === 'select' ? ['options' => $this->choicesWithIcons()] : []),
             ...($this->type === 'list' ? ['fields' => array_map(fn (Field $field): array => $field->toArray(), $this->fields)] : []),
             ...($this->type === 'list' && $this->maxItems !== null ? ['maxItems' => $this->maxItems] : []),
             ...($this->type === 'number' && $this->min !== null ? ['min' => $this->min] : []),

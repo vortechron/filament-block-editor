@@ -277,4 +277,21 @@ class OwnBlockTest extends TestCase
         $this->assertArrayNotHasKey('editedAt', OwnBlock::make('board')->editedAt('Edit', 'javascript:alert(1)')->toArray());
         $this->assertArrayNotHasKey('editedAt', OwnBlock::make('board')->editedAt('Edit', fn (): ?string => null)->toArray());
     }
+
+    public function test_a_select_can_show_a_picture_of_each_icon(): void
+    {
+        $pen = '<svg viewBox="0 0 24 24"><path d="m4 20 1-5L16 4l4 4L9 19z"/></svg>';
+        $field = Field::select('icon')->options(['pen' => 'Pen', 'box' => 'Box', 'odd' => 'Odd'])
+            ->icons(fn (string $value): ?string => match ($value) {
+                'pen' => $pen,
+                'odd' => 'not a picture',
+                default => null,
+            });
+
+        $this->assertSame(
+            [['value' => 'pen', 'label' => 'Pen', 'svg' => $pen], ['value' => 'box', 'label' => 'Box'], ['value' => 'odd', 'label' => 'Odd']],
+            $field->toArray()['options'],
+        );
+        $this->assertSame('pen', $field->clean('pen'));
+    }
 }

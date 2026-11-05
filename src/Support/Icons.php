@@ -60,6 +60,19 @@ final class Icons
     }
 
     /**
+     * Every icon as a select choice: its name, and a readable label
+     * ("shield-check" is "Shield check").
+     *
+     * @return array<string, string>
+     */
+    public static function choices(): array
+    {
+        $names = self::names();
+
+        return array_combine($names, array_map(fn (string $name): string => ucfirst(str_replace('-', ' ', $name)), $names));
+    }
+
+    /**
      * The icon as an inline <svg>, hidden from screen readers, or "" for
      * an unknown name. `$class` is added after `fbe-icon` when it is made
      * of class names only.

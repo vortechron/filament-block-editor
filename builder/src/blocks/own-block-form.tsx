@@ -11,6 +11,7 @@ import { useT } from '@/lib/i18n';
 import type { OwnBlockDefinition, OwnBlockField } from '@/types';
 import { Input } from '@/ui/input';
 import { Textarea } from '@/ui/textarea';
+import { hasIconPictures, IconChoice } from './icon-choice';
 import {
     emptyValue,
     type OwnValues,
@@ -241,6 +242,14 @@ function SelectField({
     onChange: (value: string) => void;
 }) {
     const options = field.options ?? [];
+
+    if (hasIconPictures(options)) {
+        return (
+            <Group label={label} hint={hint}>
+                <IconChoice label={label} value={value} options={options} onChange={onChange} />
+            </Group>
+        );
+    }
 
     if (options.length <= MAX_SEGMENTS) {
         return (

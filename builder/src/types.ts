@@ -252,7 +252,8 @@ export type OwnBlockField = {
     label?: string | null;
     help?: string | null;
     default?: unknown;
-    options?: { value: string; label: string }[];
+    /** A choice's `svg` is its picture (Field::icons()). */
+    options?: { value: string; label: string; svg?: string }[];
     /** For `list`: the fields of one row, and how many rows at most. */
     fields?: OwnBlockField[];
     maxItems?: number | null;

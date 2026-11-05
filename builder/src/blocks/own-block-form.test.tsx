@@ -442,3 +442,52 @@ describe('shop values in an own block’s text fields', () => {
         expect(screen.queryByRole('button', { name: 'Shop value' })).toBeNull();
     });
 });
+
+describe('an icon choice', () => {
+    const svg = (d: string) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="${d}"/></svg>`;
+    const badge = (count: number): OwnBlockDefinition => ({
+        kind: 'badge',
+        label: 'Badge',
+        fields: [
+            {
+                name: 'icon',
+                type: 'select',
+                label: 'Icon',
+                options: Array.from({ length: count }, (_, index) => ({
+                    value: `i${index}`,
+                    label: `Icon ${index}`,
+                    svg: svg(`M${index} 0`),
+                })),
+                default: 'i0',
+            },
+        ],
+    });
+
+    it('shows a picture of every icon to tap, not a list of names', () => {
+        const onChange = vi.fn();
+
+        render(<OwnBlockForm definition={badge(12)} values="{}" onChange={onChange} />, { wrapper: wrap() });
+
+        expect(screen.queryByRole('combobox')).toBeNull();
+        const group = screen.getByRole('radiogroup', { name: 'Icon' });
+        const choices = within(group).getAllByRole('radio');
+
+        expect(choices).toHaveLength(12);
+        expect(choices[0].getAttribute('aria-checked')).toBe('true');
+        expect(choices[3].querySelector('path')?.getAttribute('d')).toBe('M3 0');
+        expect(screen.getByText('Icon 0')).toBeTruthy();
+
+        fireEvent.click(screen.getByRole('radio', { name: 'Icon 7' }));
+        expect(JSON.parse(onChange.mock.calls.at(-1)?.[0] as string).icon).toBe('i7');
+    });
+
+    it('shows each name beside its picture when there are only a few', () => {
+        render(<OwnBlockForm definition={badge(3)} values="{}" onChange={vi.fn()} />, { wrapper: wrap() });
+
+        const choice = screen.getByRole('radio', { name: 'Icon 2' });
+
+        expect(choice.textContent).toContain('Icon 2');
+        expect(choice.querySelector('svg')).toBeTruthy();
+    });
+});
+

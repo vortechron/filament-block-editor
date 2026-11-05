@@ -181,7 +181,9 @@ to edge. More in [docs/php.md](docs/php.md#your-own-blocks).
 A block that shows data kept somewhere else, like a list of items, names that screen with
 `->editedAt('Edit items', fn () => ItemResource::getUrl())`: its settings then show its description and a button
 there, never an empty tab. A select can read its choices when they are needed, such as from the database:
-`Field::select('category')->options(fn () => Category::pluck('name', 'id')->all())` (keys by id are kept).
+`Field::select('category')->options(fn () => Category::pluck('name', 'id')->all())` (keys by id are kept). A select of
+icons shows each as a picture to tap with `->icons(fn (string $value) => '<svg ...>')`; the builder keeps only plain
+shapes from it. The Icon list block does this with the package's own icons (`Support\Icons::choices()` and `svg()`).
 
 For a long list, cut it into pages a visitor flips through with ‹ ›, with no JavaScript:
 

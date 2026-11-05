@@ -73,7 +73,7 @@ final class CoreBlocks
             ->description(self::t('icon_list.description'))
             ->fields([
                 Field::list('items')->label(self::t('icon_list.items'))->maxItems(12)->fields([
-                    Field::select('icon')->label(self::t('icon_list.icon'))->options(Icons::names())->default('check'),
+                    Field::select('icon')->label(self::t('icon_list.icon'))->options(Icons::choices())->icons(fn (string $name): string => Icons::svg($name))->default('check'),
                     Field::text('title')->label(self::t('icon_list.title')),
                     Field::textarea('text')->label(self::t('icon_list.text')),
                 ])->default([$item('zap', 1), $item('shield-check', 2), $item('message-circle', 3)]),
