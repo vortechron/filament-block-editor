@@ -22,6 +22,7 @@
                 ...options,
                 adapter: {
                     save: (value) => wire.savePageBuilder(value),
+                    createTranslation: (locale) => wire.createPageBuilderTranslation(locale),
                     preview: (value, extra) => wire.previewPageBuilder(value, extra?.kit ?? null, extra?.siteInfo ?? null),
                     ...(supports.saveKit ? { saveKit: (kit) => wire.saveKitFromPageBuilder(kit) } : {}),
                     ...(supports.saveSection ? { saveSection: (section, meta) => wire.saveSectionFromPageBuilder(section, meta?.title ?? '', meta?.synced ?? false) } : {}),

@@ -169,6 +169,38 @@ class PageBuilderHooksTest extends FilamentTestCase
         ], $options['pageMenu']);
     }
 
+    public function test_the_builder_offers_safe_unique_language_destinations_and_draft_creation(): void
+    {
+        $this->signIn();
+        DemoBuilder::$languages = [
+            ['locale' => 'ms', 'label' => ' Bahasa Melayu ', 'url' => '/admin/pages/1/build', 'current' => true],
+            ['locale' => 'en', 'label' => 'English', 'url' => null, 'current' => false],
+            ['locale' => 'en', 'label' => 'Duplicate', 'url' => '/wrong-record', 'current' => true],
+            ['locale' => '../bad', 'label' => 'Bad locale', 'url' => null],
+            ['locale' => 'de', 'label' => 'Unsafe', 'url' => 'javascript:alert(1)'],
+            ['locale' => 'fr', 'label' => 'Missing URL'],
+        ];
+
+        $options = Livewire::test(DemoBuilder::class)->instance()->getPageBuilderOptions();
+
+        $this->assertSame([
+            ['locale' => 'ms', 'label' => 'Bahasa Melayu', 'url' => '/admin/pages/1/build', 'current' => true],
+            ['locale' => 'en', 'label' => 'English', 'url' => null, 'current' => false],
+        ], $options['languages']);
+
+        DemoBuilder::$languages = [DemoBuilder::$languages[0]];
+        $this->assertArrayNotHasKey('languages', Livewire::test(DemoBuilder::class)->instance()->getPageBuilderOptions());
+    }
+
+    public function test_translation_creation_is_refused_by_default_and_wired_to_the_host(): void
+    {
+        $this->signIn();
+
+        Livewire::test(DemoBuilder::class)->call('createPageBuilderTranslation', 'en')->assertForbidden();
+        $html = $this->get(DemoBuilder::getUrl())->assertOk()->getContent();
+        $this->assertStringContainsString('createTranslation: (locale) => wire.createPageBuilderTranslation(locale)', $html);
+    }
+
     public function test_the_kit_is_saved_cleaned(): void
     {
         $this->signIn();

@@ -119,6 +119,7 @@ final class Field
         return $this;
     }
 
+    /** A value, or a callback read in the selected content language. */
     public function default(mixed $default): self
     {
         $this->default = $default;
@@ -304,14 +305,16 @@ final class Field
      */
     public function defaultValue(): mixed
     {
+        $default = $this->default instanceof Closure ? ($this->default)() : $this->default;
+
         return match ($this->type) {
-            'text', 'textarea' => $this->scalarText($this->default) ?? '',
-            'select' => $this->selectDefault(),
-            'toggle' => filter_var($this->default, FILTER_VALIDATE_BOOLEAN),
-            'number' => $this->clean($this->default, useDefault: false),
-            'image' => Urls::media($this->default),
-            'link' => Urls::link($this->default),
-            'list' => is_array($this->default) ? $this->clean($this->default, useDefault: false) : [],
+            'text', 'textarea' => $this->scalarText($default) ?? '',
+            'select' => $this->cleanSelect($default) ?? ($this->choices()[0]['value'] ?? null),
+            'toggle' => filter_var($default, FILTER_VALIDATE_BOOLEAN),
+            'number' => $this->clean($default, useDefault: false),
+            'image' => Urls::media($default),
+            'link' => Urls::link($default),
+            'list' => is_array($default) ? $this->clean($default, useDefault: false) : [],
         };
     }
 
@@ -370,13 +373,6 @@ final class Field
     private function scalarText(mixed $value): ?string
     {
         return is_string($value) ? $value : (is_int($value) || is_float($value) ? (string) $value : null);
-    }
-
-    private function selectDefault(): ?string
-    {
-        $default = $this->cleanSelect($this->default);
-
-        return $default ?? ($this->choices()[0]['value'] ?? null);
     }
 
     private function cleanSelect(mixed $value): ?string

@@ -5,7 +5,11 @@ namespace Vortechron\FilamentBlockEditor\Tests\Filament;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
+use Vortechron\FilamentBlockEditor\Blocks\BlockRegistry;
+use Vortechron\FilamentBlockEditor\Blocks\Field;
+use Vortechron\FilamentBlockEditor\Blocks\OwnBlock;
 use Vortechron\FilamentBlockEditor\Content\PageContent;
+use Vortechron\FilamentBlockEditor\Rendering\ContentLocale;
 use Workbench\App\Filament\Pages\DemoBuilder;
 
 class PageBuilderPageTest extends FilamentTestCase
@@ -51,6 +55,93 @@ class PageBuilderPageTest extends FilamentTestCase
         $this->assertSame('ms', $options['contentLocale']);
         $this->assertSame('Hero', $hero['label']);
         $this->assertStringContainsString('Hubungi kami', json_encode($hero['section']));
+    }
+
+    public function test_document_language_controls_lazy_custom_defaults_without_changing_panel_labels(): void
+    {
+        $this->signIn();
+        app()->setLocale('en');
+        config(['filament-block-editor.content_locale' => 'ms']);
+        app(BlockRegistry::class)->register(OwnBlock::make('translated-notice')->fields([
+            Field::text('heading')->label('Heading')->default(fn (): string => ContentLocale::site() === 'ms' ? 'Selamat datang' : 'Welcome'),
+        ]));
+        DemoBuilder::$contentLocale = 'en';
+        $english = Livewire::test(DemoBuilder::class)->instance()->getPageBuilderOptions();
+        $definition = collect($english['blocks'])->firstWhere('kind', 'translated-notice');
+
+        $this->assertSame('en', $english['contentLocale']);
+        $this->assertSame('Heading', $definition['fields'][0]['label']);
+        $this->assertSame('Welcome', $definition['defaults']['heading']);
+
+        DemoBuilder::$contentLocale = 'ms';
+        $malay = Livewire::test(DemoBuilder::class)->instance()->getPageBuilderOptions();
+        $definition = collect($malay['blocks'])->firstWhere('kind', 'translated-notice');
+
+        $this->assertSame('Heading', $definition['fields'][0]['label']);
+        $this->assertSame('Selamat datang', $definition['defaults']['heading']);
+        $this->assertSame('en', app()->getLocale());
+    }
+
+    public function test_core_defaults_and_templates_follow_the_selected_document_with_english_panel_labels(): void
+    {
+        $this->signIn();
+        app()->setLocale('en');
+        config(['filament-block-editor.content_locale' => 'ms']);
+        // Boot the shared registry before choosing either document.
+        app(BlockRegistry::class)->definitions();
+
+        DemoBuilder::$contentLocale = 'ms';
+        $malay = Livewire::test(DemoBuilder::class)->instance()->getPageBuilderOptions();
+        $faq = collect($malay['blocks'])->firstWhere('kind', 'fbe-faq');
+        $this->assertSame('Heading', $faq['fields'][0]['label']);
+        $this->assertSame('Soalan lazim', $faq['defaults']['heading']);
+        $this->assertStringContainsString('Hubungi kami', json_encode(collect($malay['templates'])->firstWhere('key', 'hero')['section']));
+
+        DemoBuilder::$contentLocale = 'en';
+        $english = Livewire::test(DemoBuilder::class)->instance()->getPageBuilderOptions();
+        $faq = collect($english['blocks'])->firstWhere('kind', 'fbe-faq');
+        $this->assertSame('Heading', $faq['fields'][0]['label']);
+        $this->assertSame('Frequently asked questions', $faq['defaults']['heading']);
+        $this->assertStringContainsString('Get in touch', json_encode(collect($english['templates'])->firstWhere('key', 'hero')['section']));
+    }
+
+    public function test_preview_uses_the_document_language_and_restores_the_site_and_panel(): void
+    {
+        $this->signIn();
+        app()->setLocale('en');
+        config(['filament-block-editor.content_locale' => 'ms']);
+        DemoBuilder::$contentLocale = 'en';
+        $value = ['sections' => [['id' => 'form1', 'type' => 'rich', 'data' => ['document' => [
+            ['type' => 'form', 'props' => ['form' => '{"fields":[],"submit":{"text":""}}']],
+        ]]]]];
+
+        $html = Livewire::test(DemoBuilder::class)->call('previewPageBuilder', $value)->effects['returns'][0];
+
+        $this->assertStringContainsString('>Send</button>', $html);
+        $this->assertStringNotContainsString('>Hantar</button>', $html);
+        $this->assertStringContainsString('This form is not connected yet', $html);
+        $this->assertSame('ms', ContentLocale::site());
+        $this->assertSame('en', app()->getLocale());
+    }
+
+    public function test_save_normalizes_missing_custom_block_values_in_the_documents_language(): void
+    {
+        $this->signIn();
+        app()->setLocale('en');
+        config(['filament-block-editor.content_locale' => 'ms']);
+        DemoBuilder::$contentLocale = 'en';
+        app(BlockRegistry::class)->register(OwnBlock::make('translated-notice')->fields([
+            Field::text('heading')->default(fn (): string => ContentLocale::site() === 'en' ? 'Welcome' : 'Selamat datang'),
+        ]));
+        $value = ['sections' => [['id' => 'notice1', 'type' => 'rich', 'data' => ['document' => [
+            ['type' => 'ownBlock', 'props' => ['kind' => 'translated-notice', 'values' => '{}']],
+        ]]]]];
+
+        Livewire::test(DemoBuilder::class)->call('savePageBuilder', $value)->assertReturned(['ok' => true]);
+
+        $saved = DemoBuilder::$saved['sections'][0]['data']['document'][0]['props']['values'];
+        $this->assertSame('Welcome', json_decode($saved, true)['heading']);
+        $this->assertSame('ms', ContentLocale::site());
     }
 
     public function test_saving_cleans_the_sections_and_hands_them_to_the_page(): void

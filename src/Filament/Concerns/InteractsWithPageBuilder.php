@@ -131,12 +131,14 @@ trait InteractsWithPageBuilder
     {
         $locale = $this->getPageBuilderLocale();
 
-        return array_filter([
+        $contentLocale = $this->getPageBuilderContentLocale();
+
+        return ContentLocale::with($contentLocale, fn (): array => array_filter([
             'value' => PageValue::normalize($this->getPageBuilderValue()),
             'blocks' => app(BlockRegistry::class)->definitions(),
-            'templates' => SectionTemplates::all($locale, $this->getPageBuilderContentLocale()),
+            'templates' => SectionTemplates::all($locale, $contentLocale),
             'locale' => $locale,
-            'contentLocale' => $this->getPageBuilderContentLocale(),
+            'contentLocale' => $contentLocale,
             'title' => (string) $this->getTitle(),
             'backUrl' => $this->getPageBuilderBackUrl(),
             'viewUrl' => $this->getPageBuilderViewUrl(),
@@ -144,7 +146,7 @@ trait InteractsWithPageBuilder
             'fonts' => array_map(fn (string $key, array $font): array => ['value' => $key, ...$font], array_keys(Kit::fonts()), Kit::fonts()),
             'dynamicValues' => $this->pageBuilderDynamicValues(),
             ...$this->getPageBuilderHookOptions(),
-        ], fn (mixed $value): bool => $value !== null);
+        ], fn (mixed $value): bool => $value !== null));
     }
 
     public function getPageBuilderScriptUrl(): string
@@ -165,27 +167,29 @@ trait InteractsWithPageBuilder
     {
         $this->authorizePageBuilder();
 
-        $value = PageValue::upgrade($value);
-        $validator = Validator::make(['sections' => $value['sections'] ?? null], PageContent::rules('sections'));
+        return ContentLocale::with($this->getPageBuilderContentLocale(), function () use ($value): array {
+            $value = PageValue::upgrade($value);
+            $validator = Validator::make(['sections' => $value['sections'] ?? null], PageContent::rules('sections'));
 
-        if ($validator->fails()) {
-            return [
-                'ok' => false,
-                'errors' => collect($validator->errors()->messages())->map(fn (array $messages): string => $messages[0])->all(),
-            ];
-        }
+            if ($validator->fails()) {
+                return [
+                    'ok' => false,
+                    'errors' => collect($validator->errors()->messages())->map(fn (array $messages): string => $messages[0])->all(),
+                ];
+            }
 
-        $value = PageValue::normalize($value);
+            $value = PageValue::normalize($value);
 
-        // Safe by default: a host that forgets the guard still never saves
-        // locks or custom CSS from someone who is not a developer.
-        if (! $this->isPageBuilderDeveloper()) {
-            $value = PageValue::guard($value, PageValue::normalize($this->getPageBuilderValue()));
-        }
+            // Safe by default: a host that forgets the guard still never saves
+            // locks or custom CSS from someone who is not a developer.
+            if (! $this->isPageBuilderDeveloper()) {
+                $value = PageValue::guard($value, PageValue::normalize($this->getPageBuilderValue()));
+            }
 
-        $this->savePageBuilderValue($value);
+            $this->savePageBuilderValue($value);
 
-        return ['ok' => true];
+            return ['ok' => true];
+        });
     }
 
     /**
@@ -203,24 +207,26 @@ trait InteractsWithPageBuilder
     {
         $this->authorizePageBuilder();
 
-        $sections = PageValue::normalize($value)['sections'];
-        $drawPage = fn (): string => app(DynamicValues::class)->drawWith($this->getPageBuilderRenderValues(), fn (): string => $this->renderPageBuilderPreview($sections));
-        $draw = $siteInfo === null
-            ? $drawPage
-            : fn (): string => $this->withPageBuilderSiteInfo(array_filter($siteInfo, is_array(...)), $drawPage);
+        return ContentLocale::with($this->getPageBuilderContentLocale(), function () use ($value, $kit, $siteInfo): string {
+            $sections = PageValue::normalize($value)['sections'];
+            $drawPage = fn (): string => app(DynamicValues::class)->drawWith($this->getPageBuilderRenderValues(), fn (): string => $this->renderPageBuilderPreview($sections));
+            $draw = $siteInfo === null
+                ? $drawPage
+                : fn (): string => $this->withPageBuilderSiteInfo(array_filter($siteInfo, is_array(...)), $drawPage);
 
-        if ($kit === null) {
-            return $draw();
-        }
+            if ($kit === null) {
+                return $draw();
+            }
 
-        $source = app(KitSource::class);
-        $source->override($kit);
+            $source = app(KitSource::class);
+            $source->override($kit);
 
-        try {
-            return $draw();
-        } finally {
-            $source->override(null);
-        }
+            try {
+                return $draw();
+            } finally {
+                $source->override(null);
+            }
+        });
     }
 
     /**

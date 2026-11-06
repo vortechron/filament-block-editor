@@ -188,4 +188,23 @@ describe('the form block', () => {
         ]);
         expect(form.success).toBe('Thank you. We will get back to you soon.');
     });
+    it('starts a new form in the selected document language while editor labels stay English', async () => {
+        const { builder } = mountBuilder({ value: WITH_FORM, locale: 'en', contentLocale: 'ms' });
+        await pickSection(/Hubungi kami/);
+        fireEvent.click(screen.getByRole('button', { name: 'Add' }));
+        fireEvent.click(await screen.findByRole('tab', { name: 'Items' }));
+        fireEvent.click(screen.getByRole('button', { name: 'Form' }));
+
+        await waitFor(() => expect(firstSection(builder).data.document.filter((entry) => entry.type === 'form')).toHaveLength(2));
+        const added = firstSection(builder).data.document.find((entry) => entry.type === 'form' && entry.id !== 'form0001');
+        const props = added && 'props' in added ? added.props : null;
+        const form = props && typeof props === 'object' && 'form' in props && typeof props.form === 'string'
+            ? JSON.parse(props.form)
+            : null;
+        expect(form.fields.map((field: { label: string }) => field.label)).toEqual(['Nama', 'Telefon', 'Mesej']);
+        expect(form.submit.text).toBe('Hantar');
+        expect(form.name).toBe('Enquiry form');
+        expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy();
+    });
+
 });

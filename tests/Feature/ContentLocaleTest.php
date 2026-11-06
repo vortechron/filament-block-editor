@@ -70,6 +70,42 @@ class ContentLocaleTest extends TestCase
         $this->assertSame('en', ContentLocale::panel());
     }
 
+    public function test_nested_content_languages_respect_the_panel_and_restore_after_exceptions(): void
+    {
+        config(['filament-block-editor.content_locale' => 'ms']);
+
+        $result = ContentLocale::with('en', function (): array {
+            $this->assertSame('en', ContentLocale::site());
+            $this->assertSame('en', ContentLocale::panel());
+            $this->assertSame('en', ContentLocale::run(fn (): string => app()->getLocale()));
+
+            try {
+                ContentLocale::run(fn () => ContentLocale::with('ms', function (): void {
+                    $this->assertSame('ms', ContentLocale::site());
+                    $this->assertSame('en', ContentLocale::panel());
+                    $this->assertSame('ms', ContentLocale::run(fn (): string => app()->getLocale()));
+                    throw new RuntimeException('broken translation');
+                }));
+            } catch (RuntimeException) {
+            }
+
+            return [ContentLocale::site(), ContentLocale::panel(), app()->getLocale()];
+        });
+
+        $this->assertSame(['en', 'en', 'en'], $result);
+        $this->assertSame('ms', ContentLocale::site());
+        $this->assertSame('en', ContentLocale::panel());
+        $this->assertSame('en', app()->getLocale());
+
+        ContentLocale::run(function (): void {
+            ContentLocale::with('en', function (): void {
+                $this->assertSame('en', ContentLocale::run(fn (): string => app()->getLocale()));
+                $this->assertSame('en', ContentLocale::panel());
+            });
+            $this->assertSame('ms', app()->getLocale());
+        });
+    }
+
     public function test_the_page_speaks_the_site_language_and_the_builder_notes_the_panels(): void
     {
         config(['filament-block-editor.content_locale' => 'ms']);

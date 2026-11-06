@@ -64,6 +64,7 @@ function wrap(
         syncedSections: [],
         parts: [],
         pageMenu: [],
+        languages: [],
         siteInfo: null,
         kind: 'page',
     };

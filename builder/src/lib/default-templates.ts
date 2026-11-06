@@ -117,16 +117,17 @@ const COPY: Record<Locale, Copy> = {
     },
 };
 
-function templatesFor(locale: Locale): SectionTemplateInput[] {
-    const copy = COPY[locale];
+export function defaultTemplates(locale: Locale, contentLocale: Locale = locale): SectionTemplateInput[] {
+    const copy = COPY[contentLocale];
+    const labels = COPY[locale].labels;
     const make = (
         key: keyof Copy['labels'],
         category: string,
         data: Record<string, unknown> & { document: RichDocument },
     ): SectionTemplateInput => ({
         key,
-        label: copy.labels[key][0],
-        description: copy.labels[key][1],
+        label: labels[key][0],
+        description: labels[key][1],
         category,
         section: { type: 'rich', data },
     });
@@ -178,6 +179,6 @@ function templatesFor(locale: Locale): SectionTemplateInput[] {
 }
 
 export const DEFAULT_TEMPLATES: Record<Locale, SectionTemplateInput[]> = {
-    ms: templatesFor('ms'),
-    en: templatesFor('en'),
+    ms: defaultTemplates('ms'),
+    en: defaultTemplates('en'),
 };

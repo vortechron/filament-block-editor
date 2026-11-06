@@ -14,6 +14,7 @@ use Vortechron\FilamentBlockEditor\Content\PageValue;
 use Vortechron\FilamentBlockEditor\Design\Kit;
 use Vortechron\FilamentBlockEditor\Design\KitSource;
 use Vortechron\FilamentBlockEditor\Enums\DocumentKind;
+use Vortechron\FilamentBlockEditor\Rendering\ContentLocale;
 use Vortechron\FilamentBlockEditor\Rendering\RenderContext;
 use Vortechron\FilamentBlockEditor\Support\Urls;
 
@@ -144,6 +145,31 @@ trait PageBuilderHooks
     }
 
     /**
+     * Counterpart builders, or null URLs for languages with no draft yet.
+     * Hidden with fewer than two. The host checks permissions and creates
+     * the new draft in createPageBuilderTranslation(), never in this hook.
+     *
+     * @return list<array{locale: string, label: string, url: string|null, current: bool}>
+     */
+    protected function getPageBuilderLanguages(): array
+    {
+        return [];
+    }
+
+    /**
+     * Hosts override this public Livewire action, check access, validate the
+     * requested language and return the counterpart builder's URL. No page
+     * content is passed here; translating never saves the open document.
+     *
+     * @return array{url: string}
+     */
+    public function createPageBuilderTranslation(string $locale): array
+    {
+        $this->authorizePageBuilder();
+        abort(403);
+    }
+
+    /**
      * What is being built: a DocumentKind value (page, header, footer,
      * section, card or single).
      */
@@ -239,7 +265,7 @@ trait PageBuilderHooks
         }
 
         $title = mb_substr(trim($title), 0, PageContent::MAX_TITLE_LENGTH);
-        $clean = PageContent::normalize([$section])[0] ?? null;
+        $clean = ContentLocale::with($this->getPageBuilderContentLocale(), fn (): ?array => PageContent::normalize([$section])[0] ?? null);
 
         if ($title === '' || ($clean['type'] ?? null) !== PageContent::TYPE) {
             return ['ok' => false, 'errors' => $title === '' ? ['title' => __('filament-block-editor::builder.errors.title_needed')] : ['section' => __('filament-block-editor::builder.errors.section_only')]];
@@ -247,7 +273,7 @@ trait PageBuilderHooks
 
         // A saved section is new, so it keeps no developer-only data from someone else.
         if (! $this->isPageBuilderDeveloper()) {
-            $clean = PageValue::guard(['sections' => [$clean]], [])['sections'][0];
+            $clean = ContentLocale::with($this->getPageBuilderContentLocale(), fn (): array => PageValue::guard(['sections' => [$clean]], [])['sections'][0]);
         }
 
         $result = $this->savePageBuilderSection($clean, $title, $synced);
@@ -275,7 +301,7 @@ trait PageBuilderHooks
 
         $result = $this->refusingInvalid(fn () => $this->savePageBuilderSiteInfo(array_filter($values, is_array(...))));
 
-        return $result['ok'] ? [...$result, 'dynamicValues' => $this->pageBuilderDynamicValues()] : $result;
+        return $result['ok'] ? [...$result, 'dynamicValues' => ContentLocale::with($this->getPageBuilderContentLocale(), fn (): array => $this->pageBuilderDynamicValues())] : $result;
     }
 
     /**
@@ -298,6 +324,7 @@ trait PageBuilderHooks
             'siteInfo' => $siteInfo === null ? null : self::siteInfo($siteInfo),
             'pages' => $pages === [] ? null : $pages,
             'pageMenu' => count($menu = $this->pageBuilderPageMenu()) < 2 ? null : $menu,
+            'languages' => count($languages = $this->pageBuilderLanguages()) < 2 ? null : $languages,
             'kind' => (DocumentKind::tryFrom($this->getPageBuilderKind()) ?? DocumentKind::Page)->value,
         ], fn (mixed $value): bool => $value !== null);
     }
@@ -383,6 +410,37 @@ trait PageBuilderHooks
         }
 
         return $menu;
+    }
+
+    /** @return list<array{locale: string, label: string, url: string|null, current: bool}> */
+    private function pageBuilderLanguages(): array
+    {
+        $languages = [];
+        $hasCurrent = false;
+
+        foreach ($this->getPageBuilderLanguages() as $entry) {
+            if (! is_array($entry) || ! array_key_exists('url', $entry)) {
+                continue;
+            }
+
+            $locale = $entry['locale'] ?? null;
+            $label = is_string($entry['label'] ?? null) ? mb_substr(trim($entry['label']), 0, 120) : '';
+            $url = $entry['url'] ?? null;
+
+            if (! is_string($locale) || preg_match('/^[a-z]{2,3}(?:[-_][A-Za-z0-9]{2,8})*$/D', $locale) !== 1 || isset($languages[$locale]) || $label === '') {
+                continue;
+            }
+
+            if ($url !== null && (! is_string($url) || preg_match('~^(https?://|/(?!/))~i', $url) !== 1 || Urls::link($url) === null)) {
+                continue;
+            }
+
+            $current = ($entry['current'] ?? false) === true && ! $hasCurrent;
+            $hasCurrent = $hasCurrent || $current;
+            $languages[$locale] = ['locale' => $locale, 'label' => $label, 'url' => $url, 'current' => $current];
+        }
+
+        return array_values($languages);
     }
 
     /**

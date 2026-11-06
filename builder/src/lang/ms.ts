@@ -548,6 +548,10 @@ export default {
     'Resize the editor panel': 'Ubah saiz panel penyunting',
     'Drag to resize. Double-tap to reset.': 'Seret untuk ubah saiz. Ketik dua kali untuk set semula.',
     'Edit without the page': 'Sunting tanpa halaman',
+    'Language': 'Bahasa',
+    'Content language: :language': 'Bahasa kandungan: :language',
+    'Create :language draft': 'Buat draf :language',
+    'The language draft could not be opened. Your changes are still here. Try again.': 'Draf bahasa tidak dapat dibuka. Perubahan anda masih di sini. Cuba lagi.',
     'Build another page': 'Bina halaman lain',
     'Tap to add, or drag to any place. The page scrolls to it.': 'Ketik untuk tambah, atau seret ke mana-mana tempat. Halaman akan skrol kepadanya.',
 } satisfies Messages;

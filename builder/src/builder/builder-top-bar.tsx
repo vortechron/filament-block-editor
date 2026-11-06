@@ -29,6 +29,7 @@ import {
 } from '@/ui/dropdown-menu';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/ui/tooltip';
 import type { Device } from './types';
+import { LanguageMenu } from './language-menu';
 import { PageMenu } from './page-menu';
 import { historyShortcuts } from './use-builder-shortcuts';
 
@@ -82,7 +83,8 @@ export function BuilderTopBar({
     onRedo: () => void;
 }) {
     const t = useT();
-    const { title, backUrl, viewUrl, kind } = useHost();
+    const { title, backUrl, viewUrl, kind, languages } = useHost();
+    const hasLanguages = languages.length > 1;
     const kindLabel = isPartKey(kind) ? partLabel(kind, t) : null;
     const canSave = hasUnsavedChanges && !isSaving;
     const keys = historyShortcuts();
@@ -119,7 +121,7 @@ export function BuilderTopBar({
                 </>
             )}
 
-            <div className="flex min-w-0 flex-1 items-center gap-2 pl-1 md:flex-none">
+            <div className={cn("flex min-w-0 flex-1 items-center gap-2 pl-1", !hasLanguages && "md:flex-none")}>
                 {kindLabel && (
                     <span className="shrink-0 rounded-md bg-[var(--builder-select)]/10 px-2 py-0.5 text-xs font-semibold text-[var(--builder-select)]">
                         {kindLabel}
@@ -130,8 +132,10 @@ export function BuilderTopBar({
                 </h1>
             </div>
 
+            <LanguageMenu />
+
             {isDesktop && (
-                <div className="pointer-events-none absolute inset-x-0 flex justify-center">
+                <div className={hasLanguages ? "flex shrink-0 justify-center" : "pointer-events-none absolute inset-x-0 flex justify-center"}>
                     <div
                         role="radiogroup"
                         aria-label={t('View the page on')}

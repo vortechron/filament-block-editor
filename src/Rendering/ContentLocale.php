@@ -22,9 +22,11 @@ final class ContentLocale
      */
     private static ?string $panel = null;
 
+    private static ?string $override = null;
+
     public static function site(): string
     {
-        $locale = config('filament-block-editor.content_locale');
+        $locale = self::$override ?? config('filament-block-editor.content_locale');
 
         return is_string($locale) && trim($locale) !== '' ? trim($locale) : app()->getLocale();
     }
@@ -32,6 +34,27 @@ final class ContentLocale
     public static function panel(): string
     {
         return self::$panel ?? app()->getLocale();
+    }
+
+    /**
+     * Selects a content language for this callback, including nested run()
+     * calls, without changing the panel language or the configured default.
+     *
+     * @template T
+     *
+     * @param  Closure(): T  $draw
+     * @return T
+     */
+    public static function with(string $locale, Closure $draw): mixed
+    {
+        $outer = self::$override;
+        self::$override = $locale;
+
+        try {
+            return $draw();
+        } finally {
+            self::$override = $outer;
+        }
     }
 
     /**

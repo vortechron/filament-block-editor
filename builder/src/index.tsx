@@ -1,11 +1,12 @@
 import './styles/builder.css';
 import { createRoot } from 'react-dom/client';
 import { PageBuilderApp } from './app';
-import { DEFAULT_TEMPLATES } from './lib/default-templates';
+import { defaultTemplates } from './lib/default-templates';
 import type { Host } from './lib/host';
 import { isLocale } from './lib/i18n';
 import { normalizeDynamicValues } from './lib/dynamic-values';
 import { normalizeKit } from './lib/kit';
+import { normalizeLanguages } from './lib/languages';
 import { normalizePageLinks, normalizePageMenu } from './lib/page-links';
 import { normalizeKind, normalizeParts, normalizeSiteInfo } from './lib/site-parts';
 import { normalizeSyncedSections } from './lib/synced-sections';
@@ -62,7 +63,7 @@ export function mountPageBuilder(
     const templates = normalizeTemplates(
         options.templates && options.templates.length > 0
             ? options.templates
-            : DEFAULT_TEMPLATES[locale],
+            : defaultTemplates(locale, contentLocale),
     );
     const host: Host = {
         adapter,
@@ -98,6 +99,7 @@ export function mountPageBuilder(
         dynamicValues: normalizeDynamicValues(options.dynamicValues),
         pages: normalizePageLinks(options.pages),
         pageMenu: normalizePageMenu(options.pageMenu),
+        languages: normalizeLanguages(options.languages),
         syncedSections: normalizeSyncedSections(options.syncedSections),
         parts: normalizeParts(options.parts),
         siteInfo:

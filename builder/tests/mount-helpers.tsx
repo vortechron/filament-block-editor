@@ -4,6 +4,7 @@ import { mountPageBuilder } from '../src/index';
 import type {
     Kit,
     PageBuilderOptions,
+    PageBuilderAdapter,
     PageValue,
     PageValueInput,
     RichSection,
@@ -52,6 +53,7 @@ export function makeAdapter(
 }
 
 export type TestAdapter = ReturnType<typeof makeAdapter> & {
+    createTranslation?: PageBuilderAdapter['createTranslation'];
     saveKit?: ReturnType<typeof vi.fn>;
     saveSection?: ReturnType<typeof vi.fn>;
     saveSiteInfo?: ReturnType<typeof vi.fn>;

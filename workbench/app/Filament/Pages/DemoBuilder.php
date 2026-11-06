@@ -23,6 +23,21 @@ class DemoBuilder extends PageBuilderPage
     /** Tests flip this to save as a developer. */
     public static bool $developer = false;
 
+    public static ?string $contentLocale = null;
+
+    /** @var array<mixed> */
+    public static array $languages = [];
+
+    protected function getPageBuilderLanguages(): array
+    {
+        return self::$languages;
+    }
+
+    protected function getPageBuilderContentLocale(): string
+    {
+        return self::$contentLocale ?? parent::getPageBuilderContentLocale();
+    }
+
     protected function authorizePageBuilder(): void
     {
         abort_if(self::$denied, 403);

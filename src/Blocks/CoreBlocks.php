@@ -2,6 +2,7 @@
 
 namespace Vortechron\FilamentBlockEditor\Blocks;
 
+use Vortechron\FilamentBlockEditor\Rendering\ContentLocale;
 use Vortechron\FilamentBlockEditor\Support\Icons;
 
 /**
@@ -32,13 +33,13 @@ final class CoreBlocks
             ->icon('circle-help')
             ->description(self::t('faq.description'))
             ->fields([
-                Field::text('heading')->label(self::t('faq.heading'))->default(self::t('faq.default_heading')),
+                Field::text('heading')->label(self::t('faq.heading'))->default(fn (): string => self::content('faq.default_heading')),
                 Field::list('items')->label(self::t('faq.items'))->maxItems(20)->fields([
                     Field::text('question')->label(self::t('faq.question')),
                     Field::textarea('answer')->label(self::t('faq.answer')),
-                ])->default([
-                    ['question' => self::t('faq.default_question_1'), 'answer' => self::t('faq.default_answer_1')],
-                    ['question' => self::t('faq.default_question_2'), 'answer' => self::t('faq.default_answer_2')],
+                ])->default(fn (): array => [
+                    ['question' => self::content('faq.default_question_1'), 'answer' => self::content('faq.default_answer_1')],
+                    ['question' => self::content('faq.default_question_2'), 'answer' => self::content('faq.default_answer_2')],
                 ]),
                 Field::toggle('open_first')->label(self::t('faq.open_first'))->default(true),
             ])
@@ -65,7 +66,7 @@ final class CoreBlocks
 
     private static function iconList(): OwnBlock
     {
-        $item = fn (string $icon, int $number): array => ['icon' => $icon, 'title' => self::t("icon_list.default_title_{$number}"), 'text' => self::t("icon_list.default_text_{$number}")];
+        $item = fn (string $icon, int $number): array => ['icon' => $icon, 'title' => self::content("icon_list.default_title_{$number}"), 'text' => self::content("icon_list.default_text_{$number}")];
 
         return OwnBlock::make('fbe-icon-list')
             ->label(self::t('icon_list.label'))
@@ -76,7 +77,7 @@ final class CoreBlocks
                     Field::select('icon')->label(self::t('icon_list.icon'))->options(Icons::choices())->icons(fn (string $name): string => Icons::svg($name))->default('check'),
                     Field::text('title')->label(self::t('icon_list.title')),
                     Field::textarea('text')->label(self::t('icon_list.text')),
-                ])->default([$item('zap', 1), $item('shield-check', 2), $item('message-circle', 3)]),
+                ])->default(fn (): array => [$item('zap', 1), $item('shield-check', 2), $item('message-circle', 3)]),
                 Field::select('columns')->label(self::t('icon_list.columns'))->options(['1', '2', '3', '4'])->default('3'),
                 Field::select('style')->label(self::t('icon_list.style'))->options(['plain' => self::t('icon_list.plain'), 'boxed' => self::t('icon_list.boxed')])->default('plain'),
             ])
@@ -86,11 +87,11 @@ final class CoreBlocks
     private static function pricing(): OwnBlock
     {
         $plan = fn (int $number, bool $highlight): array => [
-            'name' => self::t("pricing.default_name_{$number}"),
-            'price' => self::t("pricing.default_price_{$number}"),
-            'period' => self::t('pricing.default_period'),
-            'features' => self::t("pricing.default_features_{$number}"),
-            'button_text' => self::t('pricing.default_button'),
+            'name' => self::content("pricing.default_name_{$number}"),
+            'price' => self::content("pricing.default_price_{$number}"),
+            'period' => self::content('pricing.default_period'),
+            'features' => self::content("pricing.default_features_{$number}"),
+            'button_text' => self::content('pricing.default_button'),
             'highlight' => $highlight,
         ];
 
@@ -107,7 +108,7 @@ final class CoreBlocks
                     Field::text('button_text')->label(self::t('pricing.button_text')),
                     Field::link('button_link')->label(self::t('pricing.button_link')),
                     Field::toggle('highlight')->label(self::t('pricing.highlight')),
-                ])->default([$plan(1, false), $plan(2, true)]),
+                ])->default(fn (): array => [$plan(1, false), $plan(2, true)]),
                 Field::textarea('note')->label(self::t('pricing.note')),
             ])
             ->view('filament-block-editor::core.pricing');
@@ -115,7 +116,7 @@ final class CoreBlocks
 
     private static function testimonials(): OwnBlock
     {
-        $item = fn (int $number): array => ['quote' => self::t("testimonials.default_quote_{$number}"), 'name' => self::t("testimonials.default_name_{$number}"), 'role' => self::t('testimonials.default_role'), 'rating' => '5'];
+        $item = fn (int $number): array => ['quote' => self::content("testimonials.default_quote_{$number}"), 'name' => self::content("testimonials.default_name_{$number}"), 'role' => self::content('testimonials.default_role'), 'rating' => '5'];
 
         return OwnBlock::make('fbe-testimonials')
             ->label(self::t('testimonials.label'))
@@ -128,13 +129,18 @@ final class CoreBlocks
                     Field::text('role')->label(self::t('testimonials.role')),
                     Field::image('photo')->label(self::t('testimonials.photo')),
                     Field::select('rating')->label(self::t('testimonials.rating'))->options(['0', '1', '2', '3', '4', '5'])->default('5'),
-                ])->default([$item(1), $item(2)]),
+                ])->default(fn (): array => [$item(1), $item(2)]),
             ])
             ->view('filament-block-editor::core.testimonials');
     }
 
+    private static function content(string $key): string
+    {
+        return (string) __('filament-block-editor::core.'.$key, [], ContentLocale::site());
+    }
+
     private static function t(string $key): string
     {
-        return (string) __('filament-block-editor::core.'.$key);
+        return (string) __('filament-block-editor::core.'.$key, [], ContentLocale::panel());
     }
 }

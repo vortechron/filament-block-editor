@@ -26,7 +26,7 @@ It started as the page builder of [NakJual](https://nakjual.com) and is made gen
 
 ```bash
 composer config repositories.vortechron-block-editor vcs https://github.com/vortechron/filament-block-editor.git
-composer require vortechron/filament-block-editor:^2.8
+composer require vortechron/filament-block-editor:^2.13
 php artisan filament:assets   # with Filament
 # or, without Filament:
 php artisan vendor:publish --tag=filament-block-editor-assets
@@ -246,6 +246,60 @@ link are Malay in the live page and in the builder's preview, while the builder'
 Ready-made sections keep English names and get Malay words. A new form or button starts in the site's language
 too (the `contentLocale` option): the labels, button and thank-you message visitors read are Malay, while the
 form's name and the email subject, which only the owner sees, stay English. Unset, both are the app's language.
+
+For a multilingual host, override `getPageBuilderContentLocale(): string` with the locale of the record being
+edited. Options, default values, saves and previews run inside `ContentLocale::with($locale, $draw)`. It changes
+`ContentLocale::site()` for that callback, supports nesting and restores it after exceptions. It leaves the
+panel's app locale unchanged; nested `ContentLocale::run()` draws in the override and `panel()` still reads
+the panel language. Use `with()` around public page rendering too when the host selects a translated page.
+
+Add the top-bar language menu with these hooks on the page using `InteractsWithPageBuilder`:
+
+```php
+protected function getPageBuilderContentLocale(): string
+{
+    return $this->record->locale;
+}
+
+protected function getPageBuilderLanguages(): array
+{
+    return [
+        ['locale' => 'ms', 'label' => 'Bahasa Melayu', 'url' => '/admin/pages/1/build', 'current' => true],
+        ['locale' => 'en', 'label' => 'English', 'url' => null, 'current' => false],
+    ];
+}
+
+public function createPageBuilderTranslation(string $locale): array
+{
+    $this->authorizePageBuilder();
+    // Validate the locale against your enabled languages, check permission
+    // to create, find or create the counterpart draft, then return its builder.
+    return ['url' => $draftBuilderUrl];
+}
+```
+
+The default language list is empty; fewer than two valid entries hides the menu. An existing URL opens that
+record's separate editor. A null URL offers "Create English draft" through the Livewire action above, whose
+default refuses with 403. A standalone JS host supplies the same `languages` option and
+`adapter.createTranslation(locale): Promise<{ url: string }>`. Without that callback, creation is disabled.
+The host owns record creation, locale validation, permission checks and the returned URL. No content is sent
+to the creation callback, no text is automatically translated, and language selection never saves the open
+record. The builder asks before discarding unsaved page content, design or shop info. Full-page navigation
+starts a fresh editor so undo cannot cross languages. The host's pages, parts and page menu should return
+links for the selected content locale too.
+
+Custom block defaults may use callbacks, evaluated when defaults are needed, including inside lists:
+
+```php
+use Vortechron\FilamentBlockEditor\Rendering\ContentLocale;
+
+Field::text('heading')->label('Heading')->default(
+    fn (): string => __('site.welcome', [], ContentLocale::site()),
+);
+```
+
+Keep panel labels in the panel language. Core block sample text and new forms use the selected content locale;
+stored text is kept as written.
 
 Every new item starts with words in the site's language, so it never lands blank on the page: a heading says "Tajuk
 anda", a text "Tulis ayat anda di sini.", a question has an answer, each new column a line. The item panel changes a

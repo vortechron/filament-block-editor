@@ -28,3 +28,4 @@ development commands: `README.md`. The design and every deviation from it: `docs
   `SITE_LOCALE` (`Rendering\ContentLocale`). Our clients run an English panel (`APP_LOCALE=en`) and a Malay site
   (`SITE_LOCALE=ms`). Words drawn on the page follow the site; notes for the builder use `ContentLocale::panel()`.
 - Local PHP is `php84`. Use `/opt/homebrew/bin/composer`; the Herd composer path has a space in it.
+- With Node 26, run the JS suite as `NODE_OPTIONS=--no-experimental-webstorage npm test`. Node's built-in web storage otherwise overrides jsdom's storage and breaks the existing layout tests.

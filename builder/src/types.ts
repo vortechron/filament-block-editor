@@ -265,6 +265,14 @@ export type OwnBlockField = {
 /** A page in the title's menu: its name and the address of its builder. */
 export type PageMenuEntry = { title: string; url: string; current?: boolean };
 
+/** One content language and its separate editor, or a draft to create. */
+export type PageBuilderLanguage = {
+    locale: string;
+    label: string;
+    url: string | null;
+    current: boolean;
+};
+
 /** A block the host defines and draws. Mirrors Blocks\OwnBlock::toArray(). */
 export type OwnBlockDefinition = {
     kind: string;
@@ -328,6 +336,8 @@ export type PageBuilderAdapter = {
         section: RichSection,
         meta: { title: string; synced: boolean },
     ) => Promise<SaveSectionResult>;
+    /** Creates a draft, then opens its separate editor. Never translates text. */
+    createTranslation?: (locale: string) => Promise<{ url: string }>;
     saveSiteInfo?: (
         values: Record<string, Record<string, unknown>>,
     ) => Promise<SaveSiteInfoResult>;
@@ -381,6 +391,7 @@ export type PageBuilderOptions = {
      * lists them, each a link to its own builder.
      */
     pageMenu?: PageMenuEntry[];
+    languages?: PageBuilderLanguage[];
     syncedSections?: SyncedSectionOption[];
     parts?: PagePart[];
     siteInfo?: SiteInfo | null;
