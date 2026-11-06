@@ -10,6 +10,9 @@ import {
     columnSlashMenuItems,
     spacerSlashMenuItem,
 } from '@vortechron/blocknote-kit';
+import { blockCopyMap } from '@/lib/translation-copies';
+import type { IdentifiedTableEditor } from '@/lib/table-identities';
+import type { RichDocument } from '@/types';
 import type { NewItemWords } from '@/lib/new-item-words';
 import type { SectionLayout } from '@/types';
 import { layoutSlashMenuItems } from '../editor/layout-slash-items';
@@ -36,7 +39,11 @@ const untranslated = (text: string) => text;
  * JSON and the words of the other items (newItemWords()), in the site's
  * language (contentTranslator()).
  */
-export type NewItemLabels = { button: string; form: string; words?: NewItemWords };
+export type NewItemLabels = {
+    button: string;
+    form: string;
+    words?: NewItemWords;
+};
 
 /**
  * Wraps one section's BlockNote editor so the sidebar, the page on the
@@ -47,14 +54,26 @@ export type NewItemLabels = { button: string; form: string; words?: NewItemWords
 export function createSectionEditorHandle(
     editor: AnyEditor,
     labels: NewItemLabels = { button: 'Read more', form: '' },
+    tables?: IdentifiedTableEditor,
 ): SectionEditorHandle {
     return {
         insertItem: (key, place, layout) =>
             insertItem(editor, key, place, layout, labels),
-        getItem: (blockId) => snapshot(editor, blockId),
+        getItem: (blockId) => {
+            const item = snapshot(editor, blockId);
+            return item?.type === 'table' && tables
+                ? { ...item, content: tables.content(blockId) }
+                : item;
+        },
+        setTableCellContent: tables?.setCell,
         updateItem: (blockId, props) => {
             if (editor.getBlock(blockId)) {
                 editor.updateBlock(blockId, { props });
+            }
+        },
+        setItemContent: (blockId, content) => {
+            if (editor.getBlock(blockId)) {
+                editor.updateBlock(blockId, { content } as never);
             }
         },
         setItemText: (blockId, text) => {
@@ -80,7 +99,7 @@ export function createSectionEditorHandle(
                 editor.moveBlocksDown(blockId);
             }
         },
-        duplicateItem: (blockId) => {
+        duplicateItem: (blockId, onCopied) => {
             const block = editor.getBlock(blockId);
 
             if (!block) {
@@ -93,6 +112,14 @@ export function createSectionEditorHandle(
                 'after',
             );
 
+            if (copy) {
+                const mapping = blockCopyMap(
+                    [block] as RichDocument,
+                    [copy] as RichDocument,
+                );
+                tables?.copied(mapping);
+                onCopied?.(mapping);
+            }
             return copy?.id ?? null;
         },
         removeItem: (blockId) => {
@@ -195,10 +222,16 @@ function runInsert(
             return fromMenu('video');
         case 'divider':
             return fromMenu('divider');
+        case 'table':
+            return fromMenu('table');
         case 'gallery':
             return slash('gallery');
         case 'button':
-            return slash('button', { text: labels.button, url: '', variant: 'solid' });
+            return slash('button', {
+                text: labels.button,
+                url: '',
+                variant: 'solid',
+            });
         case 'form':
             return slash('form', { form: labels.form });
         case 'twoColumns':
@@ -246,7 +279,12 @@ const STARTING_WORDS: Partial<Record<ItemKey, keyof NewItemWords>> = {
  * reads as what it is: a heading says "Your heading", a question has an
  * answer under it, and each new column has a line.
  */
-function fillNewItem(editor: AnyEditor, blockId: string, key: ItemKey, words: NewItemWords): void {
+function fillNewItem(
+    editor: AnyEditor,
+    blockId: string,
+    key: ItemKey,
+    words: NewItemWords,
+): void {
     const block = editor.getBlock(blockId);
 
     if (!block) {
@@ -254,12 +292,16 @@ function fillNewItem(editor: AnyEditor, blockId: string, key: ItemKey, words: Ne
     }
 
     if (key === 'twoColumns' || key === 'threeColumns') {
-        const row = editor.getParentBlock(editor.getParentBlock(block) ?? block);
+        const row = editor.getParentBlock(
+            editor.getParentBlock(block) ?? block,
+        );
 
         for (const column of row?.type === 'columnList' ? row.children : []) {
             for (const child of column.children) {
                 if (child.type === 'paragraph' && hasNoWords(child)) {
-                    editor.updateBlock(child, { content: words.column } as never);
+                    editor.updateBlock(child, {
+                        content: words.column,
+                    } as never);
                 }
             }
         }
@@ -283,7 +325,9 @@ function fillNewItem(editor: AnyEditor, blockId: string, key: ItemKey, words: Ne
 }
 
 function hasNoWords(block: AnyBlock): boolean {
-    return Array.isArray(block.content) && inlineText(block.content).trim() === '';
+    return (
+        Array.isArray(block.content) && inlineText(block.content).trim() === ''
+    );
 }
 
 /**

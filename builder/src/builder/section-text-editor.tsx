@@ -55,13 +55,17 @@ export default function SectionTextEditor({
             blocks={blocks}
             uploadFile={uploadFile}
             onDocumentChange={onDocumentChange}
-            onEditorReady={(editor) =>
+            onEditorReady={(editor, tables) =>
                 setHandle(
-                    createSectionEditorHandle(editor, {
-                        button: siteT('Read more'),
-                        form: serializeForm(starterForm(t, siteT)),
-                        words: newItemWords(siteT),
-                    }),
+                    createSectionEditorHandle(
+                        editor,
+                        {
+                            button: siteT('Read more'),
+                            form: serializeForm(starterForm(t, siteT)),
+                            words: newItemWords(siteT),
+                        },
+                        tables,
+                    ),
                 )
             }
         />

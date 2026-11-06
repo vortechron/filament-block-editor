@@ -53,6 +53,10 @@ final class Field
 
     private bool $developerOnly = false;
 
+    private ?bool $translatable = null;
+
+    private bool $emptyFallback = false;
+
     private function __construct(public readonly string $name, public readonly string $type)
     {
         if (preg_match('/^[A-Za-z0-9_-]+$/', $name) !== 1) {
@@ -272,6 +276,31 @@ final class Field
         return $this;
     }
 
+    public function translatable(bool $translatable = true): self
+    {
+        $this->translatable = $translatable;
+
+        return $this;
+    }
+
+    public function isTranslatable(): bool
+    {
+        return in_array($this->type, ['text', 'textarea'], true) && ($this->translatable ?? true);
+    }
+
+    /** Legacy empty words ask the host for a dynamic default instead of hiding it. */
+    public function emptyFallback(bool $enabled = true): self
+    {
+        $this->emptyFallback = $enabled;
+
+        return $this;
+    }
+
+    public function isEmptyFallback(): bool
+    {
+        return $this->isTranslatable() && $this->emptyFallback;
+    }
+
     public function isDeveloperOnly(): bool
     {
         return $this->developerOnly;
@@ -290,6 +319,8 @@ final class Field
             'name' => $this->name,
             'label' => $this->label,
             'type' => $this->type,
+            'translatable' => $this->isTranslatable(),
+            ...($this->isEmptyFallback() ? ['emptyFallback' => true] : []),
             ...($this->type === 'select' ? ['options' => $this->choicesWithIcons()] : []),
             ...($this->type === 'list' ? ['fields' => array_map(fn (Field $field): array => $field->toArray(), $this->fields)] : []),
             ...($this->type === 'list' && $this->maxItems !== null ? ['maxItems' => $this->maxItems] : []),
@@ -430,7 +461,8 @@ final class Field
                 continue;
             }
 
-            $clean[] = self::cleanFields($this->fields, $item);
+            $id = $item['_id'] ?? null;
+            $clean[] = [...self::cleanFields($this->fields, $item), ...(is_string($id) && preg_match('/^[A-Za-z0-9_-]{1,40}$/D', $id) ? ['_id' => $id] : [])];
         }
 
         return $clean;

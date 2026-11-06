@@ -55,6 +55,7 @@ export function LivePreview({
     draft,
     kit = null,
     siteInfo = null,
+    siteInfoTranslations = null,
     editingBlockId,
     className,
     frameClassName,
@@ -65,12 +66,17 @@ export function LivePreview({
     kit?: string | null;
     /** The shop info as JSON, with changes not saved yet, or null. */
     siteInfo?: string | null;
+    siteInfoTranslations?: string | null;
     editingBlockId: string | null;
     className?: string;
     frameClassName?: string;
 }) {
     const t = useT();
-    const { html, isUpdating, isStale } = useDraftPreview(draft, { kit, siteInfo });
+    const { html, isUpdating, isStale } = useDraftPreview(draft, {
+        kit,
+        siteInfo,
+        siteInfoTranslations,
+    });
     const frameRef = useRef<HTMLIFrameElement>(null);
     const scrollTop = useRef(0);
     // The section the preview last scrolled to, so it scrolls once per section.

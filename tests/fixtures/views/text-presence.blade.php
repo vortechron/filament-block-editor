@@ -1,0 +1,1 @@
+<h3>{{ \Vortechron\FilamentBlockEditor\Content\TextTranslations::isExplicitlyBlank($block, 'title') ? '' : ($values['title'] !== '' ? $values['title'] : ($context->values['fallback_name'] ?? 'Category name')) }}</h3>

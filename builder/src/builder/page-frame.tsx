@@ -11,7 +11,11 @@ import {
     type FramePick,
     pickAt,
 } from './frame-marks';
-import { type PageDrawing, planUpdate, readDrawing } from './page-frame-updates';
+import {
+    type PageDrawing,
+    planUpdate,
+    readDrawing,
+} from './page-frame-updates';
 import { historyKeyOf, isTextBox } from './use-builder-shortcuts';
 
 export type { FramePick } from './frame-marks';
@@ -35,6 +39,7 @@ export function PageFrame({
     draft,
     kit = null,
     siteInfo = null,
+    siteInfoTranslations = null,
     reloads = 0,
     marks,
     onPick,
@@ -45,6 +50,7 @@ export function PageFrame({
     kit?: string | null;
     /** The shop info as JSON, with changes not saved yet, or null. */
     siteInfo?: string | null;
+    siteInfoTranslations?: string | null;
     /** Draws the page again when it goes up, like after the shop info is saved. */
     reloads?: number;
     /**
@@ -56,7 +62,12 @@ export function PageFrame({
     onPick: (pick: FramePick) => void;
 }) {
     const t = useT();
-    const { html, isUpdating, isStale } = useDraftPreview(draft, { kit, siteInfo, reloads });
+    const { html, isUpdating, isStale } = useDraftPreview(draft, {
+        kit,
+        siteInfo,
+        siteInfoTranslations,
+        reloads,
+    });
     const { pickedSectionId, pickedItemPath, scale } = marks;
     const frameA = useRef<HTMLIFrameElement>(null);
     const frameB = useRef<HTMLIFrameElement>(null);

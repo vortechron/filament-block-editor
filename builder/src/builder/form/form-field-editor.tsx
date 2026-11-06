@@ -1,3 +1,5 @@
+import { LocalizedText } from '../field-language';
+import { useHost } from '@/lib/host';
 import { type ReactNode, useId } from 'react';
 import { SwitchRow } from '@/editor/fields';
 import { SegmentedChoice } from '@/editor/segmented-choice';
@@ -74,7 +76,9 @@ export function FormFieldEditor({
             />
 
             <div className="grid gap-2">
-                <p className="text-foreground text-sm font-medium">{t('Width')}</p>
+                <p className="text-foreground text-sm font-medium">
+                    {t('Width')}
+                </p>
                 <SegmentedChoice
                     label={t('Width')}
                     value={field.width}
@@ -82,7 +86,9 @@ export function FormFieldEditor({
                         { value: 'full', label: t('Full') },
                         { value: 'half', label: t('Half') },
                     ]}
-                    onChange={(width) => set({ width: width === 'half' ? 'half' : 'full' })}
+                    onChange={(width) =>
+                        set({ width: width === 'half' ? 'half' : 'full' })
+                    }
                 />
             </div>
         </div>
@@ -99,7 +105,9 @@ function TypeRow({ field, number, set }: FieldProps) {
                 id={id}
                 aria-label={t('Type of field :number', { number })}
                 value={field.type}
-                onChange={(event) => set({ type: event.target.value as FormFieldType })}
+                onChange={(event) =>
+                    set({ type: event.target.value as FormFieldType })
+                }
                 className="border-input bg-card focus-visible:border-ring focus-visible:ring-ring/50 h-9 w-full rounded-md border px-3 text-sm outline-none focus-visible:ring-[3px]"
             >
                 {FORM_FIELD_TYPES.map((type) => (
@@ -126,11 +134,29 @@ function LabelRow({ field, number, set }: FieldProps) {
 
     return (
         <Row label={t('Label')} htmlFor={id}>
-            {field.type === 'consent' ? (
-                <Textarea {...shared} rows={2} onChange={(event) => set({ label: event.target.value })} />
-            ) : (
-                <Input {...shared} onChange={(event) => set({ label: event.target.value })} />
-            )}
+            <LocalizedText
+                path={`/field:${field.id}/label`}
+                label={t('Label')}
+                value={field.label}
+                onChange={(label) => set({ label })}
+            >
+                {(value, change) =>
+                    field.type === 'consent' ? (
+                        <Textarea
+                            {...shared}
+                            value={value}
+                            rows={2}
+                            onChange={(event) => change(event.target.value)}
+                        />
+                    ) : (
+                        <Input
+                            {...shared}
+                            value={value}
+                            onChange={(event) => change(event.target.value)}
+                        />
+                    )
+                }
+            </LocalizedText>
         </Row>
     );
 }
@@ -153,9 +179,12 @@ function NameRow({ field, number, set }: FieldProps) {
         <Row
             label={t('Name')}
             htmlFor={id}
-            hint={t('Made from the label. A WhatsApp message shows the answer with {:name}.', {
-                name: field.name,
-            })}
+            hint={t(
+                'Made from the label. A WhatsApp message shows the answer with {:name}.',
+                {
+                    name: field.name,
+                },
+            )}
         >
             <Input
                 id={id}
@@ -174,18 +203,28 @@ function HintRow({ field, set }: FieldProps) {
 
     return (
         <Row label={t('Hint inside the box')} htmlFor={id}>
-            <Input
-                id={id}
+            <LocalizedText
+                path={`/field:${field.id}/placeholder`}
+                label={t('Hint inside the box')}
                 value={field.placeholder ?? ''}
-                maxLength={PLACEHOLDER_LENGTH}
-                className="bg-card"
-                onChange={(event) => set({ placeholder: event.target.value })}
-            />
+                onChange={(placeholder) => set({ placeholder })}
+            >
+                {(value, change) => (
+                    <Input
+                        id={id}
+                        value={value}
+                        maxLength={PLACEHOLDER_LENGTH}
+                        className="bg-card"
+                        onChange={(event) => change(event.target.value)}
+                    />
+                )}
+            </LocalizedText>
         </Row>
     );
 }
 
 function ChoicesRow({ field, number, set }: FieldProps) {
+    const { fieldLanguages } = useHost();
     const t = useT();
     const id = useId();
     const choices = useDraft({
@@ -195,21 +234,87 @@ function ChoicesRow({ field, number, set }: FieldProps) {
             text
                 .split('\n')
                 .map((line) => line.trim())
-                .filter((line) => line !== ''),
-        commit: (options) => set({ options }),
+                .filter(
+                    (line) => field.option_ids !== undefined || line !== '',
+                ),
+        commit: (options) => {
+            const previous = field.options ?? [];
+            const reserved = new Set<number>();
+            // An unchanged line keeps its identity before a moved duplicate
+            // can claim it. Then reserve moved survivors before rename fallback.
+            const matches = options.map((option, index) => {
+                if (previous[index] === option) {
+                    reserved.add(index);
+                    return index;
+                }
+                return -1;
+            });
+            options.forEach((option, position) => {
+                if (matches[position] >= 0) return;
+                const index = previous.findIndex(
+                    (old, i) => old === option && !reserved.has(i),
+                );
+                if (index >= 0) reserved.add(index);
+                matches[position] = index;
+            });
+            const option_ids = options.map((_, i) => {
+                const matched = matches[i];
+                const renamed =
+                    matched < 0 && i < previous.length && !reserved.has(i)
+                        ? i
+                        : -1;
+                const index = matched >= 0 ? matched : renamed;
+                if (index >= 0) reserved.add(index);
+                return (
+                    (index >= 0 ? field.option_ids?.[index] : undefined) ??
+                    `o${Math.random().toString(36).slice(2, 10)}`
+                );
+            });
+            set({ options, option_ids });
+        },
     });
 
     return (
-        <Row label={t('Choices')} htmlFor={id} hint={t('One choice on each line.')}>
-            <Textarea
-                id={id}
-                aria-label={t('Choices of field :number', { number })}
-                value={choices.text}
-                rows={4}
-                className="bg-card"
-                onChange={(event) => choices.setText(event.target.value)}
-            />
-        </Row>
+        <div className="grid gap-2">
+            {fieldLanguages &&
+                (field.options ?? []).map((option, i) => (
+                    <LocalizedText
+                        key={field.option_ids?.[i] ?? i}
+                        path={`/field:${field.id}/option:${field.option_ids?.[i]}`}
+                        label={`${t('Choice')} ${i + 1}`}
+                        value={option}
+                        onChange={(value) =>
+                            set({
+                                options: field.options?.map((old, j) =>
+                                    i === j ? value : old,
+                                ),
+                            })
+                        }
+                    >
+                        {(value, change) => (
+                            <Input
+                                aria-label={`${t('Choice')} ${i + 1}`}
+                                value={value}
+                                onChange={(event) => change(event.target.value)}
+                            />
+                        )}
+                    </LocalizedText>
+                ))}
+            <Row
+                label={t('Choices')}
+                htmlFor={id}
+                hint={t('One choice on each line.')}
+            >
+                <Textarea
+                    id={id}
+                    aria-label={t('Choices of field :number', { number })}
+                    value={choices.text}
+                    rows={4}
+                    className="bg-card"
+                    onChange={(event) => choices.setText(event.target.value)}
+                />
+            </Row>
+        </div>
     );
 }
 
@@ -252,7 +357,10 @@ function Row({
 }) {
     return (
         <div className="grid gap-1.5">
-            <label htmlFor={htmlFor} className="text-foreground text-xs font-medium">
+            <label
+                htmlFor={htmlFor}
+                className="text-foreground text-xs font-medium"
+            >
                 {label}
             </label>
             {children}

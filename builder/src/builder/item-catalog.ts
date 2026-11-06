@@ -17,6 +17,7 @@ import {
     Pilcrow,
     SeparatorHorizontal,
     TextQuote,
+    Table2,
     Video,
 } from 'lucide-react';
 import { iconByName } from '@/lib/icons';
@@ -88,6 +89,13 @@ const ITEMS: CatalogItem[] = [
         icon: TextQuote,
         group: 'text',
         keywords: 'testimonial petikan',
+    },
+    {
+        key: 'table',
+        label: 'Table',
+        icon: Table2,
+        group: 'text',
+        keywords: 'cells rows columns jadual sel baris lajur',
     },
     {
         key: 'toggle',
@@ -204,14 +212,16 @@ export function layoutItem(layout: SectionLayout | null): CatalogItem | null {
 export function ownBlockItems(
     ownBlocks: readonly OwnBlockDefinition[],
 ): CatalogItem[] {
-    return ownBlocks.filter((definition) => !definition.retired).map((definition) => ({
-        key: `own:${definition.kind}`,
-        label: definition.label,
-        isOwn: true,
-        icon: iconByName(definition.icon),
-        group: 'own',
-        keywords: `${definition.kind} ${definition.description ?? ''}`,
-    }));
+    return ownBlocks
+        .filter((definition) => !definition.retired)
+        .map((definition) => ({
+            key: `own:${definition.kind}`,
+            label: definition.label,
+            isOwn: true,
+            icon: iconByName(definition.icon),
+            group: 'own',
+            keywords: `${definition.kind} ${definition.description ?? ''}`,
+        }));
 }
 
 /**
@@ -260,6 +270,7 @@ export function describeBlock(
         numberedListItem: 'numberedList',
         checkListItem: 'bulletList',
         quote: 'quote',
+        table: 'table',
         toggleListItem: 'toggle',
         image: 'image',
         gallery: 'gallery',

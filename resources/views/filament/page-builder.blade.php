@@ -23,10 +23,10 @@
                 adapter: {
                     save: (value) => wire.savePageBuilder(value),
                     createTranslation: (locale) => wire.createPageBuilderTranslation(locale),
-                    preview: (value, extra) => wire.previewPageBuilder(value, extra?.kit ?? null, extra?.siteInfo ?? null),
+                    preview: (value, extra) => wire.previewPageBuilder(value, extra?.kit ?? null, extra?.siteInfo ?? null, extra?.contentLocale ?? null, extra?.siteInfoTranslations ?? null),
                     ...(supports.saveKit ? { saveKit: (kit) => wire.saveKitFromPageBuilder(kit) } : {}),
-                    ...(supports.saveSection ? { saveSection: (section, meta) => wire.saveSectionFromPageBuilder(section, meta?.title ?? '', meta?.synced ?? false) } : {}),
-                    ...(supports.saveSiteInfo ? { saveSiteInfo: (values) => wire.saveSiteInfoFromPageBuilder(values) } : {}),
+                    ...(supports.saveSection ? { saveSection: (section, meta) => wire.saveSectionFromPageBuilder(section, meta?.title ?? '', meta?.synced ?? false, meta?.translations ?? []) } : {}),
+                    ...(supports.saveSiteInfo ? { saveSiteInfo: (values, translations) => wire.saveSiteInfoFromPageBuilder(values, translations ?? null) } : {}),
                     upload: (file, kind) => new Promise((resolve, reject) => {
                         wire.upload(
                             'pageBuilderUpload',

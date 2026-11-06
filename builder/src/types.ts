@@ -140,14 +140,22 @@ export type RefSection = {
 export type Section = RichSection | RefSection;
 
 /** The value the builder edits, saves and previews. Format 2 (Content\PageValue::VERSION). */
-export type PageValue = { version: 2; sections: Section[] };
+export type PageValue = {
+    version: 2;
+    sections: Section[];
+    translations?: Record<string, Record<string, string>>;
+};
 
 /**
  * A value the host may pass in: format 2, or format 1 (`{ sections }` or
  * a bare list of sections), which the builder upgrades.
  */
 export type PageValueInput =
-    | { version?: number; sections?: readonly unknown[] }
+    | {
+          version?: number;
+          sections?: readonly unknown[];
+          translations?: Record<string, Record<string, string>>;
+      }
     | readonly unknown[];
 
 /** The site's design values. Mirrors Design\Kit. */
@@ -194,6 +202,7 @@ export type SyncedSectionOption = {
     title: string;
     editUrl?: string | null;
     section: RichSection;
+    translations?: NonNullable<PageValue['translations']>;
 };
 
 export type PartKey = (typeof RULES.part_kinds)[number];
@@ -209,6 +218,7 @@ export type PagePart = {
 export type SiteInfo = {
     groups: { key: string; label: string; fields: OwnBlockField[] }[];
     values: Record<string, Record<string, unknown>>;
+    translations?: Record<string, Record<string, Record<string, unknown>>>;
 };
 
 /** What kind of document the builder edits. Enums\DocumentKind on the server. */
@@ -222,7 +232,8 @@ export type SectionTemplateInput = {
     /** The category's name in the menu. Known categories have their own. */
     categoryLabel?: string;
     description?: string;
-    section: { type?: 'rich'; data: Partial<SectionData> };
+    section: { id?: string; type?: 'rich'; data: Partial<SectionData> };
+    translations?: NonNullable<PageValue['translations']>;
 };
 
 /** A ready-made section, ready for the builder. */
@@ -233,6 +244,8 @@ export type SectionTemplate = {
     categoryLabel: string | null;
     description: string;
     data: SectionData;
+    sectionId?: string;
+    translations?: NonNullable<PageValue['translations']>;
 };
 
 export type OwnBlockFieldType =
@@ -259,6 +272,8 @@ export type OwnBlockField = {
     maxItems?: number | null;
     /** Only developers see the field. Its value is kept for everyone. */
     developerOnly?: boolean;
+    translatable?: boolean;
+    emptyFallback?: boolean;
     [key: string]: unknown;
 };
 
@@ -307,13 +322,26 @@ export type UploadKind = 'image' | 'video' | 'file';
 
 /** What `saveSection` answers. */
 export type SaveSectionResult =
-    | { ok: true; id: number | string; template?: SectionTemplateInput }
+    | {
+          ok: true;
+          id: number | string;
+          template?: SectionTemplateInput;
+          section?: RichSection;
+          translations?: NonNullable<PageValue['translations']>;
+      }
     | { ok: false; errors: Record<string, string> };
 
 /** What the preview is drawn with besides the page: unsaved site values. */
+export type FieldLanguages = {
+    defaultLocale: string;
+    locales: { locale: string; label: string }[];
+};
+
 export type PreviewExtra = {
+    contentLocale?: string;
     kit?: Kit;
     siteInfo?: SiteInfo['values'];
+    siteInfoTranslations?: NonNullable<SiteInfo['translations']>;
 };
 
 /** How the builder talks to the host. */
@@ -334,12 +362,17 @@ export type PageBuilderAdapter = {
     saveKit?: (kit: Kit) => Promise<SaveResult>;
     saveSection?: (
         section: RichSection,
-        meta: { title: string; synced: boolean },
+        meta: {
+            title: string;
+            synced: boolean;
+            translations?: NonNullable<PageValue['translations']>;
+        },
     ) => Promise<SaveSectionResult>;
     /** Creates a draft, then opens its separate editor. Never translates text. */
     createTranslation?: (locale: string) => Promise<{ url: string }>;
     saveSiteInfo?: (
         values: Record<string, Record<string, unknown>>,
+        translations?: NonNullable<SiteInfo['translations']>,
     ) => Promise<SaveSiteInfoResult>;
 };
 
@@ -392,6 +425,7 @@ export type PageBuilderOptions = {
      */
     pageMenu?: PageMenuEntry[];
     languages?: PageBuilderLanguage[];
+    fieldLanguages?: FieldLanguages;
     syncedSections?: SyncedSectionOption[];
     parts?: PagePart[];
     siteInfo?: SiteInfo | null;

@@ -18,13 +18,29 @@ export function useSiteInfoState({
 }: {
     onDynamicValues?: (values: DynamicValueDefinition[]) => void;
 } = {}) {
-    const { adapter, siteInfo } = useHost();
+    const { adapter, siteInfo, fieldLanguages } = useHost();
     const saveSiteInfo = adapter.saveSiteInfo;
     const canSave = siteInfo !== null && typeof saveSiteInfo === 'function';
     const [reloads, setReloads] = useState(0);
-    const state = useSaveState<Values, SaveSiteInfoResult>({
-        initial: siteInfo?.values ?? {},
-        save: canSave ? saveSiteInfo : null,
+    const state = useSaveState<
+        {
+            values: Values;
+            translations: NonNullable<
+                import('@/types').SiteInfo['translations']
+            >;
+        },
+        SaveSiteInfoResult
+    >({
+        initial: {
+            values: siteInfo?.values ?? {},
+            translations: siteInfo?.translations ?? {},
+        },
+        save: canSave
+            ? (current) =>
+                  fieldLanguages || siteInfo?.translations
+                      ? saveSiteInfo(current.values, current.translations)
+                      : saveSiteInfo(current.values)
+            : null,
         errorKey: 'siteInfo',
         fallbackError: 'The shop info could not be saved.',
         onSaved: (result) => {
@@ -37,11 +53,34 @@ export function useSiteInfoState({
     });
 
     return {
-        values: state.value,
+        values: state.value.values,
+        translations: state.value.translations,
+        setTranslation: (
+            locale: string,
+            group: string,
+            field: string,
+            value: string,
+        ) =>
+            state.update((current) => ({
+                ...current,
+                translations: {
+                    ...current.translations,
+                    [locale]: {
+                        ...current.translations[locale],
+                        [group]: {
+                            ...current.translations[locale]?.[group],
+                            [field]: value,
+                        },
+                    },
+                },
+            })),
         /** The host has a shop info form and can save it. */
         canSave,
         setGroup: (key: string, group: Record<string, unknown>) =>
-            state.update((current) => ({ ...current, [key]: group })),
+            state.update((current) => ({
+                ...current,
+                values: { ...current.values, [key]: group },
+            })),
         save: state.save,
         errors: state.errors,
         clearErrors: state.clearErrors,

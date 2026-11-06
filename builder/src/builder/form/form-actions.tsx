@@ -1,3 +1,4 @@
+import { LocalizedText } from '../field-language';
 import { Plus, Trash2 } from 'lucide-react';
 import { useId, useState } from 'react';
 import { linkOrReference } from '@/blocks/button-url';
@@ -63,7 +64,10 @@ export function FormActions({
         <div className="grid grid-cols-1 gap-2">
             {actions.map((action, index) =>
                 offered.includes(action.type) ? (
-                    <div key={action.type} className="bg-card grid gap-3 rounded-xl border p-3">
+                    <div
+                        key={action.type}
+                        className="bg-card grid gap-3 rounded-xl border p-3"
+                    >
                         <div className="flex items-center gap-2">
                             <p className="text-foreground flex-1 text-sm font-semibold">
                                 {t(ACTION_LABELS[action.type])}
@@ -74,7 +78,9 @@ export function FormActions({
                                     action: t(ACTION_LABELS[action.type]),
                                 })}
                                 onClick={() =>
-                                    onChange(actions.filter((_, at) => at !== index))
+                                    onChange(
+                                        actions.filter((_, at) => at !== index),
+                                    )
                                 }
                                 className="text-muted-foreground hover:bg-muted hover:text-foreground grid size-8 place-items-center rounded-md [&_svg]:size-3.5"
                             >
@@ -84,7 +90,9 @@ export function FormActions({
                         <ActionFields
                             action={action}
                             fields={fields}
-                            onChange={(next) => onChange(replaceItem(actions, index, next))}
+                            onChange={(next) =>
+                                onChange(replaceItem(actions, index, next))
+                            }
                         />
                     </div>
                 ) : null,
@@ -96,8 +104,12 @@ export function FormActions({
                         <button
                             key={type}
                             type="button"
-                            aria-label={t('Add :action', { action: t(ACTION_LABELS[type]) })}
-                            onClick={() => onChange([...actions, NEW_ACTIONS[type]])}
+                            aria-label={t('Add :action', {
+                                action: t(ACTION_LABELS[type]),
+                            })}
+                            onClick={() =>
+                                onChange([...actions, NEW_ACTIONS[type]])
+                            }
                             className="bg-card text-muted-foreground flex h-8 items-center gap-1 rounded-lg border border-dashed px-2.5 text-xs font-medium hover:border-[var(--builder-select)] hover:text-[var(--builder-select)]"
                         >
                             <Plus className="size-3.5" />
@@ -125,13 +137,21 @@ function ActionFields({
         case 'email':
             return <EmailFields action={action} onChange={onChange} />;
         case 'whatsapp':
-            return <WhatsAppFields action={action} fields={fields} onChange={onChange} />;
+            return (
+                <WhatsAppFields
+                    action={action}
+                    fields={fields}
+                    onChange={onChange}
+                />
+            );
         case 'redirect':
             return (
                 <AddressField
                     label={t('Page address')}
                     hint={t('A web address or a /path on your site.')}
-                    problem={t('This link will not work. Use https://, #, /, mailto: or tel:.')}
+                    problem={t(
+                        'This link will not work. Use https://, #, /, mailto: or tel:.',
+                    )}
                     value={action.url}
                     allowEmpty
                     isGood={(url) => linkOrReference(url) !== null}
@@ -196,7 +216,10 @@ function EmailFields({
                 />
             )}
             <div className="grid gap-1.5">
-                <label htmlFor={subjectId} className="text-foreground text-xs font-medium">
+                <label
+                    htmlFor={subjectId}
+                    className="text-foreground text-xs font-medium"
+                >
                     {t('Subject')}
                 </label>
                 <Input
@@ -204,7 +227,9 @@ function EmailFields({
                     value={action.subject}
                     maxLength={SUBJECT_LENGTH}
                     className="bg-card"
-                    onChange={(event) => onChange({ ...action, subject: event.target.value })}
+                    onChange={(event) =>
+                        onChange({ ...action, subject: event.target.value })
+                    }
                 />
             </div>
         </>
@@ -222,49 +247,66 @@ function WhatsAppFields({
 }) {
     const t = useT();
     const messageId = useId();
-
     return (
         <>
             <p className="text-muted-foreground text-xs">
-                {t('After sending, the visitor opens WhatsApp to the shop’s number with this message.')}
+                {t(
+                    'After sending, the visitor opens WhatsApp to the shop’s number with this message.',
+                )}
             </p>
             <div className="grid gap-1.5">
-                <label htmlFor={messageId} className="text-foreground text-xs font-medium">
+                <label
+                    htmlFor={messageId}
+                    className="text-foreground text-xs font-medium"
+                >
                     {t('WhatsApp message')}
                 </label>
-                <Textarea
-                    id={messageId}
+                <LocalizedText
+                    path="/action:whatsapp/message"
+                    label={t('WhatsApp message')}
                     value={action.message}
-                    maxLength={MESSAGE_LENGTH}
-                    rows={3}
-                    className="bg-card"
-                    onChange={(event) => onChange({ ...action, message: event.target.value })}
-                />
-            </div>
-            {fields.length > 0 && (
-                <div
-                    role="group"
-                    aria-label={t('Fields to put in the message')}
-                    className="flex flex-wrap gap-1"
+                    onChange={(message) => onChange({ ...action, message })}
                 >
-                    {fields.map((field) => (
-                        <button
-                            key={field.id}
-                            type="button"
-                            title={field.label}
-                            onClick={() =>
-                                onChange({
-                                    ...action,
-                                    message: joinWords(action.message, `{${field.name}}`),
-                                })
-                            }
-                            className="bg-muted hover:bg-secondary rounded-md px-2 py-1 font-mono text-[11px]"
-                        >
-                            {`{${field.name}}`}
-                        </button>
-                    ))}
-                </div>
-            )}
+                    {(value, change) => (
+                        <>
+                            <Textarea
+                                id={messageId}
+                                value={value}
+                                maxLength={MESSAGE_LENGTH}
+                                rows={3}
+                                className="bg-card"
+                                onChange={(event) => change(event.target.value)}
+                            />
+                            {fields.length > 0 && (
+                                <div
+                                    role="group"
+                                    aria-label={t(
+                                        'Fields to put in the message',
+                                    )}
+                                    className="mt-1 flex flex-wrap gap-1"
+                                >
+                                    {fields.map((field) => (
+                                        <button
+                                            key={field.id}
+                                            type="button"
+                                            title={field.label}
+                                            onClick={() =>
+                                                change(
+                                                    joinWords(
+                                                        value,
+                                                        `{${field.name}}`,
+                                                    ),
+                                                )
+                                            }
+                                            className="bg-muted hover:bg-secondary rounded-md px-2 py-1 font-mono text-[11px]"
+                                        >{`{${field.name}}`}</button>
+                                    ))}
+                                </div>
+                            )}
+                        </>
+                    )}
+                </LocalizedText>
+            </div>
         </>
     );
 }
@@ -337,5 +379,7 @@ function AddressField({
 
 /** The message with a word added at the end, with a space between. */
 function joinWords(message: string, word: string): string {
-    return message === '' || /\s$/.test(message) ? `${message}${word}` : `${message} ${word}`;
+    return message === '' || /\s$/.test(message)
+        ? `${message}${word}`
+        : `${message} ${word}`;
 }

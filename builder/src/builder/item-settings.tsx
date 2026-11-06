@@ -1,17 +1,22 @@
-import { useId } from 'react';
+import { richValue, richContent } from '@/lib/rich-text';
+import { RichWordsField } from './rich-words-field';
+import { LocalizedText } from './field-language';
 import { OwnBlockForm } from '@/blocks/own-block-form';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
-import { isPlainWords } from '@/lib/new-item-words';
 import { ownBlockSource } from '@/lib/own-block-source';
-import { Textarea } from '@/ui/textarea';
-import { GalleryBlock, galleryUrls, MAX_GALLERY_PHOTOS } from '../editor/gallery-block';
+import {
+    GalleryBlock,
+    galleryUrls,
+    MAX_GALLERY_PHOTOS,
+} from '../editor/gallery-block';
 import { SegmentedChoice } from '../editor/segmented-choice';
 import { ButtonFields } from './button-fields';
 import { EditElsewhereLink } from './edit-elsewhere-link';
 import { FormEditor } from './form/form-editor';
 import { Group, InfoCard, propText, TextField } from './item-fields';
 import { TextItemSettings } from './item-text-settings';
+import { TableWordsFields } from './table-words-fields';
 import { PhotoField, VideoField } from './media-field';
 import { SiteInfoRows } from './part/site-info-rows';
 import type { ItemSnapshot, SectionEditorHandle } from './types';
@@ -75,12 +80,17 @@ export function ItemSettings({
     handle,
     onChange,
     onWords,
-}: SettingsProps & { handle: SectionEditorHandle; onWords: (text: string) => void }) {
+}: SettingsProps & {
+    handle: SectionEditorHandle;
+    onWords: (content: unknown) => void;
+}) {
     return (
         <div className="grid grid-cols-1 gap-5">
-            <WordsField item={item} onWords={onWords} />
+            <WordsField item={item} onWords={onWords} handle={handle} />
             <KindSettings item={item} handle={handle} onChange={onChange} />
-            {item.type !== 'form' && <SiteInfoRows source={item} back={{ name: 'item' }} />}
+            {item.type !== 'form' && (
+                <SiteInfoRows source={item} back={{ name: 'item' }} />
+            )}
             <TextItemSettings item={item} handle={handle} onChange={onChange} />
             <PlacementSettings item={item} onChange={onChange} />
         </div>
@@ -88,40 +98,52 @@ export function ItemSettings({
 }
 
 /**
- * A text item's words, in a plain box. Words with bold, colours, links or
- * shop info chips are changed in the section instead, so none of it is
- * lost.
+ * One complete inline field per language. Plain words keep a normal box;
+ * marked words keep their full inline tree in the field editor.
  */
-function WordsField({ item, onWords }: { item: ItemSnapshot; onWords: (text: string) => void }) {
+function WordsField({
+    item,
+    onWords,
+    handle,
+}: {
+    item: ItemSnapshot;
+    onWords: (content: unknown) => void;
+    handle: SectionEditorHandle;
+}) {
     const t = useT();
-    const id = useId();
+
+    if (item.type === 'table')
+        return <TableWordsFields item={item} handle={handle} />;
 
     if (!WORD_ITEMS.has(item.type)) {
         return null;
     }
 
-    if (!isPlainWords(item.content)) {
-        return (
-            <InfoCard>
-                {t('These words have bold, colours, links or shop info. Change them in the section, so nothing is lost.')}
-            </InfoCard>
-        );
-    }
-
-    return LONG_WORD_ITEMS.has(item.type) ? (
-        <div className="grid gap-2">
-            <label htmlFor={id} className="text-foreground text-sm font-medium">
-                {t('Words')}
-            </label>
-            <Textarea id={id} rows={4} value={item.text} onChange={(event) => onWords(event.target.value)} className="bg-card" />
-        </div>
-    ) : (
-        <TextField label={t('Words')} value={item.text} onChange={onWords} />
+    return (
+        <LocalizedText
+            path="/rich"
+            label={t('Words')}
+            value={richValue(item.content)}
+            onChange={(value) => onWords(richContent(value))}
+        >
+            {(value, change) => (
+                <RichWordsField
+                    label={t('Words')}
+                    value={value}
+                    multiline={LONG_WORD_ITEMS.has(item.type)}
+                    onChange={change}
+                />
+            )}
+        </LocalizedText>
     );
 }
 
 /** What only this kind of item has. */
-function KindSettings({ item, handle, onChange }: SettingsProps & { handle: SectionEditorHandle }) {
+function KindSettings({
+    item,
+    handle,
+    onChange,
+}: SettingsProps & { handle: SectionEditorHandle }) {
     const t = useT();
 
     switch (item.type) {
@@ -159,7 +181,13 @@ function KindSettings({ item, handle, onChange }: SettingsProps & { handle: Sect
                 </Group>
             );
         case 'gallery':
-            return <GallerySettings item={item} handle={handle} onChange={onChange} />;
+            return (
+                <GallerySettings
+                    item={item}
+                    handle={handle}
+                    onChange={onChange}
+                />
+            );
         case 'card':
             return (
                 <InfoCard>
@@ -171,7 +199,9 @@ function KindSettings({ item, handle, onChange }: SettingsProps & { handle: Sect
         case 'columnList':
             return (
                 <InfoCard>
-                    {t('Drag the line between two columns in the section to change how wide they are.')}
+                    {t(
+                        'Drag the line between two columns in the section to change how wide they are.',
+                    )}
                 </InfoCard>
             );
         default:
@@ -183,7 +213,11 @@ function KindSettings({ item, handle, onChange }: SettingsProps & { handle: Sect
  * The slideshow's photos: add (several at once), move and remove them.
  * Photos that finish uploading join the ones the slideshow has by then.
  */
-function GallerySettings({ item, handle, onChange }: SettingsProps & { handle: SectionEditorHandle }) {
+function GallerySettings({
+    item,
+    handle,
+    onChange,
+}: SettingsProps & { handle: SectionEditorHandle }) {
     const t = useT();
     const { upload } = useHost();
 
@@ -193,9 +227,15 @@ function GallerySettings({ item, handle, onChange }: SettingsProps & { handle: S
                 images={propText(item.props.images, '')}
                 uploadFile={(file) => upload(file, 'image')}
                 onAdd={(urls) => {
-                    const now = galleryUrls(propText(handle.getItem(item.id)?.props.images, ''));
+                    const now = galleryUrls(
+                        propText(handle.getItem(item.id)?.props.images, ''),
+                    );
 
-                    onChange({ images: [...now, ...urls].slice(0, MAX_GALLERY_PHOTOS).join('\n') });
+                    onChange({
+                        images: [...now, ...urls]
+                            .slice(0, MAX_GALLERY_PHOTOS)
+                            .join('\n'),
+                    });
                 }}
                 onChange={(urls) => onChange({ images: urls.join('\n') })}
             />
@@ -206,12 +246,16 @@ function GallerySettings({ item, handle, onChange }: SettingsProps & { handle: S
 function OwnBlockSettings({ item, onChange }: SettingsProps) {
     const t = useT();
     const { ownBlocks, developer } = useHost();
-    const definition = ownBlocks.find((entry) => entry.kind === item.props.kind);
+    const definition = ownBlocks.find(
+        (entry) => entry.kind === item.props.kind,
+    );
     const source = definition ? ownBlockSource(definition, developer) : null;
 
     return definition && source ? (
         <div className="grid grid-cols-1 gap-4">
-            {(source.note !== null || source.link !== null || source.isEmpty) && (
+            {(source.note !== null ||
+                source.link !== null ||
+                source.isEmpty) && (
                 <InfoCard
                     action={
                         source.link && (
@@ -237,7 +281,9 @@ function OwnBlockSettings({ item, onChange }: SettingsProps) {
         </div>
     ) : (
         <InfoCard>
-            {t('This app has no block of this kind any more. Its values are kept, and the page leaves it out.')}
+            {t(
+                'This app has no block of this kind any more. Its values are kept, and the page leaves it out.',
+            )}
         </InfoCard>
     );
 }
@@ -250,16 +296,25 @@ function MediaSettings({ item, onChange }: SettingsProps) {
         <div className="grid grid-cols-1 gap-3">
             {item.type === 'image' ? (
                 <>
-                    <PhotoField url={url} onChange={(next) => onChange({ url: next })} />
+                    <PhotoField
+                        url={url}
+                        onChange={(next) => onChange({ url: next })}
+                    />
                     <TextField
                         label={t('Caption')}
-                        hint={t('Shown under the photo. Also helps search engines.')}
+                        translationPath="/props/caption"
+                        hint={t(
+                            'Shown under the photo. Also helps search engines.',
+                        )}
                         value={propText(item.props.caption, '')}
                         onChange={(caption) => onChange({ caption })}
                     />
                 </>
             ) : (
-                <VideoField url={url} onChange={(next) => onChange({ url: next })} />
+                <VideoField
+                    url={url}
+                    onChange={(next) => onChange({ url: next })}
+                />
             )}
         </div>
     );
@@ -272,10 +327,15 @@ function PlacementSettings({ item, onChange }: SettingsProps) {
     return (
         <>
             {'width' in item.props && (
-                <Group label={t('Width')} hint={t('Or drag the edge of the item in the section.')}>
+                <Group
+                    label={t('Width')}
+                    hint={t('Or drag the edge of the item in the section.')}
+                >
                     <SegmentedChoice
                         label={t('Width')}
-                        value={nearestWidth(Number(item.props.width ?? FULL_COLUMNS))}
+                        value={nearestWidth(
+                            Number(item.props.width ?? FULL_COLUMNS),
+                        )}
                         options={WIDTHS.map((option) => ({
                             value: option.value,
                             label: t(option.label),

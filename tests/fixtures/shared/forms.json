@@ -607,6 +607,54 @@
                 "success": "",
                 "actions": []
             }
+        },
+        {
+            "name": "deliberate blank form words retain only the two supported markers",
+            "input": {
+                "submit": {
+                    "text": ""
+                },
+                "success": "",
+                "_translated_empty": [
+                    "success",
+                    "submit",
+                    "submit",
+                    "unsafe"
+                ]
+            },
+            "output": {
+                "submit": {
+                    "text": ""
+                },
+                "success": "",
+                "_translated_empty": [
+                    "submit",
+                    "success"
+                ]
+            }
+        },
+        {
+            "name": "a nonblank form word cannot carry an empty marker",
+            "input": {
+                "submit": {
+                    "text": "Hantar"
+                },
+                "success": "",
+                "_translated_empty": [
+                    "submit",
+                    "success",
+                    "unsafe"
+                ]
+            },
+            "output": {
+                "submit": {
+                    "text": "Hantar"
+                },
+                "success": "",
+                "_translated_empty": [
+                    "success"
+                ]
+            }
         }
     ]
 }

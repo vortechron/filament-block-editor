@@ -18,7 +18,11 @@ import { PreviewDialog } from './builder/preview-dialog';
 import { SaveErrors, sectionIndexOfError } from './builder/save-errors';
 import { Sidebar } from './builder/sidebar';
 import { SidebarResizer } from './builder/sidebar-resizer';
-import { clampSidebarWidth, defaultSidebarWidth, useSidebarWidth } from './builder/sidebar-width';
+import {
+    clampSidebarWidth,
+    defaultSidebarWidth,
+    useSidebarWidth,
+} from './builder/sidebar-width';
 import { type Device, panelUnder, type SidebarPanel } from './builder/types';
 import { useBuilder } from './builder/use-builder';
 import { useBuilderShortcuts } from './builder/use-builder-shortcuts';
@@ -29,7 +33,11 @@ import { useMediaQuery } from './editor/use-media-query';
 import { usePageState } from './editor/use-page-state';
 import { type Host, HostContext } from './lib/host';
 import { I18nContext, type Locale, useT } from './lib/i18n';
-import type { DynamicValueDefinition, PageValue, SectionTemplate } from './types';
+import type {
+    DynamicValueDefinition,
+    PageValue,
+    SectionTemplate,
+} from './types';
 import { PortalContainerContext } from './ui/portal';
 import { TooltipProvider } from './ui/tooltip';
 
@@ -77,7 +85,11 @@ export function PageBuilderApp({
     // The shop values change after the shop info is saved: the host reads
     // them again, so chips and shop info rows show the new values.
     const [dynamicValues, setDynamicValues] = useState(host.dynamicValues);
-    const liveHost = useMemo(() => ({ ...host, dynamicValues }), [host, dynamicValues]);
+    const [previewLocale, setPreviewLocale] = useState(host.previewLocale);
+    const liveHost = useMemo(
+        () => ({ ...host, dynamicValues, previewLocale, setPreviewLocale }),
+        [host, dynamicValues, previewLocale],
+    );
 
     return (
         <div
@@ -242,7 +254,11 @@ function Builder({
     const refused = [
         { key: 'page', title: undefined, state: form },
         { key: 'kit', title: t('Your design was not saved'), state: kit },
-        { key: 'siteInfo', title: t('Your shop info was not saved'), state: siteInfo },
+        {
+            key: 'siteInfo',
+            title: t('Your shop info was not saved'),
+            state: siteInfo,
+        },
     ].filter(({ state }) => Object.keys(state.errors).length > 0);
     const notices =
         refused.length > 0 ? (
@@ -262,7 +278,11 @@ function Builder({
     // The width the user dragged the panel to, or the default for what it shows.
     const panelWidth =
         sidebarWidth.width === null
-            ? defaultSidebarWidth(['section', 'item', 'part'].includes(panelUnder(builder.panel).name))
+            ? defaultSidebarWidth(
+                  ['section', 'item', 'part'].includes(
+                      panelUnder(builder.panel).name,
+                  ),
+              )
             : clampSidebarWidth(sidebarWidth.width, window.innerWidth);
 
     return (
@@ -326,7 +346,11 @@ function Builder({
                                 <aside
                                     aria-label={t('Editor panels')}
                                     data-wide={isWide ? 'true' : undefined}
-                                    style={isWide ? undefined : { width: panelWidth }}
+                                    style={
+                                        isWide
+                                            ? undefined
+                                            : { width: panelWidth }
+                                    }
                                     className={
                                         isWide
                                             ? 'bg-card min-w-0 flex-1'
@@ -372,7 +396,15 @@ function Builder({
                 onOpenChange={setIsPreviewOpen}
                 draft={JSON.stringify(form.data)}
                 kit={kit.canSave ? JSON.stringify(kit.kit) : null}
-                siteInfo={siteInfo.canSave ? JSON.stringify(siteInfo.values) : null}
+                siteInfo={
+                    siteInfo.canSave ? JSON.stringify(siteInfo.values) : null
+                }
+                siteInfoTranslations={
+                    siteInfo.canSave &&
+                    Object.keys(siteInfo.translations).length
+                        ? JSON.stringify(siteInfo.translations)
+                        : null
+                }
                 initialDevice={device}
                 isDesktop={isDesktop}
             />

@@ -1,9 +1,20 @@
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import {
+    act,
+    cleanup,
+    fireEvent,
+    render,
+    screen,
+    within,
+} from '@testing-library/react';
 import { type ReactNode, useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { HostContext, type Host } from '@/lib/host';
 import { I18nContext } from '@/lib/i18n';
-import type { DynamicValueDefinition, OwnBlockDefinition, PageLinkOption } from '@/types';
+import type {
+    DynamicValueDefinition,
+    OwnBlockDefinition,
+    PageLinkOption,
+} from '@/types';
 import { OwnBlockForm } from './own-block-form';
 import { DEFAULT_KIT } from '@/lib/kit';
 
@@ -11,7 +22,12 @@ const board: OwnBlockDefinition = {
     kind: 'stationery-board',
     label: 'Stationery board',
     fields: [
-        { name: 'heading', type: 'text', label: 'Heading', default: 'Stationery' },
+        {
+            name: 'heading',
+            type: 'text',
+            label: 'Heading',
+            default: 'Stationery',
+        },
         { name: 'intro', type: 'textarea', label: 'Intro' },
         {
             name: 'style',
@@ -23,7 +39,12 @@ const board: OwnBlockDefinition = {
             ],
             default: 'plain',
         },
-        { name: 'show_prices', type: 'toggle', label: 'Show prices', default: true },
+        {
+            name: 'show_prices',
+            type: 'toggle',
+            label: 'Show prices',
+            default: true,
+        },
         { name: 'limit', type: 'number', label: 'Limit' },
         { name: 'photo', type: 'image', label: 'Photo' },
         { name: 'link', type: 'link', label: 'Link' },
@@ -100,7 +121,12 @@ describe('developer-only fields of an own block', () => {
         label: 'Tracked',
         fields: [
             { name: 'title', type: 'text', label: 'Title' },
-            { name: 'pixel', type: 'text', label: 'Pixel id', developerOnly: true },
+            {
+                name: 'pixel',
+                type: 'text',
+                label: 'Pixel id',
+                developerOnly: true,
+            },
         ],
     };
 
@@ -118,7 +144,9 @@ describe('developer-only fields of an own block', () => {
 
         expect(screen.queryByLabelText('Pixel id')).toBeNull();
 
-        fireEvent.change(screen.getByLabelText('Title'), { target: { value: 'B' } });
+        fireEvent.change(screen.getByLabelText('Title'), {
+            target: { value: 'B' },
+        });
 
         expect(JSON.parse(onChange.mock.calls.at(-1)?.[0])).toEqual({
             title: 'B',
@@ -128,7 +156,11 @@ describe('developer-only fields of an own block', () => {
 
     it('show for a developer', () => {
         render(
-            <OwnBlockForm definition={tracked} values="{}" onChange={() => {}} />,
+            <OwnBlockForm
+                definition={tracked}
+                values="{}"
+                onChange={() => {}}
+            />,
             { wrapper: wrap(vi.fn(), true) },
         );
 
@@ -139,24 +171,33 @@ describe('developer-only fields of an own block', () => {
 describe('the form for an own block', () => {
     it('shows the values, with the definition’s defaults for empty fields', () => {
         render(
-            <OwnBlockForm definition={board} values='{"intro":"Hello"}' onChange={() => {}} />,
+            <OwnBlockForm
+                definition={board}
+                values='{"intro":"Hello"}'
+                onChange={() => {}}
+            />,
             { wrapper: wrap() },
         );
 
-        expect(screen.getByLabelText('Heading')).toHaveProperty('value', 'Stationery');
-        expect(screen.getByLabelText('Intro')).toHaveProperty('value', 'Hello');
-        expect(screen.getByRole('switch', { name: 'Show prices' })).toHaveProperty(
-            'ariaChecked',
-            'true',
+        expect(screen.getByLabelText('Heading')).toHaveProperty(
+            'value',
+            'Stationery',
         );
+        expect(screen.getByLabelText('Intro')).toHaveProperty('value', 'Hello');
+        expect(
+            screen.getByRole('switch', { name: 'Show prices' }),
+        ).toHaveProperty('ariaChecked', 'true');
     });
 
     it('writes every change back as one JSON object string', () => {
         const onChange = vi.fn();
 
-        render(<OwnBlockForm definition={board} values="{}" onChange={onChange} />, {
-            wrapper: wrap(),
-        });
+        render(
+            <OwnBlockForm definition={board} values="{}" onChange={onChange} />,
+            {
+                wrapper: wrap(),
+            },
+        );
 
         fireEvent.change(screen.getByLabelText('Heading'), {
             target: { value: 'Pens' },
@@ -177,22 +218,31 @@ describe('the form for an own block', () => {
 
         render(<Harness onChange={onChange} />, { wrapper: wrap() });
 
-        fireEvent.change(screen.getByLabelText('Limit'), { target: { value: '12' } });
+        fireEvent.change(screen.getByLabelText('Limit'), {
+            target: { value: '12' },
+        });
         expect(JSON.parse(onChange.mock.calls.at(-1)?.[0]).limit).toBe(12);
 
-        fireEvent.change(screen.getByLabelText('Limit'), { target: { value: '' } });
+        fireEvent.change(screen.getByLabelText('Limit'), {
+            target: { value: '' },
+        });
         expect(JSON.parse(onChange.mock.calls.at(-1)?.[0]).limit).toBeNull();
     });
 
     it('switches toggles and picks select options', () => {
         const onChange = vi.fn();
 
-        render(<OwnBlockForm definition={board} values="{}" onChange={onChange} />, {
-            wrapper: wrap(),
-        });
+        render(
+            <OwnBlockForm definition={board} values="{}" onChange={onChange} />,
+            {
+                wrapper: wrap(),
+            },
+        );
 
         fireEvent.click(screen.getByRole('switch', { name: 'Show prices' }));
-        expect(JSON.parse(onChange.mock.calls.at(-1)?.[0]).show_prices).toBe(false);
+        expect(JSON.parse(onChange.mock.calls.at(-1)?.[0]).show_prices).toBe(
+            false,
+        );
 
         fireEvent.click(screen.getByRole('radio', { name: 'Boxed' }));
         expect(JSON.parse(onChange.mock.calls.at(-1)?.[0]).style).toBe('boxed');
@@ -209,12 +259,16 @@ describe('the form for an own block', () => {
 
         const oneRow = onChange.mock.calls.at(-1)?.[0];
 
-        expect(JSON.parse(oneRow).items).toEqual([{ name: '' }]);
+        expect(JSON.parse(oneRow).items).toEqual([
+            { name: '', _id: expect.any(String) },
+        ]);
 
         rerender(
             <OwnBlockForm
                 definition={board}
-                values={JSON.stringify({ items: [{ name: 'a' }, { name: 'b' }] })}
+                values={JSON.stringify({
+                    items: [{ name: 'a' }, { name: 'b' }],
+                })}
                 onChange={onChange}
             />,
         );
@@ -228,7 +282,7 @@ describe('the form for an own block', () => {
         });
         expect(JSON.parse(onChange.mock.calls.at(-1)?.[0]).items).toEqual([
             { name: 'a' },
-            { name: 'Blue pen' },
+            { name: 'Blue pen', _id: expect.any(String) },
         ]);
     });
 
@@ -253,9 +307,12 @@ describe('the form for an own block', () => {
         const upload = vi.fn(async () => '/storage/photo.jpg');
         const onChange = vi.fn();
 
-        render(<OwnBlockForm definition={board} values="{}" onChange={onChange} />, {
-            wrapper: wrap(upload),
-        });
+        render(
+            <OwnBlockForm definition={board} values="{}" onChange={onChange} />,
+            {
+                wrapper: wrap(upload),
+            },
+        );
 
         const file = new File(['x'], 'photo.jpg', { type: 'image/jpeg' });
 
@@ -278,7 +335,11 @@ const PAGES: PageLinkOption[] = [
 ];
 
 describe('pages in a link field', () => {
-    function renderLink(values: string, pages: PageLinkOption[], shop: DynamicValueDefinition[] = []) {
+    function renderLink(
+        values: string,
+        pages: PageLinkOption[],
+        shop: DynamicValueDefinition[] = [],
+    ) {
         const onChange = vi.fn();
 
         function Linked() {
@@ -303,29 +364,50 @@ describe('pages in a link field', () => {
 
     it('list the pages first in the one picker, and store the plain url of the page picked', () => {
         const onChange = renderLink('{}', PAGES, [
-            { key: 'site.whatsapp', label: 'WhatsApp', type: 'link', group: 'Contact', preview: 'https://wa.me/6012' },
+            {
+                key: 'site.whatsapp',
+                label: 'WhatsApp',
+                type: 'link',
+                group: 'Contact',
+                preview: 'https://wa.me/6012',
+            },
         ]);
 
-        fireEvent.click(screen.getByRole('button', { name: 'Pages and links' }));
+        fireEvent.click(
+            screen.getByRole('button', { name: 'Pages and links' }),
+        );
 
         const groups = screen.getAllByRole('group');
 
-        expect(groups.map((group) => group.getAttribute('aria-label'))).toEqual(['Pages', 'Contact']);
+        expect(groups.map((group) => group.getAttribute('aria-label'))).toEqual(
+            ['Pages', 'Contact'],
+        );
         expect(within(groups[0]).getByText('/hubungi')).toBeTruthy();
 
         fireEvent.click(screen.getByRole('option', { name: /Stationery/ }));
 
         expect(lastValues(onChange).link).toBe('/stationery');
         expect(screen.getByText('Page: Stationery')).toBeTruthy();
-        expect((screen.getByRole('textbox', { name: 'Link' }) as HTMLInputElement).value).toBe('/stationery');
+        expect(
+            (screen.getByRole('textbox', { name: 'Link' }) as HTMLInputElement)
+                .value,
+        ).toBe('/stationery');
     });
 
     it('still store @key when a shop link is picked', () => {
         const onChange = renderLink('{}', PAGES, [
-            { key: 'site.whatsapp', label: 'WhatsApp', type: 'link', group: 'Contact', preview: null },
+            {
+                key: 'site.whatsapp',
+                label: 'WhatsApp',
+                type: 'link',
+                group: 'Contact',
+                preview: null,
+            },
         ]);
 
-        fireEvent.click(screen.getByRole('button', { name: 'Pages and links' }));
+        fireEvent.click(
+            screen.getByRole('button', { name: 'Pages and links' }),
+        );
         fireEvent.click(screen.getByRole('option', { name: /WhatsApp/ }));
 
         expect(lastValues(onChange).link).toBe('@site.whatsapp');
@@ -334,7 +416,9 @@ describe('pages in a link field', () => {
     it('show the picker when the site has pages but no shop links', () => {
         renderLink('{}', PAGES);
 
-        expect(screen.getByRole('button', { name: 'Pages and links' })).toBeTruthy();
+        expect(
+            screen.getByRole('button', { name: 'Pages and links' }),
+        ).toBeTruthy();
     });
 
     it('name the page under a link that holds its url, and keep the generic hint for any other', () => {
@@ -349,9 +433,19 @@ describe('pages in a link field', () => {
     });
 
     it('keep "Shop links" and the old behaviour when the site has no pages', () => {
-        const onChange = renderLink('{}', [], [
-            { key: 'site.whatsapp', label: 'WhatsApp', type: 'link', group: 'Contact', preview: null },
-        ]);
+        const onChange = renderLink(
+            '{}',
+            [],
+            [
+                {
+                    key: 'site.whatsapp',
+                    label: 'WhatsApp',
+                    type: 'link',
+                    group: 'Contact',
+                    preview: null,
+                },
+            ],
+        );
 
         fireEvent.click(screen.getByRole('button', { name: 'Shop links' }));
 
@@ -370,83 +464,155 @@ describe('pages in a link field', () => {
 });
 
 const SHOP_VALUES: DynamicValueDefinition[] = [
-    { key: 'site.phone', label: 'Phone', type: 'text', group: 'Contact', preview: '012-345 6789' },
-    { key: 'site.email', label: 'Email', type: 'text', group: 'Contact', preview: null },
-    { key: 'site.whatsapp', label: 'WhatsApp', type: 'link', group: 'Contact', preview: 'https://wa.me/6012' },
+    {
+        key: 'site.phone',
+        label: 'Phone',
+        type: 'text',
+        group: 'Contact',
+        preview: '012-345 6789',
+    },
+    {
+        key: 'site.email',
+        label: 'Email',
+        type: 'text',
+        group: 'Contact',
+        preview: null,
+    },
+    {
+        key: 'site.whatsapp',
+        label: 'WhatsApp',
+        type: 'link',
+        group: 'Contact',
+        preview: 'https://wa.me/6012',
+    },
 ];
 
 /** The board's form with shop values in its text fields, as the item panel shows it. */
 function renderWithShopValues(values: string, onChange = vi.fn()) {
-    render(<OwnBlockForm definition={board} values={values} onChange={onChange} allowShopValues />, {
-        wrapper: wrap(vi.fn(), false, SHOP_VALUES),
-    });
+    render(
+        <OwnBlockForm
+            definition={board}
+            values={values}
+            onChange={onChange}
+            allowShopValues
+        />,
+        {
+            wrapper: wrap(vi.fn(), false, SHOP_VALUES),
+        },
+    );
 
     return onChange;
 }
 
 /** What the chips in a field show, in order. */
 const chipsIn = (field: HTMLElement) =>
-    [...field.querySelectorAll('[data-short-code]')].map((chip) => chip.textContent);
+    [...field.querySelectorAll('[data-short-code]')].map(
+        (chip) => chip.textContent,
+    );
 
-const lastValues = (onChange: ReturnType<typeof vi.fn>) => JSON.parse(onChange.mock.calls.at(-1)?.[0]);
+const lastValues = (onChange: ReturnType<typeof vi.fn>) =>
+    JSON.parse(onChange.mock.calls.at(-1)?.[0]);
 
 describe('shop values in an own block’s text fields', () => {
     it('show each {key} as a chip with its label and what it is now, and say when a value is gone', () => {
-        renderWithShopValues(JSON.stringify({ heading: 'Hubungi {site.phone} atau {site.gone}', intro: 'Baris 1\n{site.email}' }));
+        renderWithShopValues(
+            JSON.stringify({
+                heading: 'Hubungi {site.phone} atau {site.gone}',
+                intro: 'Baris 1\n{site.email}',
+            }),
+        );
 
-        expect(chipsIn(screen.getByRole('textbox', { name: 'Heading' }))).toEqual([
-            'Phone· 012-345 6789',
-            'site.gone· no longer exists',
-        ]);
-        expect(screen.getByRole('textbox', { name: 'Intro' }).textContent).toBe('Baris 1Email');
-        expect(screen.getByRole('textbox', { name: 'Intro' }).getAttribute('aria-multiline')).toBe('true');
+        expect(
+            chipsIn(screen.getByRole('textbox', { name: 'Heading' })),
+        ).toEqual(['Phone· 012-345 6789', 'site.gone· no longer exists']);
+        expect(screen.getByRole('textbox', { name: 'Intro' }).textContent).toBe(
+            'Baris 1Email',
+        );
+        expect(
+            screen
+                .getByRole('textbox', { name: 'Intro' })
+                .getAttribute('aria-multiline'),
+        ).toBe('true');
     });
 
     it('show a link or a picture value typed into the words as broken, since words only show text', () => {
-        renderWithShopValues(JSON.stringify({ heading: 'Chat {site.whatsapp}' }));
+        renderWithShopValues(
+            JSON.stringify({ heading: 'Chat {site.whatsapp}' }),
+        );
 
-        expect(chipsIn(screen.getByRole('textbox', { name: 'Heading' }))).toEqual(['WhatsApp· no longer exists']);
+        expect(
+            chipsIn(screen.getByRole('textbox', { name: 'Heading' })),
+        ).toEqual(['WhatsApp· no longer exists']);
     });
 
     it('put a picked shop value at the end of the words, stored as {key}, and undo takes it out', () => {
-        const onChange = renderWithShopValues(JSON.stringify({ heading: 'Hubungi ' }));
+        const onChange = renderWithShopValues(
+            JSON.stringify({ heading: 'Hubungi ' }),
+        );
         const heading = screen.getByRole('group', { name: 'Heading' });
 
-        fireEvent.click(within(heading).getByRole('button', { name: 'Shop value' }));
+        fireEvent.click(
+            within(heading).getByRole('button', { name: 'Shop value' }),
+        );
         // Only text values go in words.
-        expect(within(heading).queryByRole('option', { name: /WhatsApp/ })).toBeNull();
+        expect(
+            within(heading).queryByRole('option', { name: /WhatsApp/ }),
+        ).toBeNull();
         fireEvent.click(within(heading).getByRole('option', { name: /Phone/ }));
 
         expect(lastValues(onChange).heading).toBe('Hubungi {site.phone}');
-        expect(chipsIn(screen.getByRole('textbox', { name: 'Heading' }))).toEqual(['Phone· 012-345 6789']);
+        expect(
+            chipsIn(screen.getByRole('textbox', { name: 'Heading' })),
+        ).toEqual(['Phone· 012-345 6789']);
 
-        fireEvent.keyDown(screen.getByRole('textbox', { name: 'Heading' }), { key: 'z', ctrlKey: true });
+        fireEvent.keyDown(screen.getByRole('textbox', { name: 'Heading' }), {
+            key: 'z',
+            ctrlKey: true,
+        });
 
         expect(lastValues(onChange).heading).toBe('Hubungi ');
     });
 
     it('keep a one-line field on one line, and give a textarea a new line on Enter', () => {
-        const onChange = renderWithShopValues(JSON.stringify({ heading: 'Satu', intro: 'Satu' }));
+        const onChange = renderWithShopValues(
+            JSON.stringify({ heading: 'Satu', intro: 'Satu' }),
+        );
 
-        fireEvent.keyDown(screen.getByRole('textbox', { name: 'Heading' }), { key: 'Enter' });
+        fireEvent.keyDown(screen.getByRole('textbox', { name: 'Heading' }), {
+            key: 'Enter',
+        });
         expect(onChange).not.toHaveBeenCalled();
 
-        fireEvent.keyDown(screen.getByRole('textbox', { name: 'Intro' }), { key: 'Enter' });
+        fireEvent.keyDown(screen.getByRole('textbox', { name: 'Intro' }), {
+            key: 'Enter',
+        });
         expect(lastValues(onChange).intro.split('\n')).toHaveLength(2);
     });
 
     it('are plain boxes when the site has no text values', () => {
-        render(<OwnBlockForm definition={board} values="{}" onChange={vi.fn()} allowShopValues />, {
-            wrapper: wrap(),
-        });
+        render(
+            <OwnBlockForm
+                definition={board}
+                values="{}"
+                onChange={vi.fn()}
+                allowShopValues
+            />,
+            {
+                wrapper: wrap(),
+            },
+        );
 
-        expect(screen.getByLabelText('Heading')).toHaveProperty('value', 'Stationery');
+        expect(screen.getByLabelText('Heading')).toHaveProperty(
+            'value',
+            'Stationery',
+        );
         expect(screen.queryByRole('button', { name: 'Shop value' })).toBeNull();
     });
 });
 
 describe('an icon choice', () => {
-    const svg = (d: string) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="${d}"/></svg>`;
+    const svg = (d: string) =>
+        `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="${d}"/></svg>`;
     const badge = (count: number): OwnBlockDefinition => ({
         kind: 'badge',
         label: 'Badge',
@@ -466,7 +632,14 @@ describe('an icon choice', () => {
     });
 
     it('is a dropdown showing the picked icon’s picture and name', () => {
-        render(<OwnBlockForm definition={badge(12)} values='{"icon":"i4"}' onChange={vi.fn()} />, { wrapper: wrap() });
+        render(
+            <OwnBlockForm
+                definition={badge(12)}
+                values='{"icon":"i4"}'
+                onChange={vi.fn()}
+            />,
+            { wrapper: wrap() },
+        );
 
         const trigger = screen.getByRole('combobox', { name: 'Icon' });
 
@@ -478,17 +651,30 @@ describe('an icon choice', () => {
     it('lists every icon with its picture on the left and its name on the right, and picks one', async () => {
         const onChange = vi.fn();
 
-        render(<OwnBlockForm definition={badge(12)} values="{}" onChange={onChange} />, { wrapper: wrap() });
-        fireEvent.keyDown(screen.getByRole('combobox', { name: 'Icon' }), { key: 'ArrowDown' });
+        render(
+            <OwnBlockForm
+                definition={badge(12)}
+                values="{}"
+                onChange={onChange}
+            />,
+            { wrapper: wrap() },
+        );
+        fireEvent.keyDown(screen.getByRole('combobox', { name: 'Icon' }), {
+            key: 'ArrowDown',
+        });
 
         const options = await screen.findAllByRole('option');
 
         expect(options).toHaveLength(12);
         expect(options[7].textContent).toBe('Icon 7');
-        expect(options[7].querySelector('svg path')?.getAttribute('d')).toBe('M7 0');
+        expect(options[7].querySelector('svg path')?.getAttribute('d')).toBe(
+            'M7 0',
+        );
         expect(options[7].firstElementChild?.querySelector('svg')).toBeTruthy();
 
         fireEvent.keyDown(options[7], { key: 'Enter' });
-        expect(JSON.parse(onChange.mock.calls.at(-1)?.[0] as string).icon).toBe('i7');
+        expect(JSON.parse(onChange.mock.calls.at(-1)?.[0] as string).icon).toBe(
+            'i7',
+        );
     });
 });

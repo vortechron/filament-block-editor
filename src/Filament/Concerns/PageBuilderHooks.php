@@ -5,6 +5,7 @@ namespace Vortechron\FilamentBlockEditor\Filament\Concerns;
 use Closure;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 use ReflectionClass;
 use ReflectionMethod;
 use Vortechron\FilamentBlockEditor\Blocks\Field;
@@ -63,6 +64,17 @@ trait PageBuilderHooks
     }
 
     /**
+     * A canonical section and its section-scoped text maps, for shared-language hosts.
+     * The older hook remains compatible with hosts that store one language.
+     *
+     * @param  array<string, array<string, string>>  $translations
+     */
+    protected function savePageBuilderSectionTranslations(array $section, string $title, bool $synced, array $translations): array
+    {
+        return $this->savePageBuilderSection($section, $title, $synced);
+    }
+
+    /**
      * The shop info the header and footer show:
      * `['groups' => [['key' => ..., 'label' => ..., 'fields' => [Field, ...]]], 'values' => [group => [field => value]]]`.
      *
@@ -79,6 +91,16 @@ trait PageBuilderHooks
      * @param  array<string, array<string, mixed>>  $values  by group
      */
     protected function savePageBuilderSiteInfo(array $values): void {}
+
+    protected function savePageBuilderSiteInfoTranslations(array $values, array $translations): void
+    {
+        $this->savePageBuilderSiteInfo($values);
+    }
+
+    protected function withPageBuilderSiteInfoTranslations(array $values, array $translations, Closure $draw): string
+    {
+        return $this->withPageBuilderSiteInfo($values, $draw);
+    }
 
     /**
      * Draws the builder's preview with shop info that is not saved yet, so
@@ -151,6 +173,11 @@ trait PageBuilderHooks
      *
      * @return list<array{locale: string, label: string, url: string|null, current: bool}>
      */
+    protected function getPageBuilderFieldLanguages(): array
+    {
+        return [];
+    }
+
     protected function getPageBuilderLanguages(): array
     {
         return [];
@@ -226,8 +253,8 @@ trait PageBuilderHooks
     {
         return [
             'saveKit' => $this->overridesPageBuilderHook('savePageBuilderKit'),
-            'saveSection' => $this->overridesPageBuilderHook('savePageBuilderSection'),
-            'saveSiteInfo' => $this->overridesPageBuilderHook('savePageBuilderSiteInfo'),
+            'saveSection' => $this->overridesPageBuilderHook('savePageBuilderSection') || $this->overridesPageBuilderHook('savePageBuilderSectionTranslations'),
+            'saveSiteInfo' => $this->overridesPageBuilderHook('savePageBuilderSiteInfo') || $this->overridesPageBuilderHook('savePageBuilderSiteInfoTranslations'),
         ];
     }
 
@@ -256,30 +283,44 @@ trait PageBuilderHooks
      * @param  array<string, mixed>  $section
      * @return array<string, mixed>
      */
-    public function saveSectionFromPageBuilder(array $section, string $title = '', bool $synced = false): array
+    public function saveSectionFromPageBuilder(array $section, string $title = '', bool $synced = false, array $translations = []): array
     {
         $this->authorizePageBuilder();
 
-        if (! $this->overridesPageBuilderHook('savePageBuilderSection')) {
+        if (! $this->overridesPageBuilderHook('savePageBuilderSection') && ! $this->overridesPageBuilderHook('savePageBuilderSectionTranslations')) {
             return ['ok' => false, 'errors' => ['section' => __('filament-block-editor::builder.errors.section_not_available')]];
         }
 
         $title = mb_substr(trim($title), 0, PageContent::MAX_TITLE_LENGTH);
-        $clean = ContentLocale::with($this->getPageBuilderContentLocale(), fn (): ?array => PageContent::normalize([$section])[0] ?? null);
+        $languages = $this->getPageBuilderFieldLanguages();
+        $value = ['sections' => [$section], ...($translations !== [] || $languages !== [] ? ['translations' => $translations] : [])];
+        $validator = Validator::make(['value' => $value], PageValue::rules());
+        if ($validator->fails()) {
+            return ['ok' => false, 'errors' => self::firstErrors($validator->errors()->messages())];
+        }
+        try {
+            $value = ContentLocale::with($languages['defaultLocale'] ?? $this->getPageBuilderContentLocale(), function () use ($value): array {
+                $clean = PageValue::normalize($value);
+
+                // A saved section is new; base words and every map follow the same guard.
+                return $this->isPageBuilderDeveloper() ? $clean : PageValue::guard($clean, []);
+            });
+        } catch (InvalidArgumentException $exception) {
+            return ['ok' => false, 'errors' => ['section' => $exception->getMessage()]];
+        }
+        $clean = $value['sections'][0] ?? null;
 
         if ($title === '' || ($clean['type'] ?? null) !== PageContent::TYPE) {
             return ['ok' => false, 'errors' => $title === '' ? ['title' => __('filament-block-editor::builder.errors.title_needed')] : ['section' => __('filament-block-editor::builder.errors.section_only')]];
         }
 
-        // A saved section is new, so it keeps no developer-only data from someone else.
-        if (! $this->isPageBuilderDeveloper()) {
-            $clean = ContentLocale::with($this->getPageBuilderContentLocale(), fn (): array => PageValue::guard(['sections' => [$clean]], [])['sections'][0]);
-        }
-
-        $result = $this->savePageBuilderSection($clean, $title, $synced);
+        $result = $this->savePageBuilderSectionTranslations($clean, $title, $synced, $value['translations'] ?? []);
 
         return ($result['ok'] ?? false) === true
-            ? ['ok' => true, 'id' => $result['id'] ?? null, 'template' => is_array($result['template'] ?? null) ? $result['template'] : null]
+            ? ['ok' => true, 'id' => $result['id'] ?? null, 'template' => is_array($result['template'] ?? null) ? $result['template'] : null,
+                ...(is_array($result['section'] ?? null) ? ['section' => $result['section']] : []),
+                ...(is_array($result['translations'] ?? null) ? ['translations' => $result['translations']] : []),
+            ]
             : ['ok' => false, 'errors' => is_array($result['errors'] ?? null) ? $result['errors'] : ['section' => __('filament-block-editor::builder.errors.section_not_saved')]];
     }
 
@@ -291,15 +332,15 @@ trait PageBuilderHooks
      * @param  array<string, mixed>  $values
      * @return array{ok: bool, errors?: array<string, string>, dynamicValues?: list<array<string, mixed>>}
      */
-    public function saveSiteInfoFromPageBuilder(array $values): array
+    public function saveSiteInfoFromPageBuilder(array $values, ?array $translations = null): array
     {
         $this->authorizePageBuilder();
 
-        if (! $this->overridesPageBuilderHook('savePageBuilderSiteInfo')) {
+        if (! $this->getPageBuilderSupports()['saveSiteInfo']) {
             return ['ok' => false, 'errors' => ['siteInfo' => __('filament-block-editor::builder.errors.site_info_not_available')]];
         }
 
-        $result = $this->refusingInvalid(fn () => $this->savePageBuilderSiteInfo(array_filter($values, is_array(...))));
+        $result = $this->refusingInvalid(fn () => $this->savePageBuilderSiteInfoTranslations(array_filter($values, is_array(...)), $translations ?? []));
 
         return $result['ok'] ? [...$result, 'dynamicValues' => ContentLocale::with($this->getPageBuilderContentLocale(), fn (): array => $this->pageBuilderDynamicValues())] : $result;
     }
@@ -324,6 +365,7 @@ trait PageBuilderHooks
             'siteInfo' => $siteInfo === null ? null : self::siteInfo($siteInfo),
             'pages' => $pages === [] ? null : $pages,
             'pageMenu' => count($menu = $this->pageBuilderPageMenu()) < 2 ? null : $menu,
+            'fieldLanguages' => $this->getPageBuilderFieldLanguages() ?: null,
             'languages' => count($languages = $this->pageBuilderLanguages()) < 2 ? null : $languages,
             'kind' => (DocumentKind::tryFrom($this->getPageBuilderKind()) ?? DocumentKind::Page)->value,
         ], fn (mixed $value): bool => $value !== null);
@@ -451,11 +493,14 @@ trait PageBuilderHooks
         $synced = [];
 
         foreach ($this->getPageBuilderSyncedSections() as $entry) {
-            $section = is_array($entry['section'] ?? null) ? (PageContent::normalize([$entry['section']])[0] ?? null) : null;
+            $value = is_array($entry['section'] ?? null)
+                ? ContentLocale::with($this->getPageBuilderFieldLanguages()['defaultLocale'] ?? $this->getPageBuilderContentLocale(), fn (): array => PageValue::normalize(['sections' => [$entry['section']], ...(is_array($entry['translations'] ?? null) ? ['translations' => $entry['translations']] : [])]))
+                : [];
+            $section = $value['sections'][0] ?? null;
             $id = PageContent::ref($entry['id'] ?? null);
 
             if ($id !== null && ($section['type'] ?? null) === PageContent::TYPE) {
-                $synced[] = ['id' => $id, 'title' => (string) ($entry['title'] ?? ''), 'editUrl' => is_string($entry['editUrl'] ?? null) ? $entry['editUrl'] : null, 'section' => $section];
+                $synced[] = ['id' => $id, 'title' => (string) ($entry['title'] ?? ''), 'editUrl' => is_string($entry['editUrl'] ?? null) ? $entry['editUrl'] : null, 'section' => $section, ...(isset($value['translations']) ? ['translations' => $value['translations']] : [])];
             }
         }
 
@@ -475,7 +520,7 @@ trait PageBuilderHooks
             'fields' => array_values(array_map(fn (mixed $field): mixed => $field instanceof Field ? $field->toArray() : $field, (array) ($group['fields'] ?? []))),
         ], array_values(array_filter((array) ($siteInfo['groups'] ?? []), is_array(...))));
 
-        return ['groups' => $groups, 'values' => is_array($siteInfo['values'] ?? null) ? $siteInfo['values'] : []];
+        return ['groups' => $groups, 'values' => is_array($siteInfo['values'] ?? null) ? $siteInfo['values'] : [], ...(is_array($siteInfo['translations'] ?? null) ? ['translations' => $siteInfo['translations']] : [])];
     }
 
     /**

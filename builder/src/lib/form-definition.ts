@@ -41,6 +41,7 @@ export type FormField = {
     required: boolean;
     width: 'full' | 'half';
     options?: string[];
+    option_ids?: string[];
     rows?: number;
 };
 
@@ -64,6 +65,7 @@ export type FormDefinition = {
     submit: { text: string; align: SubmitAlign };
     success: string;
     actions: FormAction[];
+    _translated_empty?: ('submit' | 'success')[];
 };
 
 export const MAX_FIELDS = FORM.max_fields;
@@ -116,7 +118,7 @@ export function cleanForm(raw: unknown): FormDefinition {
     const source = isObject(raw) ? raw : {};
     const submit = isObject(source.submit) ? source.submit : {};
 
-    return {
+    const form: FormDefinition = {
         name: text(source.name, FORM_NAME_LENGTH),
         fields: cleanFields(source.fields),
         submit: {
@@ -126,6 +128,13 @@ export function cleanForm(raw: unknown): FormDefinition {
         success: text(source.success, SUCCESS_LENGTH),
         actions: cleanActions(source.actions),
     };
+    const blank = (['submit', 'success'] as const).filter(
+        (part) =>
+            Array.isArray(source._translated_empty) &&
+            source._translated_empty.includes(part) &&
+            (part === 'submit' ? form.submit.text : form.success) === '',
+    );
+    return { ...form, ...(blank.length ? { _translated_empty: blank } : {}) };
 }
 
 /**
@@ -218,12 +227,17 @@ function cleanFields(raw: unknown): FormField[] {
                 name,
                 label,
                 ...(PLACEHOLDER_TYPES.includes(type)
-                    ? { placeholder: text(field.placeholder, PLACEHOLDER_LENGTH) }
+                    ? {
+                          placeholder: text(
+                              field.placeholder,
+                              PLACEHOLDER_LENGTH,
+                          ),
+                      }
                     : {}),
                 required: field.required === true,
                 width: field.width === 'half' ? 'half' : 'full',
                 ...(CHOICE_TYPES.includes(type)
-                    ? { options: cleanOptions(field.options) }
+                    ? cleanChoices(field.options, field.option_ids)
                     : {}),
                 ...(type === 'textarea' ? { rows: cleanRows(field.rows) } : {}),
             } satisfies FormField;
@@ -238,6 +252,32 @@ function freshId(taken: ReadonlySet<string>): string {
     }
 
     return id;
+}
+
+/** Labels and identities are one list; never filter one without the other. */
+function cleanChoices(
+    raw: unknown,
+    rawIds: unknown,
+): { options: string[]; option_ids?: string[] } {
+    if (!Array.isArray(rawIds)) return { options: cleanOptions(raw) };
+    const options: string[] = [];
+    const option_ids: string[] = [];
+    const seen = new Set<string>();
+    for (const [index, value] of (Array.isArray(raw) ? raw : []).entries()) {
+        if (typeof value !== 'string') continue;
+        if (options.length >= MAX_OPTIONS) break;
+        const candidate = rawIds[index];
+        const id =
+            typeof candidate === 'string' &&
+            FIELD_ID.test(candidate) &&
+            !seen.has(candidate)
+                ? candidate
+                : freshId(seen);
+        options.push(value.trim().slice(0, LABEL_LENGTH));
+        option_ids.push(id);
+        seen.add(id);
+    }
+    return { options, option_ids };
 }
 
 function cleanOptions(raw: unknown): string[] {
@@ -267,8 +307,9 @@ function cleanActions(raw: unknown): FormAction[] {
         .filter(isObject)
         .filter((action) => {
             const isNew =
-                (FORM_ACTION_TYPES as readonly unknown[]).includes(action.type) &&
-                !seen.has(action.type as string);
+                (FORM_ACTION_TYPES as readonly unknown[]).includes(
+                    action.type,
+                ) && !seen.has(action.type as string);
 
             seen.add(action.type as string);
 
@@ -294,7 +335,10 @@ function cleanAction(action: Record<string, unknown>): FormAction {
         case 'redirect':
             return { type: 'redirect', url: linkOrReference(action.url) ?? '' };
         case 'webhook':
-            return { type: 'webhook', url: isWebhookUrl(action.url) ? action.url.trim() : '' };
+            return {
+                type: 'webhook',
+                url: isWebhookUrl(action.url) ? action.url.trim() : '',
+            };
     }
 }
 
@@ -302,13 +346,15 @@ function cleanAction(action: Record<string, unknown>): FormAction {
 export function isEmailTarget(value: unknown): value is string {
     return (
         typeof value === 'string' &&
-        (value === SHOP_EMAIL || (value.length <= EMAIL_LENGTH && EMAIL.test(value)))
+        (value === SHOP_EMAIL ||
+            (value.length <= EMAIL_LENGTH && EMAIL.test(value)))
     );
 }
 
 function isWhatsAppTarget(value: unknown): value is string {
     return (
-        typeof value === 'string' && (dynamicRefKey(value) !== null || PHONE.test(value))
+        typeof value === 'string' &&
+        (dynamicRefKey(value) !== null || PHONE.test(value))
     );
 }
 
@@ -326,7 +372,9 @@ function oneOf<T extends string>(
     allowed: readonly T[],
     fallback: T,
 ): T {
-    return (allowed as readonly unknown[]).includes(value) ? (value as T) : fallback;
+    return (allowed as readonly unknown[]).includes(value)
+        ? (value as T)
+        : fallback;
 }
 
 function isObject(value: unknown): value is Record<string, unknown> {

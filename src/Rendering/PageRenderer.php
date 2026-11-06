@@ -5,6 +5,7 @@ namespace Vortechron\FilamentBlockEditor\Rendering;
 use Vortechron\FilamentBlockEditor\Content\PageContent;
 use Vortechron\FilamentBlockEditor\Content\PageValue;
 use Vortechron\FilamentBlockEditor\Content\SectionResolver;
+use Vortechron\FilamentBlockEditor\Content\TextTranslations;
 use Vortechron\FilamentBlockEditor\Enums\SectionLayout;
 use Vortechron\FilamentBlockEditor\Styling\StyleSheet;
 
@@ -52,7 +53,8 @@ final class PageRenderer
      */
     public function render(array $sections, RenderContext $context): string
     {
-        $sections = PageValue::normalize($sections)['sections'];
+        $value = PageValue::normalize($sections);
+        $sections = isset($value['translations']) ? TextTranslations::apply($value, $value['translations'][ContentLocale::site()] ?? [])['sections'] : $value['sections'];
 
         return ContentLocale::run(fn (): string => StyleSheet::collect(function () use ($sections, $context): string {
             $html = '';

@@ -111,7 +111,7 @@ final class FormDefinition
         $raw = is_array($raw) ? $raw : [];
         $submit = is_array($raw['submit'] ?? null) ? $raw['submit'] : [];
 
-        return [
+        $form = [
             'name' => self::words($raw['name'] ?? null, self::NAME_LENGTH),
             'fields' => FormFields::clean($raw['fields'] ?? null),
             'submit' => [
@@ -121,6 +121,14 @@ final class FormDefinition
             'success' => self::words($raw['success'] ?? null, self::SUCCESS_LENGTH),
             'actions' => self::cleanActions($raw['actions'] ?? null),
         ];
+        $blank = [];
+        foreach (['submit', 'success'] as $part) {
+            if (is_array($raw['_translated_empty'] ?? null) && in_array($part, $raw['_translated_empty'], true) && ($part === 'submit' ? $form['submit']['text'] : $form['success']) === '') {
+                $blank[] = $part;
+            }
+        }
+
+        return [...$form, ...($blank === [] ? [] : ['_translated_empty' => $blank])];
     }
 
     /**
@@ -164,6 +172,11 @@ final class FormDefinition
     public function submit(): array
     {
         return $this->form['submit'];
+    }
+
+    public function hasTranslatedEmpty(string $part): bool
+    {
+        return in_array($part, $this->form['_translated_empty'] ?? [], true);
     }
 
     public function success(): string

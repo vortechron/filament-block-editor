@@ -1,5 +1,13 @@
 import { ArrowDown, ArrowUp, Plus, Trash2 } from 'lucide-react';
-import { type ReactNode, useId } from 'react';
+import {
+    FieldTextStore,
+    LocalizedText,
+    PrepareTranslation,
+    TextScope,
+} from '@/builder/field-language';
+import { rowIdentities } from '@/lib/text-identities';
+import { newBlockId } from '@/lib/block-ids';
+import { type ReactNode, useId, useContext, useMemo } from 'react';
 import { Field, SwitchRow } from '@/editor/fields';
 import { ImageField } from '@/editor/image-field';
 import { LinkField } from '@/editor/link-field';
@@ -45,16 +53,34 @@ export function OwnBlockForm({
     onChange: (values: string) => void;
     allowShopValues?: boolean;
 }) {
-    const { dynamicValues } = useHost();
-    const current = valuesWithDefaults(definition, parseValues(values));
+    const { dynamicValues, fieldLanguages } = useHost();
+    const scope = useContext(TextScope);
+    const current = useMemo(() => {
+        const current = valuesWithDefaults(definition, parseValues(values));
+        return fieldLanguages
+            ? rowIdentities(current, definition.fields)
+            : current;
+    }, [definition, values, fieldLanguages]);
 
     return (
-        <FieldList
-            fields={definition.fields}
-            values={current}
-            shortCodes={allowShopValues && dynamicValuesOfType(dynamicValues, 'text').length > 0}
-            onChange={(next) => onChange(serializeValues(next))}
-        />
+        <PrepareTranslation
+            value={() => {
+                if (serializeValues(current) !== values)
+                    onChange(serializeValues(current));
+            }}
+        >
+            <TextScope value={scope ? `${scope}/values` : ''}>
+                <FieldList
+                    fields={definition.fields}
+                    values={current}
+                    shortCodes={
+                        allowShopValues &&
+                        dynamicValuesOfType(dynamicValues, 'text').length > 0
+                    }
+                    onChange={(next) => onChange(serializeValues(next))}
+                />
+            </TextScope>
+        </PrepareTranslation>
     );
 }
 
@@ -104,7 +130,44 @@ export function fieldLabel(field: OwnBlockField): string {
     return words.charAt(0).toUpperCase() + words.slice(1);
 }
 
-function OwnField({
+function OwnField(props: {
+    field: OwnBlockField;
+    value: unknown;
+    shortCodes: boolean;
+    onChange: (value: unknown) => void;
+}) {
+    const scope = useContext(TextScope);
+    const store = useContext(FieldTextStore);
+    const { field, value, onChange } = props;
+    if (
+        scope &&
+        (!store || (!scope.includes('/row:') && field.translatable === true)) &&
+        (field.translatable ?? ['text', 'textarea'].includes(field.type)) &&
+        ['text', 'textarea'].includes(field.type)
+    ) {
+        return (
+            <LocalizedText
+                path={`/${field.name}`}
+                label={fieldLabel(field)}
+                value={typeof value === 'string' ? value : ''}
+                onChange={onChange}
+            >
+                {(text, change) => (
+                    <OwnFieldInput
+                        {...props}
+                        value={text}
+                        onChange={(next) => {
+                            if (typeof next === 'string') change(next);
+                        }}
+                    />
+                )}
+            </LocalizedText>
+        );
+    }
+    return <OwnFieldInput {...props} />;
+}
+
+function OwnFieldInput({
     field,
     value,
     shortCodes,
@@ -199,7 +262,12 @@ function OwnField({
             );
         case 'link':
             return (
-                <LinkField label={label} hint={hint} value={text} onChange={onChange} />
+                <LinkField
+                    label={label}
+                    hint={hint}
+                    value={text}
+                    onChange={onChange}
+                />
             );
         case 'list':
             return (
@@ -246,7 +314,13 @@ function SelectField({
     if (hasIconPictures(options)) {
         return (
             <Field label={label} htmlFor={id} hint={hint}>
-                <IconChoice id={id} label={label} value={value} options={options} onChange={onChange} />
+                <IconChoice
+                    id={id}
+                    label={label}
+                    value={value}
+                    options={options}
+                    onChange={onChange}
+                />
             </Field>
         );
     }
@@ -298,6 +372,7 @@ function ListField({
     shortCodes: boolean;
     onChange: (rows: OwnValues[]) => void;
 }) {
+    const scope = useContext(TextScope);
     const t = useT();
     const fields = field.fields ?? [];
     const max =
@@ -309,8 +384,10 @@ function ListField({
             ? (row as OwnValues)
             : {},
     );
-    const newRow = (): OwnValues =>
-        Object.fromEntries(fields.map((sub) => [sub.name, emptyValue(sub)]));
+    const newRow = (): OwnValues => ({
+        ...Object.fromEntries(fields.map((sub) => [sub.name, emptyValue(sub)])),
+        _id: newBlockId(),
+    });
     const move = (index: number, offset: -1 | 1) => {
         const target = index + offset;
         const next = [...values];
@@ -324,7 +401,7 @@ function ListField({
             <div className="grid grid-cols-1 gap-2">
                 {values.map((row, index) => (
                     <div
-                        key={index}
+                        key={typeof row._id === 'string' ? row._id : index}
                         className="bg-muted/40 grid gap-3 rounded-xl border p-3"
                     >
                         <div className="flex items-center gap-1">
@@ -361,18 +438,26 @@ function ListField({
                                 <Trash2 />
                             </RowButton>
                         </div>
-                        <FieldList
-                            fields={fields}
-                            values={{ ...newRow(), ...row }}
-                            shortCodes={shortCodes}
-                            onChange={(next) =>
-                                onChange(
-                                    values.map((current, position) =>
-                                        position === index ? next : current,
-                                    ),
-                                )
+                        <TextScope
+                            value={
+                                scope
+                                    ? `${scope}/${field.name}/row:${row._id}`
+                                    : ''
                             }
-                        />
+                        >
+                            <FieldList
+                                fields={fields}
+                                values={{ ...newRow(), ...row }}
+                                shortCodes={shortCodes}
+                                onChange={(next) =>
+                                    onChange(
+                                        values.map((current, position) =>
+                                            position === index ? next : current,
+                                        ),
+                                    )
+                                }
+                            />
+                        </TextScope>
                     </div>
                 ))}
                 <button

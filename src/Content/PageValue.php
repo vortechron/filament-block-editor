@@ -3,6 +3,9 @@
 namespace Vortechron\FilamentBlockEditor\Content;
 
 use Closure;
+use InvalidArgumentException;
+use Vortechron\FilamentBlockEditor\BlockNote\BlockNoteDocument;
+use Vortechron\FilamentBlockEditor\Rendering\ContentLocale;
 
 /**
  * The whole stored value of a page, with its format version:
@@ -74,10 +77,23 @@ final class PageValue
     {
         $value = self::upgrade($raw);
 
-        return [
-            'version' => self::VERSION,
-            'sections' => PageContent::normalize(is_array($value['sections'] ?? null) ? $value['sections'] : []),
-        ];
+        $base = ['version' => self::VERSION, 'sections' => PageContent::normalize(is_array($value['sections'] ?? null) ? $value['sections'] : [])];
+        if (is_array($value['translations'] ?? null)) {
+            $base = TextTranslations::ensureIds($base);
+        }
+        $translations = [];
+        foreach (is_array($value['translations'] ?? null) ? $value['translations'] : [] as $locale => $overrides) {
+            if (is_string($locale) && preg_match('/^[a-z]{2,3}(?:[-_][A-Za-z0-9]{2,8})*$/D', $locale) && is_array($overrides)) {
+                $translations[$locale] = TextTranslations::normalizeOverrides($base, $overrides);
+                foreach (TextTranslations::apply($base, $translations[$locale])['sections'] as $section) {
+                    if ($section['type'] === 'rich' && BlockNoteDocument::isTooBig($section['data']['document'])) {
+                        throw new InvalidArgumentException(__('filament-block-editor::builder.errors.rich_large', [], ContentLocale::panel()));
+                    }
+                }
+            }
+        }
+
+        return [...$base, ...($translations === [] ? [] : ['translations' => $translations])];
     }
 
     /**
@@ -91,6 +107,9 @@ final class PageValue
         return [
             $attribute => ['required', 'array'],
             "{$attribute}.version" => ['sometimes', 'integer', 'min:1', 'max:'.self::VERSION],
+            "{$attribute}.translations" => ['sometimes', 'array', 'max:30'],
+            "{$attribute}.translations.*" => ['array', 'max:10000'],
+            "{$attribute}.translations.*.*" => ['string', 'max:100000'],
             ...PageContent::rules("{$attribute}.sections"),
         ];
     }
@@ -107,7 +126,34 @@ final class PageValue
      */
     public static function guard(array $new, array $stored): array
     {
-        return self::normalize(PageGuard::apply(self::normalize($new)['sections'], self::normalize($stored)['sections']));
+        $new = self::normalize($new);
+        $stored = self::normalize($stored);
+        $new = MissingBlockData::restore($new, $stored);
+        $base = self::normalize(PageGuard::apply($new['sections'], $stored['sections']));
+        if (! isset($new['translations']) && ! isset($stored['translations'])) {
+            return $base;
+        }
+        $words = TextTranslations::textFields($base);
+        $probeWords = TextTranslations::permissionProbe($base);
+        $probe = TextTranslations::apply($base, $probeWords);
+        $probe['sections'] = PageGuard::apply($probe['sections'], $stored['sections']);
+        $editable = TextTranslations::textFields($probe);
+        $translations = [];
+        foreach (array_unique([...array_keys($new['translations'] ?? []), ...array_keys($stored['translations'] ?? [])]) as $locale) {
+            $overrides = MissingBlockData::overrides($base, $stored['translations'][$locale] ?? []);
+            foreach ($words as $key => $_) {
+                $source = ($editable[$key] ?? null) === $probeWords[$key] ? ($new['translations'][$locale] ?? []) : ($stored['translations'][$locale] ?? []);
+                if (array_key_exists($key, $source)) {
+                    $overrides[$key] = $source[$key];
+                    if (array_key_exists($key.'/_empty_fallback', $source)) {
+                        $overrides[$key.'/_empty_fallback'] = $source[$key.'/_empty_fallback'];
+                    }
+                }
+            }
+            $translations[$locale] = $overrides;
+        }
+
+        return self::normalize([...$base, ...($translations === [] ? [] : ['translations' => $translations])]);
     }
 
     /**

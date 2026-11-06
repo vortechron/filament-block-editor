@@ -1,4 +1,4 @@
-import type { RichSection, SyncedSectionOption } from '@/types';
+import type { PageValue, RichSection, SyncedSectionOption } from '@/types';
 import { isRef, normalizeValue } from './page-value';
 
 /**
@@ -26,6 +26,18 @@ export function normalizeSyncedSections(raw: unknown): SyncedSectionOption[] {
                     ? entry.editUrl
                     : null,
             section: richSectionOf(entry.section),
+            ...(entry.translations &&
+            typeof entry.translations === 'object' &&
+            !Array.isArray(entry.translations)
+                ? {
+                      translations: normalizeValue({
+                          sections: [richSectionOf(entry.section)],
+                          translations: entry.translations as NonNullable<
+                              PageValue['translations']
+                          >,
+                      }).translations,
+                  }
+                : {}),
         }));
 }
 

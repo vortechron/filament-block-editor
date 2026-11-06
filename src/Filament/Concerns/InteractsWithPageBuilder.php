@@ -4,12 +4,13 @@ namespace Vortechron\FilamentBlockEditor\Filament\Concerns;
 
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
+use InvalidArgumentException;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Vortechron\FilamentBlockEditor\Blocks\BlockRegistry;
 use Vortechron\FilamentBlockEditor\Content\DynamicValues;
-use Vortechron\FilamentBlockEditor\Content\PageContent;
 use Vortechron\FilamentBlockEditor\Content\PageValue;
+use Vortechron\FilamentBlockEditor\Content\TextTranslations;
 use Vortechron\FilamentBlockEditor\Design\Kit;
 use Vortechron\FilamentBlockEditor\Design\KitSource;
 use Vortechron\FilamentBlockEditor\Rendering\ContentLocale;
@@ -132,11 +133,12 @@ trait InteractsWithPageBuilder
         $locale = $this->getPageBuilderLocale();
 
         $contentLocale = $this->getPageBuilderContentLocale();
+        $valueLocale = $this->pageBuilderValueLocale();
 
-        return ContentLocale::with($contentLocale, fn (): array => array_filter([
+        return ContentLocale::with($valueLocale, fn (): array => array_filter([
             'value' => PageValue::normalize($this->getPageBuilderValue()),
             'blocks' => app(BlockRegistry::class)->definitions(),
-            'templates' => SectionTemplates::all($locale, $contentLocale),
+            'templates' => SectionTemplates::all($locale, $valueLocale),
             'locale' => $locale,
             'contentLocale' => $contentLocale,
             'title' => (string) $this->getTitle(),
@@ -154,6 +156,11 @@ trait InteractsWithPageBuilder
         return Assets::builderScriptUrl();
     }
 
+    private function pageBuilderValueLocale(): string
+    {
+        return $this->getPageBuilderFieldLanguages()['defaultLocale'] ?? $this->getPageBuilderContentLocale();
+    }
+
     public function getPageBuilderStyleUrl(): string
     {
         return Assets::builderStyleUrl();
@@ -167,23 +174,28 @@ trait InteractsWithPageBuilder
     {
         $this->authorizePageBuilder();
 
-        return ContentLocale::with($this->getPageBuilderContentLocale(), function () use ($value): array {
+        return ContentLocale::with($this->pageBuilderValueLocale(), function () use ($value): array {
             $value = PageValue::upgrade($value);
-            $validator = Validator::make(['sections' => $value['sections'] ?? null], PageContent::rules('sections'));
+            $validator = Validator::make(['value' => $value], PageValue::rules());
 
             if ($validator->fails()) {
                 return [
                     'ok' => false,
-                    'errors' => collect($validator->errors()->messages())->map(fn (array $messages): string => $messages[0])->all(),
+                    'errors' => collect($validator->errors()->messages())->map(fn (array $messages): string => $messages[0])->mapWithKeys(fn ($message, $key) => [str_starts_with($key, 'value.sections') ? substr($key, 6) : $key => $message])->all(),
                 ];
             }
 
-            $value = PageValue::normalize($value);
+            try {
+                $value = PageValue::normalize($value);
 
-            // Safe by default: a host that forgets the guard still never saves
-            // locks or custom CSS from someone who is not a developer.
-            if (! $this->isPageBuilderDeveloper()) {
-                $value = PageValue::guard($value, PageValue::normalize($this->getPageBuilderValue()));
+                // Safe by default: a host that forgets the guard still never saves
+                // locks or custom CSS from someone who is not a developer.
+                if (! $this->isPageBuilderDeveloper()) {
+                    $value = PageValue::guard($value, PageValue::normalize($this->getPageBuilderValue()));
+                }
+
+            } catch (InvalidArgumentException $error) {
+                return ['ok' => false, 'errors' => ['value' => $error->getMessage()]];
             }
 
             $this->savePageBuilderValue($value);
@@ -203,16 +215,24 @@ trait InteractsWithPageBuilder
      * @param  array<string, mixed>|null  $kit
      * @param  array<string, mixed>|null  $siteInfo  the shop info form's values, by group
      */
-    public function previewPageBuilder(array $value, ?array $kit = null, ?array $siteInfo = null): string
+    public function previewPageBuilder(array $value, ?array $kit = null, ?array $siteInfo = null, ?string $contentLocale = null, ?array $siteInfoTranslations = null): string
     {
         $this->authorizePageBuilder();
 
-        return ContentLocale::with($this->getPageBuilderContentLocale(), function () use ($value, $kit, $siteInfo): string {
-            $sections = PageValue::normalize($value)['sections'];
+        $languages = $this->getPageBuilderFieldLanguages();
+        $allowed = array_column($languages['locales'] ?? [], 'locale');
+        $contentLocale = in_array($contentLocale, $allowed, true) ? $contentLocale : $this->getPageBuilderContentLocale();
+
+        return ContentLocale::with($contentLocale, function () use ($value, $kit, $siteInfo, $contentLocale, $siteInfoTranslations): string {
+            $sections = ContentLocale::with($this->pageBuilderValueLocale(), function () use ($value, $contentLocale): array {
+                $value = PageValue::normalize($value);
+
+                return TextTranslations::apply($value, $value['translations'][$contentLocale] ?? [])['sections'];
+            });
             $drawPage = fn (): string => app(DynamicValues::class)->drawWith($this->getPageBuilderRenderValues(), fn (): string => $this->renderPageBuilderPreview($sections));
             $draw = $siteInfo === null
                 ? $drawPage
-                : fn (): string => $this->withPageBuilderSiteInfo(array_filter($siteInfo, is_array(...)), $drawPage);
+                : fn (): string => $this->withPageBuilderSiteInfoTranslations(array_filter($siteInfo, is_array(...)), $siteInfoTranslations ?? [], $drawPage);
 
             if ($kit === null) {
                 return $draw();

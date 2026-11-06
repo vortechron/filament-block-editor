@@ -1,4 +1,10 @@
-import { fireEvent, screen, waitFor, within } from '@testing-library/react';
+import {
+    act,
+    fireEvent,
+    screen,
+    waitFor,
+    within,
+} from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import type { PageValueInput } from '../src/types';
 import { firstSection, mountBuilder, pickSection } from './mount-helpers';
@@ -6,7 +12,14 @@ import { firstSection, mountBuilder, pickSection } from './mount-helpers';
 const FORM = {
     name: 'Borang pertanyaan',
     fields: [
-        { id: 'f1', type: 'text', name: 'nama', label: 'Nama', required: true, width: 'half' },
+        {
+            id: 'f1',
+            type: 'text',
+            name: 'nama',
+            label: 'Nama',
+            required: true,
+            width: 'half',
+        },
     ],
     submit: { text: 'Hantar', align: 'left' },
     success: 'Terima kasih.',
@@ -25,8 +38,17 @@ const WITH_FORM: PageValueInput = {
             data: {
                 layout: 'plain',
                 document: [
-                    { id: 'head0001', type: 'heading', props: { level: 2 }, content: 'Hubungi kami' },
-                    { id: 'form0001', type: 'form', props: { form: JSON.stringify(FORM) } },
+                    {
+                        id: 'head0001',
+                        type: 'heading',
+                        props: { level: 2 },
+                        content: 'Hubungi kami',
+                    },
+                    {
+                        id: 'form0001',
+                        type: 'form',
+                        props: { form: JSON.stringify(FORM) },
+                    },
                 ],
             },
         },
@@ -81,7 +103,10 @@ describe('the form block', () => {
             name: 'nombor_ic',
         });
         // The first field and the actions are kept as they were.
-        expect(formIn(builder).fields[0]).toMatchObject({ name: 'nama', width: 'half' });
+        expect(formIn(builder).fields[0]).toMatchObject({
+            name: 'nama',
+            width: 'half',
+        });
         expect(formIn(builder).actions).toEqual(FORM.actions);
     });
 
@@ -109,8 +134,12 @@ describe('the form block', () => {
         await openForm();
 
         expect(screen.queryByText('Webhook')).toBeNull();
-        expect(screen.getByRole('button', { name: 'Add Open WhatsApp' })).toBeTruthy();
-        expect(screen.queryByRole('button', { name: 'Add Webhook' })).toBeNull();
+        expect(
+            screen.getByRole('button', { name: 'Add Open WhatsApp' }),
+        ).toBeTruthy();
+        expect(
+            screen.queryByRole('button', { name: 'Add Webhook' }),
+        ).toBeNull();
 
         fireEvent.change(screen.getByLabelText('Button text'), {
             target: { value: 'Hantar sekarang' },
@@ -138,18 +167,27 @@ describe('the form block', () => {
         });
 
         // Not https, so the last good address stays.
-        expect(formIn(builder).actions[1].url).toBe('https://hooks.example.com/new');
-        expect(screen.getByText('Use an address that starts with https://.')).toBeTruthy();
+        expect(formIn(builder).actions[1].url).toBe(
+            'https://hooks.example.com/new',
+        );
+        expect(
+            screen.getByText('Use an address that starts with https://.'),
+        ).toBeTruthy();
     });
 
     it('lets a WhatsApp message use the fields by name', async () => {
         const { builder } = mountBuilder({ value: WITH_FORM });
 
         await openForm();
-        fireEvent.click(screen.getByRole('button', { name: 'Add Open WhatsApp' }));
         fireEvent.click(
-            within(screen.getByRole('group', { name: 'Fields to put in the message' }))
-                .getByRole('button', { name: '{nama}' }),
+            screen.getByRole('button', { name: 'Add Open WhatsApp' }),
+        );
+        fireEvent.click(
+            within(
+                screen.getByRole('group', {
+                    name: 'Fields to put in the message',
+                }),
+            ).getByRole('button', { name: '{nama}' }),
         );
 
         expect(formIn(builder).actions).toContainEqual({
@@ -169,7 +207,9 @@ describe('the form block', () => {
 
         await waitFor(() =>
             expect(
-                firstSection(builder).data.document.filter((entry) => entry.type === 'form'),
+                firstSection(builder).data.document.filter(
+                    (entry) => entry.type === 'form',
+                ),
             ).toHaveLength(2),
         );
 
@@ -178,33 +218,190 @@ describe('the form block', () => {
         )[1] as { props: { form: string } };
         const form = JSON.parse(added.props.form);
 
-        expect(form.fields.map((field: { name: string }) => field.name)).toEqual([
-            'name',
-            'phone',
-            'message',
-        ]);
+        expect(
+            form.fields.map((field: { name: string }) => field.name),
+        ).toEqual(['name', 'phone', 'message']);
         expect(form.actions).toEqual([
-            { type: 'email', to: '@site.email', subject: 'New message from your website' },
+            {
+                type: 'email',
+                to: '@site.email',
+                subject: 'New message from your website',
+            },
         ]);
         expect(form.success).toBe('Thank you. We will get back to you soon.');
     });
     it('starts a new form in the selected document language while editor labels stay English', async () => {
-        const { builder } = mountBuilder({ value: WITH_FORM, locale: 'en', contentLocale: 'ms' });
+        const { builder } = mountBuilder({
+            value: WITH_FORM,
+            locale: 'en',
+            contentLocale: 'ms',
+        });
         await pickSection(/Hubungi kami/);
         fireEvent.click(screen.getByRole('button', { name: 'Add' }));
         fireEvent.click(await screen.findByRole('tab', { name: 'Items' }));
         fireEvent.click(screen.getByRole('button', { name: 'Form' }));
 
-        await waitFor(() => expect(firstSection(builder).data.document.filter((entry) => entry.type === 'form')).toHaveLength(2));
-        const added = firstSection(builder).data.document.find((entry) => entry.type === 'form' && entry.id !== 'form0001');
+        await waitFor(() =>
+            expect(
+                firstSection(builder).data.document.filter(
+                    (entry) => entry.type === 'form',
+                ),
+            ).toHaveLength(2),
+        );
+        const added = firstSection(builder).data.document.find(
+            (entry) => entry.type === 'form' && entry.id !== 'form0001',
+        );
         const props = added && 'props' in added ? added.props : null;
-        const form = props && typeof props === 'object' && 'form' in props && typeof props.form === 'string'
-            ? JSON.parse(props.form)
-            : null;
-        expect(form.fields.map((field: { label: string }) => field.label)).toEqual(['Nama', 'Telefon', 'Mesej']);
+        const form =
+            props &&
+            typeof props === 'object' &&
+            'form' in props &&
+            typeof props.form === 'string'
+                ? JSON.parse(props.form)
+                : null;
+        expect(
+            form.fields.map((field: { label: string }) => field.label),
+        ).toEqual(['Nama', 'Telefon', 'Mesej']);
         expect(form.submit.text).toBe('Hantar');
         expect(form.name).toBe('Enquiry form');
         expect(screen.getByRole('button', { name: 'Save' })).toBeTruthy();
     });
-
 });
+
+it.each([false, true])(
+    'retains deliberate form clears after saving and reloading (field languages: %s)',
+    async (localized) => {
+        const fieldLanguages = localized
+            ? {
+                  defaultLocale: 'ms',
+                  locales: [
+                      { locale: 'ms', label: 'Bahasa Melayu' },
+                      { locale: 'en', label: 'English' },
+                  ],
+              }
+            : undefined;
+        const first = mountBuilder({
+            fieldLanguages,
+            contentLocale: 'ms',
+            value: {
+                sections: [
+                    {
+                        id: 's',
+                        type: 'rich',
+                        data: {
+                            document: [
+                                {
+                                    id: 'h',
+                                    type: 'heading',
+                                    content: 'Hubungi kami',
+                                },
+                                {
+                                    id: 'form0001',
+                                    type: 'form',
+                                    props: {
+                                        form: JSON.stringify({
+                                            ...FORM,
+                                            actions: [],
+                                        }),
+                                    },
+                                },
+                            ],
+                        },
+                    },
+                ],
+                ...(localized
+                    ? {
+                          translations: {
+                              en: {
+                                  'block:form0001/form/submit': 'Send',
+                                  'block:form0001/form/success': 'Thanks',
+                              },
+                          },
+                      }
+                    : {}),
+            },
+        });
+        await openForm();
+        fireEvent.change(screen.getByLabelText('Button text'), {
+            target: { value: '' },
+        });
+        fireEvent.change(screen.getByLabelText('Message after sending'), {
+            target: { value: '' },
+        });
+        if (localized) {
+            fireEvent.change(screen.getByLabelText('Button text language'), {
+                target: { value: 'en' },
+            });
+            expect(screen.getByLabelText('Button text')).toHaveProperty(
+                'value',
+                'Send',
+            );
+            fireEvent.change(screen.getByLabelText('Button text'), {
+                target: { value: '' },
+            });
+            fireEvent.change(
+                screen.getByLabelText('Message after sending language'),
+                { target: { value: 'en' } },
+            );
+            expect(
+                screen.getByLabelText('Message after sending'),
+            ).toHaveProperty('value', 'Thanks');
+            fireEvent.change(screen.getByLabelText('Message after sending'), {
+                target: { value: '' },
+            });
+        }
+        fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+        await waitFor(() => expect(first.adapter.save).toHaveBeenCalled());
+        const saved = first.adapter.save.mock.calls[0][0];
+        expect(formIn(first.builder)._translated_empty).toEqual([
+            'submit',
+            'success',
+        ]);
+        act(() => first.builder.unmount());
+        first.element.remove();
+        const second = mountBuilder({
+            value: saved,
+            fieldLanguages,
+            contentLocale: 'ms',
+        });
+        await openForm();
+        expect(screen.getByLabelText('Button text')).toHaveProperty(
+            'value',
+            '',
+        );
+        expect(screen.getByLabelText('Message after sending')).toHaveProperty(
+            'value',
+            '',
+        );
+        expect(formIn(second.builder)._translated_empty).toEqual([
+            'submit',
+            'success',
+        ]);
+        if (localized) {
+            fireEvent.change(screen.getByLabelText('Button text language'), {
+                target: { value: 'en' },
+            });
+            fireEvent.change(
+                screen.getByLabelText('Message after sending language'),
+                { target: { value: 'en' } },
+            );
+            expect(screen.getByLabelText('Button text')).toHaveProperty(
+                'value',
+                '',
+            );
+            expect(
+                screen.getByLabelText('Message after sending'),
+            ).toHaveProperty('value', '');
+            expect(
+                second.builder.getValue().translations!.en[
+                    'block:form0001/form/submit'
+                ],
+            ).toBe('');
+            expect(
+                second.builder.getValue().translations!.en[
+                    'block:form0001/form/success'
+                ],
+            ).toBe('');
+        }
+    },
+);

@@ -1,4 +1,12 @@
-import { ArrowDown, ArrowUp, CopyPlus, PencilLine, Replace, Trash2, X } from 'lucide-react';
+import {
+    ArrowDown,
+    ArrowUp,
+    CopyPlus,
+    PencilLine,
+    Replace,
+    Trash2,
+    X,
+} from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
@@ -9,6 +17,7 @@ import { ActionButton } from './action-button';
 import { useBuilderContext } from './builder-context';
 import { ItemGrid } from './catalog-tiles';
 import { describeBlock } from './item-catalog';
+import { TextScope } from './field-language';
 import { ItemSettings } from './item-settings';
 import { ItemTabs } from './item-tabs';
 import { Skeleton } from '@/ui/skeleton';
@@ -37,7 +46,11 @@ function itemChangeGroup(
     const keys = Object.keys(props);
 
     return keys.length === 1 && keys[0] === 'look'
-        ? changeGroup(`${scope}:look`, parseLook(current.look), parseLook(props.look))
+        ? changeGroup(
+              `${scope}:look`,
+              parseLook(current.look),
+              parseLook(props.look),
+          )
         : changeGroup(scope, current, { ...current, ...props });
 }
 
@@ -75,11 +88,11 @@ export function ItemPanel() {
         );
     }
 
-    const { label, icon: Icon, isOwn } = describeBlock(
-        item.type,
-        item.props,
-        ownBlocks,
-    );
+    const {
+        label,
+        icon: Icon,
+        isOwn,
+    } = describeBlock(item.type, item.props, ownBlocks);
     const update = (props: Record<string, unknown>) =>
         form.inGroup(
             itemChangeGroup(`item:${sectionId}:${item.id}`, item.props, props),
@@ -183,16 +196,18 @@ export function ItemPanel() {
                 )}
                 onLookChange={(look) => update({ look })}
             >
-                <ItemSettings
-                    item={item}
-                    handle={handle}
-                    onChange={update}
-                    onWords={(text) =>
-                        form.inGroup(`words:${sectionId}:${item.id}`, () =>
-                            handle.setItemText(item.id, text),
-                        )
-                    }
-                />
+                <TextScope value={`block:${item.id}`}>
+                    <ItemSettings
+                        item={item}
+                        handle={handle}
+                        onChange={update}
+                        onWords={(content) =>
+                            form.inGroup(`words:${sectionId}:${item.id}`, () =>
+                                handle.setItemContent(item.id, content),
+                            )
+                        }
+                    />
+                </TextScope>
             </ItemTabs>
         </div>
     );
@@ -230,7 +245,9 @@ function ReplacePicker({
                 </button>
             </div>
             <p className="text-muted-foreground text-xs leading-relaxed">
-                {t('The new item goes in the same place. Undo brings the old one back.')}
+                {t(
+                    'The new item goes in the same place. Undo brings the old one back.',
+                )}
             </p>
             <ItemGrid layout={layout} onPick={onPick} />
         </section>
@@ -238,7 +255,10 @@ function ReplacePicker({
 }
 
 /** The layout of the section an item is in, for its own "New card" tile. */
-function sectionLayout(blocks: Section[], sectionId: string): SectionLayout | null {
+function sectionLayout(
+    blocks: Section[],
+    sectionId: string,
+): SectionLayout | null {
     const section = blocks.find((block) => block.id === sectionId);
 
     return section?.type === 'rich' ? section.data.layout : null;

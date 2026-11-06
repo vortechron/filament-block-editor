@@ -26,7 +26,7 @@ It started as the page builder of [NakJual](https://nakjual.com) and is made gen
 
 ```bash
 composer config repositories.vortechron-block-editor vcs https://github.com/vortechron/filament-block-editor.git
-composer require vortechron/filament-block-editor:^2.13
+composer require vortechron/filament-block-editor:^2.14
 php artisan filament:assets   # with Filament
 # or, without Filament:
 php artisan vendor:publish --tag=filament-block-editor-assets
@@ -353,3 +353,116 @@ workbench has a sample page at `/` (`composer serve`) and a demo builder at `/ad
 ## License
 
 GPL-3.0-or-later, as before (see `LICENSE`).
+
+### Shared pages with text per field
+
+A host may keep one format-2 page and add optional `translations[locale]` text maps. Structure,
+block styles, pictures, form keys and action targets remain shared. Inline words, marks and links
+may differ by language. Enable field controls with:
+
+```php
+protected function getPageBuilderFieldLanguages(): array
+{
+    return ['defaultLocale' => 'ms', 'locales' => [
+        ['locale' => 'ms', 'label' => 'Bahasa Melayu'],
+        ['locale' => 'en', 'label' => 'English'],
+    ]];
+}
+```
+
+The equivalent JS option is `fieldLanguages`. Each text field selects its own language without
+saving or navigating. The separate Preview language selects the full page's language. A missing
+translation shows the base words and a missing-language hint. An explicit empty string stays empty.
+Save and undo include every language draft. Edits made during a pending save remain unsaved.
+
+`Field::text()` and `Field::textarea()` translate by default. Use `->translatable(false)` for facts,
+prices, identifiers and code. `Field::isTranslatable()` and `toArray()['translatable']` expose the rule.
+Other field types never translate. Registered list fields translate their declared text children.
+List rows reserve `_id`; form choices reserve `option_ids`. Keep these identities when moving rows.
+Existing form block ids, field ids and submission names stay unchanged.
+
+Use `Content\TextTranslations::ensureIds($base)` once and persist its result when converting a
+shared page. `extract($base, $translated)` returns the opaque text map, including equal and empty
+words; it throws `InvalidArgumentException` for shared layout changes or unknown custom/form data.
+Missing ids in a legacy translation align with the base. Rich inline words, marks and safe inline
+links are independent per language. A cleared base field does not erase another language.
+`normalizeOverrides($base, $map)` drops unknown plain keys and values for available definitions.
+Invalid rich values are refused. `apply($base, $map)` returns the selected format-2 page without its language maps. All four methods accept a page value or section list. Callers should not construct text keys.
+Rich fields use one durable key, `block:<id>/rich`, whose value is a versioned JSON string:
+`{"version":1,"content":[...BlockNote inline items...]}`. An explicit empty inline tree
+`{"version":1,"content":[]}` is a saved value; no override means fallback. The field stays stable
+when BlockNote splits or merges styled text. Unknown inline shapes, unsafe links, privileged chip
+properties, unknown chip keys and payloads above 100000 bytes are refused. Rich JSON is never
+truncated. A chip may use an existing base key or a registered shared key and carries only that key.
+Earlier unreleased `/content/...` run maps are refused with a rebuild message.
+
+An identified table cell uses `block:<tableId>/rich-cell:<cellId>` and a cell `_id`. Table layout is
+shared. Missing or orphaned translated cell ids refuse the save. The section editor preserves ids
+for unchanged tables and rolls back table edits whose identity it cannot safely track, with an
+owner message. It never guesses which moved cell owns a translation. In a host with field languages,
+select a Table item to edit each named row/column Words field, or use “Edit table N words” in the
+section editor. Each cell has its own language footer and complete inline editor. A new Table gets
+fresh cell ids before its first draft; an explicit Duplicate keeps the source cell identities under
+the new table block id. Native table editing remains available without a field-languages envelope.
+
+Words now has one language footer for the complete field. Plain paragraphs and quotes retain their
+four-row text boxes. "Format words" opens the inline editor for the selected language; marked text
+opens it directly. The section editor edits the default language; individual Words fields edit their
+selected languages. Save, reload, undo and redo retain the complete language values. The link
+controls preserve relative page paths, query strings and anchors. Unsafe or malformed web links
+are refused before changing the draft, and the public PHP save validates them again.
+`PageRenderer` resolves the map using `ContentLocale::site()` at the public rendering boundary.
+
+`PageValue::normalize()` preserves and cleans optional language maps. Its guard also protects locked
+and developer-only words. Unilingual values keep the previous normalization behavior; merely reading
+a legacy page does not add new block identities. The old `getPageBuilderLanguages()` navigation
+and creation hooks continue working for hosts with separate language documents.
+
+If a custom block definition is temporarily missing, ordinary normalization keeps its data and
+opaque maps scoped to its block ids. `PageValue::guard()` freezes those blocks and maps to their
+stored values while allowing unrelated fields to change. `TextTranslations::textFields()` reads
+only currently understood fields for permission checks; `extract()` remains strict for conversion.
+A client cannot add or reuse a missing block without a stored baseline. Such a section save returns
+a failed-save message asking the owner to re-enable the definition, preserving the source drafts.
+
+Ordinary translated-document edits use `extractForEdit($base, $translated, $storedOverrides)`.
+It refuses shared layout/media/action changes, freezes missing definitions, and retains absent
+fallback keys for untouched fields. `restoreOverrides($base, $desiredOverrides, $storedOverrides)`
+restores exact understood key presence while keeping unavailable fields at their current stored values.
+Conversion continues to use strict `extract()`.
+
+`Field::text(...)->emptyFallback()` (also textarea) declares that legacy empty words mean a dynamic
+host fallback. Extraction records this mode as `<field-key>/_empty_fallback = '1'` only alongside
+an empty override for a declared field. Form submit/success slots support the same legacy mode.
+A new field edit removes only its companion; an explicit empty override then stays blank. A host
+view may call `TextTranslations::isExplicitlyBlank($block, 'title')` to distinguish it from automatic
+text. The generated block `_translated_empty` list validates declared fields and stable repeater
+paths, survives rendering normalization, and follows the same locked/developer guards as its words.
+Hosts keep their own fallback calculation; the package never stores the calculated category name.
+
+Saving a copy or making a section synced sends only that section's maps in optional
+`adapter.saveSection(section, {title, synced, translations})`. Hosts may override
+`savePageBuilderSectionTranslations($section, $title, $synced, $translations)`; its default delegates
+to the unchanged older hook. The public `saveSectionFromPageBuilder` accepts maps as its fourth
+argument and validates and guards the complete value before calling the hook. A successful result
+may return canonical `section` and `translations`; template and synced-library entries carry maps
+beside `section`. Copies and detached sections remap words to the actual copied block ids in one
+undo step. A pending response never replaces a source whose words or maps changed after capture.
+
+Previews accept `previewPageBuilder($value, $kit, $siteInfo, $contentLocale, $siteInfoTranslations)`;
+only enabled field languages can override the preview locale. Malformed rich values return a
+failed save with a useful panel-language message, without saving partial data. The adapter supplies
+these as `PreviewExtra.contentLocale` and `PreviewExtra.siteInfoTranslations`.
+
+Shop info may return `translations[locale][group][field]` beside `groups` and base `values`.
+Only explicitly translatable top-level settings text gets a language control; nested settings lists
+stay shared. Declare phone numbers, addresses, hours and other facts `translatable(false)`.
+`adapter.saveSiteInfo(values, translations?)` saves all drafts. Hosts supporting translated settings
+override the additive hooks `savePageBuilderSiteInfoTranslations(array $values, array $translations)`
+and `withPageBuilderSiteInfoTranslations(array $values, array $translations, Closure $draw)`.
+Their defaults delegate to the old one-language hooks, whose signatures are unchanged.
+
+Deliberately cleared default or translated form submit/success text carries the narrow
+`_translated_empty` form metadata so legacy defaults do not replace an intentional blank. The real
+field control records default-language clears; both cleaners retain only supported, actually blank slots. It is not an arbitrary
+form-data extension; conversion still rejects unknown form data.

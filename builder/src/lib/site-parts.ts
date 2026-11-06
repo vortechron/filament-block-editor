@@ -36,7 +36,9 @@ export function normalizeParts(raw: unknown): PagePart[] {
     return raw
         .filter(
             (part): part is Record<string, unknown> =>
-                typeof part === 'object' && part !== null && isPartKey(part.key),
+                typeof part === 'object' &&
+                part !== null &&
+                isPartKey(part.key),
         )
         .map((part) => ({
             key: part.key as PartKey,
@@ -63,7 +65,10 @@ export function normalizeSiteInfo(raw: unknown): SiteInfo | null {
         )
         .map((group) => ({
             key: group.key as string,
-            label: typeof group.label === 'string' ? group.label : (group.key as string),
+            label:
+                typeof group.label === 'string'
+                    ? group.label
+                    : (group.key as string),
             fields: (group.fields as unknown[]).filter(
                 (field): field is OwnBlockField =>
                     typeof field === 'object' &&
@@ -80,17 +85,28 @@ export function normalizeSiteInfo(raw: unknown): SiteInfo | null {
 
     return {
         groups,
+        ...(isRecord(source.translations)
+            ? {
+                  translations: source.translations as NonNullable<
+                      SiteInfo['translations']
+                  >,
+              }
+            : {}),
         values: Object.fromEntries(
             groups.map((group) => [
                 group.key,
-                isRecord(values[group.key]) ? (values[group.key] as Record<string, unknown>) : {},
+                isRecord(values[group.key])
+                    ? (values[group.key] as Record<string, unknown>)
+                    : {},
             ]),
         ),
     };
 }
 
 export function normalizeKind(raw: unknown): DocumentKind {
-    return (KINDS as readonly unknown[]).includes(raw) ? (raw as DocumentKind) : 'page';
+    return (KINDS as readonly unknown[]).includes(raw)
+        ? (raw as DocumentKind)
+        : 'page';
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

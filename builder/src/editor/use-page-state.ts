@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useHost } from '@/lib/host';
 import {
     canRedo,
@@ -10,7 +10,16 @@ import {
     redo as redoHistory,
     undo as undoHistory,
 } from '@/lib/page-history';
+import {
+    copyTranslations,
+    containsCopies,
+    type BlockCopyMap,
+} from '@/lib/translation-copies';
 import { normalizeValue } from '@/lib/page-value';
+import {
+    tableIds,
+    withoutDeletedTableTranslations,
+} from '@/lib/table-identities';
 import type { PageValue, SaveResult } from '@/types';
 
 /** How long "Saved" shows after a save. */
@@ -40,12 +49,28 @@ export function usePageState(
     const [recentlySuccessful, setRecentlySuccessful] = useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const latest = useRef(initial);
+    // A table's IDs and locale maps belong to page history. Keep that owner
+    // after deletion, so native history cannot resurrect an ID-stripped table.
+    const tableHistorySections = useRef(
+        new Set(
+            initial.sections.flatMap((section) =>
+                section.type === 'rich' &&
+                tableIds(section.data.document).length
+                    ? [section.id]
+                    : [],
+            ),
+        ),
+    );
     const savedTimer = useRef<number | undefined>(undefined);
+    useEffect(() => () => window.clearTimeout(savedTimer.current), []);
     const [history, setHistoryState] = useState(emptyHistory<PageValue>);
     const latestHistory = useRef(history);
     // The group of the step running now (inGroup), over the caller's own.
     const runningGroup = useRef<string | null>(null);
     const groupCount = useRef(0);
+    const pendingCopies = useRef<{ mapping: BlockCopyMap; group: string }[]>(
+        [],
+    );
 
     function setHistory(next: History<PageValue>) {
         latestHistory.current = next;
@@ -75,14 +100,30 @@ export function usePageState(
         group?: string,
     ) {
         const before = latest.current;
-        const next = typeof update === 'function' ? update(before) : update;
+        let next = typeof update === 'function' ? update(before) : update;
+        const ready = pendingCopies.current.filter((entry) =>
+            containsCopies(next, entry.mapping),
+        );
+        pendingCopies.current = pendingCopies.current.filter(
+            (entry) => !ready.includes(entry),
+        );
+        for (const entry of ready) next = copyTranslations(next, entry.mapping);
+        next = withoutDeletedTableTranslations(before, next);
+        for (const section of next.sections) {
+            if (
+                section.type === 'rich' &&
+                tableIds(section.data.document).length
+            )
+                tableHistorySections.current.add(section.id);
+        }
 
         if (next === before) {
             return;
         }
 
         const recorded = record(latestHistory.current, before, next, {
-            group: runningGroup.current ?? group ?? newGroup(),
+            group:
+                runningGroup.current ?? ready[0]?.group ?? group ?? newGroup(),
             now: Date.now(),
         });
 
@@ -93,6 +134,14 @@ export function usePageState(
 
         setHistory(recorded);
         show(next);
+    }
+
+    function copyTextFor(mapping: BlockCopyMap) {
+        if (!Object.keys(mapping).length) return;
+        const group = runningGroup.current ?? newGroup();
+        pendingCopies.current.push({ mapping, group });
+        if (containsCopies(latest.current, mapping))
+            setData(latest.current, group);
     }
 
     /**
@@ -201,6 +250,7 @@ export function usePageState(
     return {
         data,
         setData,
+        copyTextFor,
         /** The latest value, also between a change and the next draw. */
         current: () => latest.current,
         inGroup,
@@ -213,6 +263,9 @@ export function usePageState(
         stepCount: () => latestHistory.current.started,
         canUndo: canUndo(history),
         canRedo: canRedo(history),
+        /** Main bilingual table editors must not split structural history from locale maps. */
+        hasTableHistory: (sectionId: string) =>
+            tableHistorySections.current.has(sectionId),
         save,
         errors,
         clearErrors: () => setErrors({}),

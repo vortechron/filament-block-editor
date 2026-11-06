@@ -9,6 +9,8 @@ use Vortechron\FilamentBlockEditor\Blocks\BlockRegistry;
 use Vortechron\FilamentBlockEditor\Blocks\Field;
 use Vortechron\FilamentBlockEditor\Blocks\OwnBlock;
 use Vortechron\FilamentBlockEditor\Content\PageContent;
+use Vortechron\FilamentBlockEditor\Content\PageValue;
+use Vortechron\FilamentBlockEditor\Content\TextTranslations;
 use Vortechron\FilamentBlockEditor\Rendering\ContentLocale;
 use Workbench\App\Filament\Pages\DemoBuilder;
 
@@ -269,5 +271,141 @@ class PageBuilderPageTest extends FilamentTestCase
         $this->assertNull(DemoBuilder::$saved);
 
         DemoBuilder::$denied = false;
+    }
+
+    public function test_a_client_can_save_other_words_while_a_translated_block_definition_is_missing(): void
+    {
+        $this->signIn();
+        $registry = app(BlockRegistry::class);
+        $definition = $registry->get('fbe-faq');
+        $base = TextTranslations::ensureIds(['sections' => [['id' => 's', 'type' => 'rich', 'data' => ['document' => [
+            ['id' => 'h', 'type' => 'heading', 'content' => [['type' => 'text', 'text' => 'Selamat', 'styles' => []]]],
+            ['id' => 'faq', 'type' => 'ownBlock', 'props' => ['kind' => 'fbe-faq', 'values' => '{"heading":"Soalan Melayu","items":[{"_id":"q1","question":"Boleh?","answer":"Boleh."}],"open_first":true}']],
+        ]]]]]);
+        $english = $base;
+        $english['sections'][0]['data']['document'][0]['content'][0]['text'] = 'Welcome';
+        $english['sections'][0]['data']['document'][1]['props']['values'] = '{"heading":"Questions","items":[{"_id":"q1","question":"Can I?","answer":"Yes."}],"open_first":true}';
+        $stored = PageValue::normalize([...$base, 'translations' => ['en' => TextTranslations::extract($base, $english)]]);
+        $english['sections'][0]['data']['document'][0]['content'][0]['text'] = 'New welcome';
+        $newHeading = TextTranslations::extract($base, $english)['block:h/rich'];
+        DemoBuilder::$saved = $stored;
+        $registry->forget('fbe-faq');
+        try {
+            $component = Livewire::test(DemoBuilder::class);
+            $loaded = $component->instance()->getPageBuilderOptions()['value'];
+            $draft = $loaded;
+            $draft['sections'][0]['data']['document'][0]['content'][0]['text'] = 'Selamat baharu';
+            $draft['sections'][0]['data']['document'][1]['props']['values'] = '{"heading":"Injected base","extra":"not permitted"}';
+            $draft['translations']['en'] = ['block:h/rich' => $newHeading, 'block:faq/values/heading' => 'Injected English', 'block:faq/values/privileged' => 'Injected extra'];
+            $result = $component->call('savePageBuilder', $draft)->effects['returns'][0];
+            $this->assertTrue($result['ok'], json_encode($result));
+            $saved = DemoBuilder::$saved;
+            $this->assertSame($stored['translations']['en']['block:faq/values/heading'], $loaded['translations']['en']['block:faq/values/heading']);
+            $this->assertSame($stored['sections'][0]['data']['document'][1], $saved['sections'][0]['data']['document'][1]);
+            $this->assertSame('Selamat baharu', $saved['sections'][0]['data']['document'][0]['content'][0]['text']);
+            foreach ($stored['translations']['en'] as $key => $text) {
+                if (str_starts_with($key, 'block:faq/')) {
+                    $this->assertSame($text, $saved['translations']['en'][$key]);
+                }
+            }
+            $this->assertArrayNotHasKey('block:faq/values/privileged', $saved['translations']['en']);
+        } finally {
+            $registry->register($definition);
+        }
+        $resolved = TextTranslations::apply($saved, $saved['translations']['en']);
+        $this->assertSame('New welcome', $resolved['sections'][0]['data']['document'][0]['content'][0]['text']);
+        $faq = json_decode($resolved['sections'][0]['data']['document'][1]['props']['values'], true);
+        $this->assertSame('Questions', $faq['heading']);
+        $this->assertSame('Can I?', $faq['items'][0]['question']);
+        $this->assertSame('Yes.', $faq['items'][0]['answer']);
+    }
+
+    public function test_a_missing_definition_does_not_relax_locked_or_developer_word_guards(): void
+    {
+        $this->signIn();
+        $registry = app(BlockRegistry::class);
+        $definition = $registry->get('fbe-faq');
+        $registry->register(OwnBlock::make('private-words')->fields([Field::text('public'), Field::text('private')->developerOnly()]));
+        $base = TextTranslations::ensureIds(['sections' => [
+            ['id' => 's', 'type' => 'rich', 'data' => ['document' => [
+                ['id' => 'private', 'type' => 'ownBlock', 'props' => ['kind' => 'private-words', 'values' => '{"public":"Awam","private":"Dalaman"}']],
+                ['id' => 'faq', 'type' => 'ownBlock', 'props' => ['kind' => 'fbe-faq', 'values' => '{"heading":"Soalan Melayu","items":[]}']],
+            ]]],
+            ['id' => 'locked', 'type' => 'rich', 'lock' => ['content' => true], 'data' => ['document' => [
+                ['id' => 'locked-heading', 'type' => 'heading', 'content' => [['type' => 'text', 'text' => 'Dikunci', 'styles' => []]]],
+            ]]],
+        ]]);
+        $english = $base;
+        $english['sections'][0]['data']['document'][0]['props']['values'] = '{"public":"Public","private":"Internal"}';
+        $english['sections'][0]['data']['document'][1]['props']['values'] = '{"heading":"Questions","items":[]}';
+        $english['sections'][1]['data']['document'][0]['content'][0]['text'] = 'Locked';
+        $stored = PageValue::normalize([...$base, 'translations' => ['en' => TextTranslations::extract($base, $english)]]);
+        $english['sections'][0]['data']['document'][0]['props']['values'] = '{"public":"New public","private":"Injected English"}';
+        $english['sections'][1]['data']['document'][0]['content'][0]['text'] = 'Injected locked English';
+        $posted = [...$base, 'translations' => ['en' => TextTranslations::extract($base, $english)]];
+        $posted['sections'][0]['data']['document'][0]['props']['values'] = '{"public":"Awam baharu","private":"Injected base"}';
+        $posted['sections'][1]['data']['document'][0]['content'][0]['text'] = 'Injected locked base';
+        unset($posted['sections'][1]['lock']);
+        DemoBuilder::$saved = $stored;
+        $registry->forget('fbe-faq');
+        try {
+            $result = Livewire::test(DemoBuilder::class)->call('savePageBuilder', $posted)->effects['returns'][0];
+            $this->assertTrue($result['ok'], json_encode($result));
+            $saved = DemoBuilder::$saved;
+            $values = json_decode($saved['sections'][0]['data']['document'][0]['props']['values'], true);
+            $this->assertSame('Awam baharu', $values['public']);
+            $this->assertSame('Dalaman', $values['private']);
+            $this->assertSame('New public', $saved['translations']['en']['block:private/values/public']);
+            $this->assertSame('Internal', $saved['translations']['en']['block:private/values/private']);
+            $this->assertSame($stored['sections'][1], $saved['sections'][1]);
+            $this->assertSame($stored['translations']['en']['block:locked-heading/rich'], $saved['translations']['en']['block:locked-heading/rich']);
+            $this->assertSame($stored['translations']['en']['block:faq/values/heading'], $saved['translations']['en']['block:faq/values/heading']);
+        } finally {
+            $registry->register($definition);
+        }
+    }
+
+    public function test_invalid_rich_words_refuse_the_save_with_a_useful_error(): void
+    {
+        $this->signIn();
+        app()->setLocale('en');
+        $value = ['sections' => [['id' => 's', 'type' => 'rich', 'data' => ['document' => [
+            ['id' => 'p', 'type' => 'paragraph', 'content' => []],
+        ]]]], 'translations' => ['en' => ['block:p/rich' => 'not JSON']]];
+        $result = Livewire::test(DemoBuilder::class)->call('savePageBuilder', $value)->effects['returns'][0];
+        $this->assertFalse($result['ok']);
+        $this->assertStringContainsString('Rich words', $result['errors']['value']);
+        $this->assertNull(DemoBuilder::$saved);
+    }
+
+    public function test_malformed_web_links_refuse_the_public_rich_save(): void
+    {
+        $this->signIn();
+        app()->setLocale('en');
+        $value = ['sections' => [['id' => 's', 'type' => 'rich', 'data' => ['document' => [
+            ['id' => 'p', 'type' => 'paragraph', 'content' => []],
+        ]]]], 'translations' => ['en' => ['block:p/rich' => json_encode(['version' => 1, 'content' => [
+            ['type' => 'link', 'href' => 'https:///en/stationery?source=field-qa#items', 'content' => [
+                ['type' => 'text', 'text' => 'Send', 'styles' => (object) []],
+            ]],
+        ]])]]];
+        $result = Livewire::test(DemoBuilder::class)->call('savePageBuilder', $value)->effects['returns'][0];
+        $this->assertFalse($result['ok']);
+        $this->assertStringContainsString('link is unsafe or invalid', $result['errors']['value']);
+        $this->assertNull(DemoBuilder::$saved);
+    }
+
+    public function test_rich_save_errors_use_malay_panel_words_even_for_english_content(): void
+    {
+        $this->signIn();
+        app()->setLocale('ms');
+        DemoBuilder::$contentLocale = 'en';
+        $value = ['sections' => [['id' => 's', 'type' => 'rich', 'data' => ['document' => [
+            ['id' => 'p', 'type' => 'paragraph', 'content' => []],
+        ]]]], 'translations' => ['en' => ['block:p/rich' => 'not JSON']]];
+        $result = Livewire::test(DemoBuilder::class)->call('savePageBuilder', $value)->effects['returns'][0];
+        $this->assertFalse($result['ok']);
+        $this->assertSame('Teks berformat bukan JSON yang sah. Muat semula ruangan dan cuba lagi.', $result['errors']['value']);
+        $this->assertNull(DemoBuilder::$saved);
     }
 }

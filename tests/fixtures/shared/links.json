@@ -17,6 +17,16 @@
             "output": "/contact"
         },
         {
+            "name": "a relative page link with query and anchor",
+            "input": "/en/stationery?source=field-qa#items",
+            "output": "/en/stationery?source=field-qa#items"
+        },
+        {
+            "name": "a malformed https address with no host",
+            "input": "https:///en/stationery",
+            "output": null
+        },
+        {
             "name": "spaces around are trimmed",
             "input": " /contact ",
             "output": "/contact"

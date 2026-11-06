@@ -53,7 +53,7 @@ final class CoreBlocks
             ->icon('map-pin')
             ->description(self::t('map.description'))
             ->fields([
-                Field::text('address')->label(self::t('map.address')),
+                Field::text('address')->translatable(false)->label(self::t('map.address')),
                 Field::link('embed_url')->label(self::t('map.embed_url')),
                 Field::select('height')->label(self::t('map.height'))->options([
                     'sm' => self::t('map.small'), 'md' => self::t('map.medium'), 'lg' => self::t('map.large'),
@@ -102,7 +102,7 @@ final class CoreBlocks
             ->fields([
                 Field::list('plans')->label(self::t('pricing.plans'))->maxItems(6)->fields([
                     Field::text('name')->label(self::t('pricing.name')),
-                    Field::text('price')->label(self::t('pricing.price')),
+                    Field::text('price')->translatable(false)->label(self::t('pricing.price')),
                     Field::text('period')->label(self::t('pricing.period')),
                     Field::textarea('features')->label(self::t('pricing.features')),
                     Field::text('button_text')->label(self::t('pricing.button_text')),

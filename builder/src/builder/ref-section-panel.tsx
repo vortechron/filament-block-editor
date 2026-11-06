@@ -11,6 +11,7 @@ import { useState } from 'react';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
 import { withoutDeveloperData } from '@/lib/locks';
+import { copySectionTranslations } from '@/lib/section-translations';
 import { findSynced } from '@/lib/synced-sections';
 import type { RefSection, RichSection } from '@/types';
 import { duplicateBlock } from '../editor/block-meta';
@@ -43,10 +44,15 @@ export function RefSectionPanel({
     function detach(section: RichSection) {
         const copy = developer ? section : withoutDeveloperData(section);
 
-        builder.replaceSection(block.id, {
+        const detached = {
             ...duplicateBlock(copy),
             ...(isHidden ? { hidden: true as const } : {}),
-        });
+        };
+        builder.replaceSection(
+            block.id,
+            detached,
+            copySectionTranslations(section, detached, synced?.translations),
+        );
     }
 
     return (
@@ -57,7 +63,10 @@ export function RefSectionPanel({
                 </span>
                 <div className="min-w-0">
                     <p className="text-foreground truncate text-sm font-semibold">
-                        {sectionTitle(block, t, { synced: library.synced, ownBlocks })}
+                        {sectionTitle(block, t, {
+                            synced: library.synced,
+                            ownBlocks,
+                        })}
                     </p>
                     <p className="text-muted-foreground text-xs">
                         {t('Section :number of :count', {
@@ -73,7 +82,9 @@ export function RefSectionPanel({
             <div className="bg-muted/60 flex items-center gap-1 rounded-xl border p-1">
                 <ActionButton
                     label={
-                        isHidden ? t('Show on the page') : t('Hide from the page')
+                        isHidden
+                            ? t('Show on the page')
+                            : t('Hide from the page')
                     }
                     onClick={() => builder.toggleHidden(block.id)}
                     isActive={isHidden}
@@ -105,12 +116,21 @@ export function RefSectionPanel({
             </div>
 
             <div className="bg-muted/60 text-muted-foreground grid gap-1 rounded-xl p-3 text-sm leading-relaxed">
-                <p>{t('This section is shared. Every page that uses it shows the same words.')}</p>
-                {!synced?.editUrl && <p>{t('Change it where the synced section is kept.')}</p>}
+                <p>
+                    {t(
+                        'This section is shared. Every page that uses it shows the same words.',
+                    )}
+                </p>
+                {!synced?.editUrl && (
+                    <p>{t('Change it where the synced section is kept.')}</p>
+                )}
             </div>
 
             {synced?.editUrl && (
-                <EditElsewhereLink href={synced.editUrl} label={t('Edit synced section')} />
+                <EditElsewhereLink
+                    href={synced.editUrl}
+                    label={t('Edit synced section')}
+                />
             )}
 
             <button
@@ -124,7 +144,9 @@ export function RefSectionPanel({
             </button>
             {!synced && (
                 <p className="text-muted-foreground text-xs">
-                    {t('This page does not have the synced section’s words, so it can not be detached here.')}
+                    {t(
+                        'This page does not have the synced section’s words, so it can not be detached here.',
+                    )}
                 </p>
             )}
 

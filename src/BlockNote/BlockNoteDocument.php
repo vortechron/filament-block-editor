@@ -5,6 +5,7 @@ namespace Vortechron\FilamentBlockEditor\BlockNote;
 use Illuminate\Support\Str;
 use Vortechron\FilamentBlockEditor\Blocks\BlockRegistry;
 use Vortechron\FilamentBlockEditor\Content\DynamicValues;
+use Vortechron\FilamentBlockEditor\Content\OwnTextPresence;
 use Vortechron\FilamentBlockEditor\Forms\FormDefinition;
 use Vortechron\FilamentBlockEditor\Styling\Look;
 use Vortechron\FilamentBlockEditor\Support\Urls;
@@ -175,7 +176,7 @@ final class BlockNoteDocument
             $block['id'] = self::blockId($block['id'] ?? null) ?? Str::lower(Str::random(8));
         }
 
-        return $block;
+        return OwnTextPresence::clean($block);
     }
 
     /**

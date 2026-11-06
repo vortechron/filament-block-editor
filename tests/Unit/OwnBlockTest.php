@@ -37,15 +37,15 @@ class OwnBlockTest extends TestCase
         $this->assertSame('pencil', $definition['icon']);
         $this->assertSame('Categories and items from the Barang screen.', $definition['description']);
         $this->assertSame(
-            ['name' => 'heading', 'label' => 'Heading', 'type' => 'text', 'default' => 'Stationery'],
+            ['name' => 'heading', 'label' => 'Heading', 'type' => 'text', 'translatable' => true, 'default' => 'Stationery'],
             $definition['fields'][0],
         );
         $this->assertSame(
-            ['name' => 'style', 'label' => 'Style', 'type' => 'select', 'options' => [['value' => 'plain', 'label' => 'Plain'], ['value' => 'boxed', 'label' => 'Boxed']], 'default' => 'plain'],
+            ['name' => 'style', 'label' => 'Style', 'type' => 'select', 'translatable' => false, 'options' => [['value' => 'plain', 'label' => 'Plain'], ['value' => 'boxed', 'label' => 'Boxed']], 'default' => 'plain'],
             $definition['fields'][2],
         );
         $this->assertSame(
-            ['name' => 'items', 'label' => 'Items', 'type' => 'list', 'fields' => [['name' => 'name', 'label' => 'Name', 'type' => 'text', 'default' => '']], 'maxItems' => 3, 'default' => []],
+            ['name' => 'items', 'label' => 'Items', 'type' => 'list', 'translatable' => false, 'fields' => [['name' => 'name', 'label' => 'Name', 'type' => 'text', 'translatable' => true, 'default' => '']], 'maxItems' => 3, 'default' => []],
             $definition['fields'][7],
         );
         $this->assertSame(

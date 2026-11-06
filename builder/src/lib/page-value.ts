@@ -48,7 +48,15 @@ const ENUMS = {
     layout: SECTION_LAYOUTS,
     background: ['none', 'color', 'image'],
     padding: ['md', 'none', 'sm', 'lg', 'xl'],
-    font: ['theme', 'grotesk', 'condensed', 'serif', 'poster', 'geometric', 'mono'],
+    font: [
+        'theme',
+        'grotesk',
+        'condensed',
+        'serif',
+        'poster',
+        'geometric',
+        'mono',
+    ],
     align: ['auto', 'left', 'center'],
     corners: ['theme', 'square', 'soft', 'round'],
     button: ['theme', 'solid', 'outline', 'pill', 'shadow'],
@@ -98,6 +106,12 @@ export function normalizeValue(
           : [];
 
     return {
+        ...(!Array.isArray(value) &&
+        value &&
+        'translations' in value &&
+        value.translations
+            ? { translations: structuredClone(value.translations) }
+            : {}),
         version: PAGE_VALUE_VERSION,
         sections: sections
             .filter(
@@ -115,7 +129,9 @@ export function isRichSection(section: Section): section is RichSection {
 }
 
 /** The last section with words of its own, for adding an item to. */
-export function lastRich(sections: readonly Section[]): RichSection | undefined {
+export function lastRich(
+    sections: readonly Section[],
+): RichSection | undefined {
     return sections.filter(isRichSection).at(-1);
 }
 
@@ -136,7 +152,12 @@ function normalizeSection(section: Record<string, unknown>): Section {
     const hidden = section.hidden === true ? { hidden: true as const } : {};
 
     if (section.type === 'ref') {
-        return { id, type: 'ref', ref: section.ref as number | string, ...hidden };
+        return {
+            id,
+            type: 'ref',
+            ref: section.ref as number | string,
+            ...hidden,
+        };
     }
 
     const lock = cleanLock(section.lock);
@@ -259,6 +280,12 @@ export function normalizeTemplates(
             description:
                 typeof input.description === 'string' ? input.description : '',
             data: normalizeSectionData(input.section?.data),
+            ...(typeof input.section?.id === 'string'
+                ? { sectionId: input.section.id }
+                : {}),
+            ...(input.translations
+                ? { translations: structuredClone(input.translations) }
+                : {}),
         }));
 }
 

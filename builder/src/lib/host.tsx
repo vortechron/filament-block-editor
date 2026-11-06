@@ -47,6 +47,9 @@ export type Host = {
     /** The pages one can build, for the title's menu. */
     pageMenu: PageMenuEntry[];
     languages: PageBuilderLanguage[];
+    fieldLanguages?: import('@/types').FieldLanguages;
+    previewLocale?: string;
+    setPreviewLocale?: (locale: string) => void;
     /** The synced sections this page may use, with the section each holds. */
     syncedSections: SyncedSectionOption[];
     /** The header and footer the page shows, each built on its own. */

@@ -1,4 +1,5 @@
 import { type ReactNode, useId } from 'react';
+import { LocalizedText } from './field-language';
 import { Input } from '@/ui/input';
 
 /**
@@ -56,7 +57,9 @@ export function TextField({
     placeholder,
     maxLength,
     onChange,
+    translationPath,
 }: {
+    translationPath?: string;
     label: string;
     hint?: string;
     error?: string;
@@ -66,6 +69,28 @@ export function TextField({
     onChange: (value: string) => void;
 }) {
     const id = useId();
+    if (translationPath) {
+        return (
+            <LocalizedText
+                path={translationPath}
+                label={label}
+                value={value}
+                onChange={onChange}
+            >
+                {(text, change) => (
+                    <TextField
+                        label={label}
+                        hint={hint}
+                        error={error}
+                        value={text}
+                        placeholder={placeholder}
+                        maxLength={maxLength}
+                        onChange={change}
+                    />
+                )}
+            </LocalizedText>
+        );
+    }
 
     return (
         <div className="grid gap-2">

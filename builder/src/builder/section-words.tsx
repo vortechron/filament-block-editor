@@ -2,6 +2,7 @@ import { Settings2 } from 'lucide-react';
 import {
     lazy,
     type PointerEvent,
+    type KeyboardEvent,
     Suspense,
     useEffect,
     useEffectEvent,
@@ -9,11 +10,13 @@ import {
 } from 'react';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
+import { tableIds } from '@/lib/table-identities';
 import type { RichSection } from '@/types';
 import { Skeleton } from '@/ui/skeleton';
 import { EditorErrorBoundary } from '../editor/editor-error-boundary';
 import { useBuilderContext } from './builder-context';
 import { describeBlock } from './item-catalog';
+import { historyKeyOf, isInModal } from './use-builder-shortcuts';
 
 /** BlockNote is large, so it loads on its own when a section is picked. */
 const SectionTextEditor = lazy(() => import('./section-text-editor'));
@@ -35,8 +38,9 @@ const SHEET_SETTLE_MS = 260;
  */
 export function SectionWords({ block }: { block: RichSection }) {
     const t = useT();
-    const { builder } = useBuilderContext();
-    const { accent, ownBlocks, upload, dynamicValues } = useHost();
+    const { builder, form } = useBuilderContext();
+    const { accent, ownBlocks, upload, dynamicValues, fieldLanguages } =
+        useHost();
     const ownBlockMap = new Map(
         ownBlocks.map((definition) => [definition.kind, definition]),
     );
@@ -104,6 +108,26 @@ export function SectionWords({ block }: { block: RichSection }) {
         }
     }
 
+    function handleHistoryKey(event: KeyboardEvent<HTMLElement>) {
+        const direction = historyKeyOf(event.nativeEvent);
+        const target = event.target;
+        if (
+            !fieldLanguages ||
+            direction === null ||
+            event.defaultPrevented ||
+            !form.hasTableHistory(block.id) ||
+            !(target instanceof Element) ||
+            !target.closest('.ProseMirror') ||
+            target.closest('input, textarea, [data-inline-words]') ||
+            isInModal(target)
+        )
+            return;
+        event.preventDefault();
+        event.stopPropagation();
+        if (direction === 'undo') builder.undo();
+        else builder.redo();
+    }
+
     function itemLabel(type: string, props: Record<string, unknown>) {
         const described = describeBlock(type, props, ownBlocks);
 
@@ -157,9 +181,39 @@ export function SectionWords({ block }: { block: RichSection }) {
                 </div>
             )}
 
+            {fieldLanguages && (
+                <>
+                    <p className="text-muted-foreground text-xs">
+                        {t(
+                            'The section editor changes :language. Use each item’s Words language to edit its translation.',
+                            {
+                                language:
+                                    fieldLanguages.locales.find(
+                                        (language) =>
+                                            language.locale ===
+                                            fieldLanguages.defaultLocale,
+                                    )?.label ?? fieldLanguages.defaultLocale,
+                            },
+                        )}
+                    </p>
+                    {tableIds(block.data.document).map((id, index) => (
+                        <button
+                            key={id}
+                            type="button"
+                            onClick={() => builder.selectItem(block.id, id)}
+                            className="min-h-11 justify-self-start text-sm underline underline-offset-4"
+                        >
+                            {t('Edit table :number words', {
+                                number: index + 1,
+                            })}
+                        </button>
+                    ))}
+                </>
+            )}
             <div
                 data-section-editor={block.id}
                 onPointerDownCapture={handlePointerDown}
+                onKeyDownCapture={handleHistoryKey}
                 className="always-light overflow-hidden rounded-xl border bg-white shadow-xs"
             >
                 <EditorErrorBoundary>
@@ -178,20 +232,40 @@ export function SectionWords({ block }: { block: RichSection }) {
                                 dynamicValues,
                             }}
                             uploadFile={(file) => upload(file)}
-                            onDocumentChange={(document) =>
-                                builder.updateSection(
-                                    block.id,
-                                    (current) =>
-                                        current.type === 'rich'
-                                            ? {
-                                                  ...current,
-                                                  data: { ...current.data, document },
-                                              }
-                                            : current,
-                                    // Typing joins up into one step to undo.
-                                    `words:${block.id}`,
+                            onDocumentChange={(document) => {
+                                const update = () =>
+                                    builder.updateSection(
+                                        block.id,
+                                        (current) =>
+                                            current.type === 'rich'
+                                                ? {
+                                                      ...current,
+                                                      data: {
+                                                          ...current.data,
+                                                          document,
+                                                      },
+                                                  }
+                                                : current,
+                                        // Typing joins up into one step to undo.
+                                        `words:${block.id}`,
+                                    );
+                                const previous = form
+                                    .current()
+                                    .sections.find(
+                                        (section) => section.id === block.id,
+                                    );
+                                // A native table insertion/deletion is one layout step,
+                                // separate from the words typed immediately before it.
+                                if (
+                                    fieldLanguages &&
+                                    previous?.type === 'rich' &&
+                                    JSON.stringify(
+                                        tableIds(previous.data.document),
+                                    ) !== JSON.stringify(tableIds(document))
                                 )
-                            }
+                                    form.asStep(update);
+                                else update();
+                            }}
                             onHandle={(next) =>
                                 builder.registerHandle(block.id, next)
                             }

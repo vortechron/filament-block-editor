@@ -15,11 +15,11 @@
 --}}
 @php
     $submit = $form->submit();
-    $buttonText = $submit['text'] !== '' ? $submit['text'] : __('filament-block-editor::page.form.submit');
+    $buttonText = $submit['text'] !== '' || $form->hasTranslatedEmpty('submit') ? $submit['text'] : __('filament-block-editor::page.form.submit');
 @endphp
 @if ($sent)
     <div class="fbe-form fbe-form-sent" id="form-{{ $blockId }}" role="status">
-        <p class="fbe-form-success">{{ $form->success() !== '' ? $form->success() : __('filament-block-editor::page.form.success') }}</p>
+        <p class="fbe-form-success">{{ $form->success() !== '' || $form->hasTranslatedEmpty('success') ? $form->success() : __('filament-block-editor::page.form.success') }}</p>
     </div>
 @else
     <form class="fbe-form" id="form-{{ $blockId }}" method="post" @if ($action !== null) action="{{ $action }}" @endif data-form="{{ $formKey }}">

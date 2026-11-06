@@ -49,7 +49,7 @@ import { TemplateMenu } from './template-menu';
 export function LayersPanel({ onPicked }: { onPicked?: () => void }) {
     const t = useT();
     const { builder, templates } = useBuilderContext();
-    const { developer, ownBlocks, parts } = useHost();
+    const { developer, ownBlocks, parts, fieldLanguages } = useHost();
     const { blocks, selection } = builder;
     // What the user opened or closed by hand. The picked section is open
     // until then. Local to this tab, so it is gone when the tab closes.
@@ -57,6 +57,7 @@ export function LayersPanel({ onPicked }: { onPicked?: () => void }) {
         {},
     );
     const nodes = buildStructureTree(blocks, {
+        keepEmpty: !!fieldLanguages,
         ownBlocks,
         canOpenItems: (section) =>
             section.type === 'rich' && !isLocked(section, 'content', developer),
@@ -164,9 +165,7 @@ export function LayersPanel({ onPicked }: { onPicked?: () => void }) {
                                     onPickItem={(itemId) =>
                                         pickItem(node, itemId)
                                     }
-                                    isSelected={
-                                        selection.sectionId === node.id
-                                    }
+                                    isSelected={selection.sectionId === node.id}
                                     onPick={() => {
                                         builder.selectSection(node.id);
                                         builder.scrollToSection(node.id);
@@ -266,122 +265,126 @@ function LayerRow({
             }}
             className={cn(isDragging && 'relative z-10')}
         >
-        <div
-            className={cn(
-                'group/row bg-card flex items-center gap-1 rounded-xl border p-1 pr-1.5 transition-[border-color,box-shadow]',
-                isSelected
-                    ? 'border-[var(--builder-select)] shadow-[0_0_0_1px_var(--builder-select)]'
-                    : 'hover:border-input',
-                isDragging && 'shadow-lg',
-            )}
-        >
-            {canMove ? (
-                <button
-                    ref={setActivatorNodeRef}
-                    type="button"
-                    {...attributes}
-                    {...listeners}
-                    aria-label={t('Move section :number', { number: index + 1 })}
-                    className="text-muted-foreground/70 hover:bg-muted hover:text-foreground grid h-9 w-6 shrink-0 cursor-grab touch-none place-items-center rounded-md active:cursor-grabbing"
-                >
-                    <GripVertical className="size-4" />
-                </button>
-            ) : (
-                <span
-                    title={t('Locked')}
-                    className="text-muted-foreground/60 grid h-9 w-6 shrink-0 place-items-center"
-                >
-                    <Lock className="size-3.5" />
-                </span>
-            )}
-            {node.canExpand ? (
-                <button
-                    type="button"
-                    onClick={onToggleOpen}
-                    aria-expanded={isOpen}
-                    aria-label={
-                        isOpen
-                            ? t('Hide items of section :number', {
-                                  number: index + 1,
-                              })
-                            : t('Show items of section :number', {
-                                  number: index + 1,
-                              })
-                    }
-                    className="text-muted-foreground hover:bg-muted hover:text-foreground grid size-6 shrink-0 place-items-center rounded-md"
-                >
-                    <ChevronRight
-                        className={cn(
-                            'size-4 transition-transform',
-                            isOpen && 'rotate-90',
-                        )}
-                    />
-                </button>
-            ) : (
-                <span aria-hidden className="size-6 shrink-0" />
-            )}
-            <button
-                type="button"
-                onClick={onPick}
+            <div
                 className={cn(
-                    'flex min-w-0 flex-1 items-center gap-2.5 rounded-lg py-1 text-left',
-                    isHidden && 'opacity-55',
+                    'group/row bg-card flex items-center gap-1 rounded-xl border p-1 pr-1.5 transition-[border-color,box-shadow]',
+                    isSelected
+                        ? 'border-[var(--builder-select)] shadow-[0_0_0_1px_var(--builder-select)]'
+                        : 'hover:border-input',
+                    isDragging && 'shadow-lg',
                 )}
             >
-                <span
-                    className={cn(
-                        'grid size-8 shrink-0 place-items-center rounded-lg',
-                        isSelected
-                            ? 'bg-[var(--builder-select)] text-white'
-                            : 'bg-muted text-muted-foreground',
-                    )}
-                >
-                    <Icon className="size-4" />
-                </span>
-                <span className="min-w-0">
-                    <span className="text-foreground block truncate text-sm font-medium">
-                        {title}
+                {canMove ? (
+                    <button
+                        ref={setActivatorNodeRef}
+                        type="button"
+                        {...attributes}
+                        {...listeners}
+                        aria-label={t('Move section :number', {
+                            number: index + 1,
+                        })}
+                        className="text-muted-foreground/70 hover:bg-muted hover:text-foreground grid h-9 w-6 shrink-0 cursor-grab touch-none place-items-center rounded-md active:cursor-grabbing"
+                    >
+                        <GripVertical className="size-4" />
+                    </button>
+                ) : (
+                    <span
+                        title={t('Locked')}
+                        className="text-muted-foreground/60 grid h-9 w-6 shrink-0 place-items-center"
+                    >
+                        <Lock className="size-3.5" />
                     </span>
-                    <span className="text-muted-foreground block truncate text-xs">
-                        {index + 1}.{' '}
-                        {block.type === 'ref'
-                            ? `#${String(block.ref)}`
-                            : sectionKind(block, t)}
-                        {isHidden && ` · ${t('Hidden')}`}
-                    </span>
-                </span>
-            </button>
-            {canRemove && (
+                )}
+                {node.canExpand ? (
+                    <button
+                        type="button"
+                        onClick={onToggleOpen}
+                        aria-expanded={isOpen}
+                        aria-label={
+                            isOpen
+                                ? t('Hide items of section :number', {
+                                      number: index + 1,
+                                  })
+                                : t('Show items of section :number', {
+                                      number: index + 1,
+                                  })
+                        }
+                        className="text-muted-foreground hover:bg-muted hover:text-foreground grid size-6 shrink-0 place-items-center rounded-md"
+                    >
+                        <ChevronRight
+                            className={cn(
+                                'size-4 transition-transform',
+                                isOpen && 'rotate-90',
+                            )}
+                        />
+                    </button>
+                ) : (
+                    <span aria-hidden className="size-6 shrink-0" />
+                )}
                 <button
                     type="button"
-                    onClick={onToggleHidden}
-                    aria-label={
-                        isHidden
-                            ? t('Show section :number on the page', {
-                                  number: index + 1,
-                              })
-                            : t('Hide section :number from the page', {
-                                  number: index + 1,
-                              })
-                    }
-                    title={
-                        isHidden ? t('Show on the page') : t('Hide from the page')
-                    }
+                    onClick={onPick}
                     className={cn(
-                        'hover:bg-muted grid size-8 shrink-0 place-items-center rounded-md transition-colors',
-                        isHidden
-                            ? 'text-foreground'
-                            : 'text-muted-foreground/70 opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100',
+                        'flex min-w-0 flex-1 items-center gap-2.5 rounded-lg py-1 text-left',
+                        isHidden && 'opacity-55',
                     )}
                 >
-                    {isHidden ? (
-                        <EyeOff className="size-4" />
-                    ) : (
-                        <Eye className="size-4" />
-                    )}
+                    <span
+                        className={cn(
+                            'grid size-8 shrink-0 place-items-center rounded-lg',
+                            isSelected
+                                ? 'bg-[var(--builder-select)] text-white'
+                                : 'bg-muted text-muted-foreground',
+                        )}
+                    >
+                        <Icon className="size-4" />
+                    </span>
+                    <span className="min-w-0">
+                        <span className="text-foreground block truncate text-sm font-medium">
+                            {title}
+                        </span>
+                        <span className="text-muted-foreground block truncate text-xs">
+                            {index + 1}.{' '}
+                            {block.type === 'ref'
+                                ? `#${String(block.ref)}`
+                                : sectionKind(block, t)}
+                            {isHidden && ` · ${t('Hidden')}`}
+                        </span>
+                    </span>
                 </button>
-            )}
-        </div>
+                {canRemove && (
+                    <button
+                        type="button"
+                        onClick={onToggleHidden}
+                        aria-label={
+                            isHidden
+                                ? t('Show section :number on the page', {
+                                      number: index + 1,
+                                  })
+                                : t('Hide section :number from the page', {
+                                      number: index + 1,
+                                  })
+                        }
+                        title={
+                            isHidden
+                                ? t('Show on the page')
+                                : t('Hide from the page')
+                        }
+                        className={cn(
+                            'hover:bg-muted grid size-8 shrink-0 place-items-center rounded-md transition-colors',
+                            isHidden
+                                ? 'text-foreground'
+                                : 'text-muted-foreground/70 opacity-0 group-hover/row:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100',
+                        )}
+                    >
+                        {isHidden ? (
+                            <EyeOff className="size-4" />
+                        ) : (
+                            <Eye className="size-4" />
+                        )}
+                    </button>
+                )}
+            </div>
             {isOpen && (
                 <ItemTree
                     items={node.items}

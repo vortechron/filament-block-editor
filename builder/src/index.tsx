@@ -8,7 +8,11 @@ import { normalizeDynamicValues } from './lib/dynamic-values';
 import { normalizeKit } from './lib/kit';
 import { normalizeLanguages } from './lib/languages';
 import { normalizePageLinks, normalizePageMenu } from './lib/page-links';
-import { normalizeKind, normalizeParts, normalizeSiteInfo } from './lib/site-parts';
+import {
+    normalizeKind,
+    normalizeParts,
+    normalizeSiteInfo,
+} from './lib/site-parts';
 import { normalizeSyncedSections } from './lib/synced-sections';
 import { normalizeTemplates, normalizeValue } from './lib/page-value';
 import { withMissingPageBlockIds } from './lib/block-ids';
@@ -53,9 +57,12 @@ export function mountPageBuilder(
     }
 
     const locale = isLocale(options.locale) ? options.locale : 'ms';
-    const contentLocale = isLocale(options.contentLocale)
+    const previewLocale = isLocale(options.contentLocale)
         ? options.contentLocale
         : locale;
+    const contentLocale = isLocale(options.fieldLanguages?.defaultLocale)
+        ? options.fieldLanguages.defaultLocale
+        : previewLocale;
     const strings = { ...(options.strings ?? {}) };
     // Words saved by code have no block ids; the builder finds items by id.
     const initialValue = withMissingPageBlockIds(normalizeValue(options.value));
@@ -79,9 +86,7 @@ export function mountPageBuilder(
             typeof options.accent === 'string' && HEX_COLOR.test(options.accent)
                 ? options.accent.toLowerCase()
                 : DEFAULT_ACCENT,
-        upload: uploadWith(adapter, (text) =>
-            translate(text, locale, strings),
-        ),
+        upload: uploadWith(adapter, (text) => translate(text, locale, strings)),
         title: typeof options.title === 'string' ? options.title : '',
         backUrl: options.backUrl || null,
         viewUrl: options.viewUrl || null,
@@ -100,6 +105,8 @@ export function mountPageBuilder(
         pages: normalizePageLinks(options.pages),
         pageMenu: normalizePageMenu(options.pageMenu),
         languages: normalizeLanguages(options.languages),
+        fieldLanguages: options.fieldLanguages,
+        previewLocale,
         syncedSections: normalizeSyncedSections(options.syncedSections),
         parts: normalizeParts(options.parts),
         siteInfo:

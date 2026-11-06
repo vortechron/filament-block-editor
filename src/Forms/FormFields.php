@@ -53,7 +53,8 @@ final class FormFields
                 'placeholder' => FormDefinition::words($field['placeholder'] ?? null, FormDefinition::MAX_LABEL),
                 'required' => filter_var($field['required'] ?? false, FILTER_VALIDATE_BOOLEAN),
                 'width' => ($field['width'] ?? null) === 'half' ? 'half' : 'full',
-                ...(in_array($type, FormDefinition::CHOICE_TYPES, true) ? ['options' => self::options($field['options'] ?? null)] : []),
+                ...(in_array($type, FormDefinition::CHOICE_TYPES, true) ? ['options' => self::options($field['options'] ?? null, isset($field['option_ids']))] : []),
+                ...(isset($field['option_ids']) && is_array($field['option_ids']) && in_array($type, FormDefinition::CHOICE_TYPES, true) ? ['option_ids' => array_values(array_map(fn ($id) => is_string($id) && preg_match('/^[A-Za-z0-9_-]{1,40}$/D', $id) ? $id : '', array_slice($field['option_ids'], 0, count(self::options($field['options'] ?? null, isset($field['option_ids']))))))] : []),
                 ...($type === 'textarea' ? ['rows' => self::rows($field['rows'] ?? null)] : []),
             ];
         }
@@ -110,14 +111,14 @@ final class FormFields
     /**
      * @return list<string>
      */
-    private static function options(mixed $options): array
+    private static function options(mixed $options, bool $identified = false): array
     {
         $clean = [];
 
         foreach (is_array($options) ? $options : [] as $option) {
             $option = FormDefinition::words($option, FormDefinition::MAX_LABEL);
 
-            if ($option !== '' && ! in_array($option, $clean, true)) {
+            if ($identified || ($option !== '' && ! in_array($option, $clean, true))) {
                 $clean[] = $option;
             }
         }

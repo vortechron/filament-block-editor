@@ -99,6 +99,9 @@ final class DeveloperData
         if (is_array($block['props'] ?? null) || $props !== []) {
             $block['props'] = $props;
         }
+        if (($block['type'] ?? null) === Blocks::OWN_BLOCK) {
+            $block = OwnTextPresence::guard($block, $old);
+        }
 
         if (is_array($block['children'] ?? null)) {
             $block['children'] = self::document($block['children'], $stored);

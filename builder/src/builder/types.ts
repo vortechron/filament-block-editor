@@ -36,7 +36,9 @@ export type SidebarPanel =
  * opened from, while that shop info shows, else the panel itself.
  */
 export function panelUnder(panel: SidebarPanel): SidebarPanel {
-    return panel.name === 'siteInfo' && panel.back !== undefined ? panel.back : panel;
+    return panel.name === 'siteInfo' && panel.back !== undefined
+        ? panel.back
+        : panel;
 }
 
 /**
@@ -61,6 +63,7 @@ export type ItemKey =
     | 'bulletList'
     | 'numberedList'
     | 'quote'
+    | 'table'
     | 'toggle'
     | 'image'
     | 'gallery'
@@ -115,13 +118,23 @@ export type SectionEditorHandle = {
     updateItem: (blockId: string, props: Record<string, unknown>) => void;
     /** Replaces a text item's words with plain text. */
     setItemText: (blockId: string, text: string) => void;
+    setItemContent: (blockId: string, content: unknown) => void;
+    /** Replaces one explicitly identified table cell's complete inline words. */
+    setTableCellContent?: (
+        edit: import('@/lib/table-identities').TableCellEdit,
+    ) => void;
     changeItemType: (
         blockId: string,
         type: string,
         props?: Record<string, unknown>,
     ) => void;
     moveItem: (blockId: string, offset: -1 | 1) => void;
-    duplicateItem: (blockId: string) => string | null;
+    duplicateItem: (
+        blockId: string,
+        onCopied?: (
+            mapping: import('@/lib/translation-copies').BlockCopyMap,
+        ) => void,
+    ) => string | null;
     removeItem: (blockId: string) => void;
     /**
      * The block at a place the page marked with `data-item`, like "1.0",

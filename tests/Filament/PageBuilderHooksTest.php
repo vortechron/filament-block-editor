@@ -3,12 +3,17 @@
 namespace Vortechron\FilamentBlockEditor\Tests\Filament;
 
 use Livewire\Livewire;
+use Vortechron\FilamentBlockEditor\Blocks\BlockRegistry;
+use Vortechron\FilamentBlockEditor\Blocks\Field;
+use Vortechron\FilamentBlockEditor\Blocks\OwnBlock;
 use Vortechron\FilamentBlockEditor\Content\DynamicValues;
+use Vortechron\FilamentBlockEditor\Content\TextTranslations;
 use Vortechron\FilamentBlockEditor\Design\Kit;
 use Vortechron\FilamentBlockEditor\Design\KitSource;
 use Vortechron\FilamentBlockEditor\Rendering\RenderContext;
 use Workbench\App\Filament\Pages\DemoBuilder;
 use Workbench\App\Filament\Pages\FullDemoBuilder;
+use Workbench\App\Filament\Pages\TranslatedSectionBuilder;
 
 class PageBuilderHooksTest extends FilamentTestCase
 {
@@ -139,7 +144,7 @@ class PageBuilderHooksTest extends FilamentTestCase
         $this->assertCount(1, $options['syncedSections']);
         $this->assertSame(7, $options['syncedSections'][0]['id']);
         $this->assertSame('md', $options['syncedSections'][0]['section']['data']['padding']);
-        $this->assertSame([['name' => 'phone', 'label' => 'Telefon', 'type' => 'text', 'default' => ''], ['name' => 'email', 'type' => 'text']], $options['siteInfo']['groups'][0]['fields']);
+        $this->assertSame([['name' => 'phone', 'label' => 'Telefon', 'type' => 'text', 'translatable' => true, 'default' => ''], ['name' => 'email', 'type' => 'text']], $options['siteInfo']['groups'][0]['fields']);
         $this->assertSame(['contact' => ['phone' => '012', 'email' => 'a@b.c']], $options['siteInfo']['values']);
         $this->assertSame(['saveKit' => true, 'saveSection' => true, 'saveSiteInfo' => true], $page->getPageBuilderSupports());
     }
@@ -240,6 +245,82 @@ class PageBuilderHooksTest extends FilamentTestCase
         $this->assertSame('md', $section['data']['padding']);
         $this->assertArrayNotHasKey('lock', $section);
         $this->assertSame(['class' => 'brand'], $section['data']['advanced']);
+    }
+
+    public function test_a_translated_section_save_carries_its_maps_and_uses_default_language_defaults(): void
+    {
+        $this->signIn();
+        TranslatedSectionBuilder::$sectionCalls = [];
+        $section = ['id' => 's', 'type' => 'rich', 'data' => ['document' => [
+            ['id' => 'b', 'type' => 'button', 'props' => ['text' => 'Hubungi', 'url' => '/contact']],
+            ['id' => 'f', 'type' => 'ownBlock', 'props' => ['kind' => 'fbe-faq', 'values' => '{}']],
+        ]]];
+        $maps = ['en' => ['block:b/props/text' => 'Contact draft', 'block:other/props/text' => 'Unrelated']];
+        $component = Livewire::test(TranslatedSectionBuilder::class);
+        $this->assertTrue($component->instance()->getPageBuilderSupports()['saveSection']);
+        $result = $component->call('saveSectionFromPageBuilder', $section, 'Contact', true, $maps)->effects['returns'][0];
+        $this->assertTrue($result['ok']);
+        $saved = TranslatedSectionBuilder::$sectionCalls[0];
+        $this->assertSame(['en' => ['block:b/props/text' => 'Contact draft']], $saved['translations']);
+        $this->assertSame('Hubungi', $saved['section']['data']['document'][0]['props']['text']);
+        $this->assertSame('Soalan lazim', json_decode($saved['section']['data']['document'][1]['props']['values'], true)['heading']);
+        $this->assertSame($saved['section'], $result['section']);
+        $this->assertSame($saved['translations'], $result['translations']);
+        $this->assertSame($saved['translations'], $component->instance()->getPageBuilderOptions()['syncedSections'][0]['translations']);
+    }
+
+    public function test_section_saving_refuses_raw_nonstring_maps_and_invalid_rich_values_without_calling_the_host(): void
+    {
+        $this->signIn();
+        TranslatedSectionBuilder::$sectionCalls = [];
+        $section = ['id' => 's', 'type' => 'rich', 'data' => ['document' => [['id' => 'p', 'type' => 'paragraph', 'content' => []]]]];
+        foreach ([['en' => 'wrong shape'], ['en' => ['block:p/rich' => 23]], ['en' => ['block:p/rich' => []]], ['en' => ['block:p/rich' => 'not JSON']]] as $maps) {
+            $result = Livewire::test(TranslatedSectionBuilder::class)->call('saveSectionFromPageBuilder', $section, 'Contact', true, $maps)->effects['returns'][0];
+            $this->assertFalse($result['ok']);
+            $this->assertNotEmpty($result['errors']);
+        }
+        $this->assertSame([], TranslatedSectionBuilder::$sectionCalls);
+    }
+
+    public function test_section_saving_guards_developer_only_base_words_and_language_maps_together(): void
+    {
+        $this->signIn();
+        TranslatedSectionBuilder::$sectionCalls = [];
+        app(BlockRegistry::class)->register(OwnBlock::make('private-copy')->fields([
+            Field::text('title'), Field::text('private')->developerOnly()->default('Internal'),
+        ]));
+        $section = ['id' => 's', 'type' => 'rich', 'data' => ['document' => [['id' => 'b', 'type' => 'ownBlock', 'props' => ['kind' => 'private-copy', 'values' => '{"title":"Hubungi","private":"Injected base"}']]]]];
+        $maps = ['en' => ['block:b/values/title' => 'Contact', 'block:b/values/private' => 'Injected English']];
+        $result = Livewire::test(TranslatedSectionBuilder::class)->call('saveSectionFromPageBuilder', $section, 'Contact', true, $maps)->effects['returns'][0];
+        $this->assertTrue($result['ok']);
+        $saved = TranslatedSectionBuilder::$sectionCalls[0];
+        $this->assertSame('Internal', json_decode($saved['section']['data']['document'][0]['props']['values'], true)['private']);
+        $this->assertSame(['en' => ['block:b/values/title' => 'Contact']], $saved['translations']);
+    }
+
+    public function test_reusing_a_missing_definition_section_is_refused_without_losing_its_source_or_maps(): void
+    {
+        $this->signIn();
+        app()->setLocale('ms');
+        TranslatedSectionBuilder::$sectionCalls = [];
+        $registry = app(BlockRegistry::class);
+        $definition = $registry->get('fbe-faq');
+        $source = TextTranslations::ensureIds(['sections' => [['id' => 's', 'type' => 'rich', 'data' => ['document' => [
+            ['id' => 'faq', 'type' => 'ownBlock', 'props' => ['kind' => 'fbe-faq', 'values' => '{"heading":"Soalan","items":[]}']],
+        ]]]]]);
+        $maps = ['en' => ['block:faq/values/heading' => 'Questions']];
+        DemoBuilder::$saved = [...$source, 'translations' => $maps];
+        $stored = DemoBuilder::$saved;
+        $registry->forget('fbe-faq');
+        try {
+            $result = Livewire::test(TranslatedSectionBuilder::class)->call('saveSectionFromPageBuilder', $source['sections'][0], 'FAQ', true, $maps)->effects['returns'][0];
+            $this->assertFalse($result['ok']);
+            $this->assertStringContainsString('Aktifkan semula', $result['errors']['section']);
+            $this->assertSame([], TranslatedSectionBuilder::$sectionCalls);
+            $this->assertSame($stored, DemoBuilder::$saved);
+        } finally {
+            $registry->register($definition);
+        }
     }
 
     public function test_a_section_save_needs_a_title_and_a_rich_section(): void
@@ -374,6 +455,6 @@ class PageBuilderHooksTest extends FilamentTestCase
         $this->assertStringContainsString('saveSiteInfoFromPageBuilder', $full);
         $this->assertStringContainsString('\\u0022saveKit\\u0022:false', $plain);
         $this->assertStringContainsString('\\u0022saveKit\\u0022:true', $full);
-        $this->assertStringContainsString('wire.previewPageBuilder(value, extra?.kit ?? null, extra?.siteInfo ?? null)', $plain);
+        $this->assertStringContainsString('wire.previewPageBuilder(value, extra?.kit ?? null, extra?.siteInfo ?? null, extra?.contentLocale ?? null, extra?.siteInfoTranslations ?? null)', $plain);
     }
 }

@@ -34,6 +34,7 @@ export type SectionNode = {
 
 type TreeOptions = {
     ownBlocks: readonly OwnBlockDefinition[];
+    keepEmpty?: boolean;
     /** Whether the section's items can be opened (not synced, not locked). */
     canOpenItems: (section: Section) => boolean;
 };
@@ -42,12 +43,12 @@ const MAX_DETAIL = 60;
 
 export function buildStructureTree(
     sections: readonly Section[],
-    { ownBlocks, canOpenItems }: TreeOptions,
+    { ownBlocks, canOpenItems, keepEmpty = false }: TreeOptions,
 ): SectionNode[] {
     return sections.map((section) => {
         const items =
             section.type === 'rich' && canOpenItems(section)
-                ? itemsOf(section.data.document, 0, ownBlocks)
+                ? itemsOf(section.data.document, 0, ownBlocks, keepEmpty)
                 : [];
 
         return { id: section.id, section, items, canExpand: items.length > 0 };
@@ -77,13 +78,14 @@ function itemsOf(
     blocks: unknown,
     depth: number,
     ownBlocks: readonly OwnBlockDefinition[],
+    keepEmpty: boolean,
 ): ItemNode[] {
     if (!Array.isArray(blocks)) {
         return [];
     }
 
     return (blocks as RawBlock[]).flatMap((raw) =>
-        nodeOf(raw, depth, ownBlocks),
+        nodeOf(raw, depth, ownBlocks, keepEmpty),
     );
 }
 
@@ -91,6 +93,7 @@ function nodeOf(
     raw: RawBlock,
     depth: number,
     ownBlocks: readonly OwnBlockDefinition[],
+    keepEmpty: boolean,
 ): ItemNode[] {
     if (typeof raw.id !== 'string' || typeof raw.type !== 'string') {
         return [];
@@ -101,7 +104,12 @@ function nodeOf(
     const children = Array.isArray(raw.children) ? raw.children : [];
 
     // An empty line of text is only room to type, not an item.
-    if (raw.type === 'paragraph' && detail === '' && children.length === 0) {
+    if (
+        !keepEmpty &&
+        raw.type === 'paragraph' &&
+        detail === '' &&
+        children.length === 0
+    ) {
         return [];
     }
 
@@ -118,7 +126,7 @@ function nodeOf(
                 depth,
                 // The column level itself is skipped: its items show here.
                 children: columns.flatMap((column) =>
-                    itemsOf(column.children, depth + 1, ownBlocks),
+                    itemsOf(column.children, depth + 1, ownBlocks, keepEmpty),
                 ),
             },
         ];
@@ -133,7 +141,7 @@ function nodeOf(
                     ? `${detail.slice(0, MAX_DETAIL)}…`
                     : detail,
             depth,
-            children: itemsOf(children, depth + 1, ownBlocks),
+            children: itemsOf(children, depth + 1, ownBlocks, keepEmpty),
         },
     ];
 }

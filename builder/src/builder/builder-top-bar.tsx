@@ -9,6 +9,7 @@ import {
     Palette,
     PanelLeftOpen,
     Redo2,
+    Save as SaveIcon,
     Smartphone,
     Store,
     Tablet,
@@ -83,22 +84,37 @@ export function BuilderTopBar({
     onRedo: () => void;
 }) {
     const t = useT();
-    const { title, backUrl, viewUrl, kind, languages } = useHost();
+    const {
+        title,
+        backUrl,
+        viewUrl,
+        kind,
+        languages,
+        fieldLanguages,
+        previewLocale,
+        setPreviewLocale,
+    } = useHost();
     const hasLanguages = languages.length > 1;
     const kindLabel = isPartKey(kind) ? partLabel(kind, t) : null;
     const canSave = hasUnsavedChanges && !isSaving;
     const keys = historyShortcuts();
     const extras: Extra[] = [
-        ...(onDesign ? [{ label: t('Design'), icon: Palette, onSelect: onDesign }] : []),
-        ...(onSiteInfo ? [{ label: t('Shop info'), icon: Store, onSelect: onSiteInfo }] : []),
-        ...(viewUrl ? [{ label: t('View page'), icon: ExternalLink, href: viewUrl }] : []),
+        ...(onDesign
+            ? [{ label: t('Design'), icon: Palette, onSelect: onDesign }]
+            : []),
+        ...(onSiteInfo
+            ? [{ label: t('Shop info'), icon: Store, onSelect: onSiteInfo }]
+            : []),
+        ...(viewUrl
+            ? [{ label: t('View page'), icon: ExternalLink, href: viewUrl }]
+            : []),
     ];
     const isTucked = extras.length >= 2;
     // The extra buttons themselves show from 1024px only, when tucked.
     const extraClass = isTucked ? 'hidden lg:inline-flex' : undefined;
 
     return (
-        <header className="bg-card relative z-30 flex h-14 shrink-0 items-center gap-2 border-b px-2 sm:gap-3 sm:px-3">
+        <header className="bg-card relative z-30 flex h-14 shrink-0 items-center gap-1 border-b px-2 sm:gap-3 sm:px-3">
             {backUrl && (
                 <>
                     <Tooltip>
@@ -114,14 +130,22 @@ export function BuilderTopBar({
                                 </a>
                             </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom">{t('Back')}</TooltipContent>
+                        <TooltipContent side="bottom">
+                            {t('Back')}
+                        </TooltipContent>
                     </Tooltip>
 
                     <div className="bg-border h-6 w-px shrink-0" />
                 </>
             )}
 
-            <div className={cn("flex min-w-0 flex-1 items-center gap-2 pl-1", !hasLanguages && "md:flex-none")}>
+            <div
+                className={cn(
+                    'min-w-0 flex-1 items-center gap-2 pl-1',
+                    fieldLanguages ? 'hidden xl:flex' : 'flex',
+                    !hasLanguages && !fieldLanguages && 'md:flex-none',
+                )}
+            >
                 {kindLabel && (
                     <span className="shrink-0 rounded-md bg-[var(--builder-select)]/10 px-2 py-0.5 text-xs font-semibold text-[var(--builder-select)]">
                         {kindLabel}
@@ -133,9 +157,37 @@ export function BuilderTopBar({
             </div>
 
             <LanguageMenu />
+            {fieldLanguages && fieldLanguages.locales.length > 1 && (
+                <label className="flex items-center gap-1 text-xs">
+                    <span className="hidden lg:inline">{t('Preview')}</span>
+                    <select
+                        aria-label={t('Preview language')}
+                        value={previewLocale}
+                        onChange={(event) =>
+                            setPreviewLocale?.(event.target.value)
+                        }
+                        className="min-h-11 w-14 shrink-0 bg-transparent text-xs underline underline-offset-4 md:w-28"
+                    >
+                        {fieldLanguages.locales.map((language) => (
+                            <option
+                                key={language.locale}
+                                value={language.locale}
+                            >
+                                {isDesktop ? language.label : language.locale.split(/[-_]/)[0].toUpperCase()}
+                            </option>
+                        ))}
+                    </select>
+                </label>
+            )}
 
             {isDesktop && (
-                <div className={hasLanguages ? "flex shrink-0 justify-center" : "pointer-events-none absolute inset-x-0 flex justify-center"}>
+                <div
+                    className={
+                        hasLanguages || fieldLanguages
+                            ? 'flex shrink-0 justify-center'
+                            : 'pointer-events-none absolute inset-x-0 flex justify-center'
+                    }
+                >
                     <div
                         role="radiogroup"
                         aria-label={t('View the page on')}
@@ -162,7 +214,10 @@ export function BuilderTopBar({
                         >
                             <Smartphone />
                         </DeviceButton>
-                        <span aria-hidden="true" className="bg-border mx-0.5 h-5 w-px" />
+                        <span
+                            aria-hidden="true"
+                            className="bg-border mx-0.5 h-5 w-px"
+                        />
                         <DeviceButton
                             label={t('Edit without the page')}
                             isActive={isWide}
@@ -174,7 +229,7 @@ export function BuilderTopBar({
                 </div>
             )}
 
-            <div className="relative ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <div className="relative ml-auto flex shrink-0 items-center gap-1 sm:gap-2">
                 {isDesktop && (
                     <SaveState
                         hasUnsavedChanges={hasUnsavedChanges}
@@ -196,7 +251,9 @@ export function BuilderTopBar({
                     >
                         <Palette />
                         {isDesktop && (
-                            <span className="hidden 2xl:inline">{t('Design')}</span>
+                            <span className="hidden 2xl:inline">
+                                {t('Design')}
+                            </span>
                         )}
                     </Button>
                 )}
@@ -213,7 +270,9 @@ export function BuilderTopBar({
                     >
                         <Store />
                         {isDesktop && (
-                            <span className="hidden 2xl:inline">{t('Shop info')}</span>
+                            <span className="hidden 2xl:inline">
+                                {t('Shop info')}
+                            </span>
                         )}
                     </Button>
                 )}
@@ -228,7 +287,9 @@ export function BuilderTopBar({
                 >
                     <Eye />
                     {isDesktop && (
-                        <span className="hidden 2xl:inline">{t('Preview')}</span>
+                        <span className="hidden 2xl:inline">
+                            {t('Preview')}
+                        </span>
                     )}
                 </Button>
 
@@ -241,7 +302,11 @@ export function BuilderTopBar({
                         aria-label={t('View page')}
                         title={t('View page')}
                     >
-                        <a href={viewUrl} target="_blank" rel="noopener noreferrer">
+                        <a
+                            href={viewUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
                             <ExternalLink />
                             {isDesktop && (
                                 <span className="hidden 2xl:inline">
@@ -284,16 +349,16 @@ export function BuilderTopBar({
                     size="sm"
                     disabled={!canSave}
                     onClick={onSave}
-                    className="min-w-20 bg-[var(--builder-select)] text-white hover:bg-[var(--builder-select)]/90"
+                    aria-label={!hasUnsavedChanges && recentlySaved && !isSaving ? t('Saved') : t('Save')}
+                    className="w-9 min-w-9 bg-[var(--builder-select)] px-0 text-white hover:bg-[var(--builder-select)]/90 sm:w-auto sm:min-w-20 sm:px-3"
                 >
                     {isSaving ? (
                         <LoaderCircle className="animate-spin" />
                     ) : (
                         !hasUnsavedChanges && recentlySaved && <Check />
                     )}
-                    {!hasUnsavedChanges && recentlySaved && !isSaving
-                        ? t('Saved')
-                        : t('Save')}
+                    {!isSaving && (hasUnsavedChanges || !recentlySaved) && <SaveIcon className="sm:hidden" />}
+                    <span className="hidden sm:inline">{!hasUnsavedChanges && recentlySaved && !isSaving ? t('Saved') : t('Save')}</span>
                 </Button>
             </div>
         </header>
@@ -332,7 +397,11 @@ function MoreMenu({ extras }: { extras: Extra[] }) {
                         </DropdownMenuItem>
                     ) : (
                         <DropdownMenuItem key={label} asChild>
-                            <a href={href} target="_blank" rel="noopener noreferrer">
+                            <a
+                                href={href}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
                                 <Icon />
                                 {label}
                             </a>

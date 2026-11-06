@@ -5,6 +5,12 @@ import {
     newSectionId,
     sectionFromTemplate,
 } from '@/lib/page-value';
+import {
+    copySectionTranslations,
+    withSectionTranslations,
+    type SectionTranslations,
+} from '@/lib/section-translations';
+import { blockCopyMap, copyTranslations } from '@/lib/translation-copies';
 import { useHost } from '@/lib/host';
 import { isLocked, withoutDeveloperData } from '@/lib/locks';
 import type { LockKey, PartKey, Section, SectionTemplate } from '@/types';
@@ -268,13 +274,20 @@ export function useBuilder({
     function withItemSteps(handle: SectionEditorHandle): SectionEditorHandle {
         return {
             ...handle,
-            insertItem: (...args) => form.asStep(() => handle.insertItem(...args)),
+            insertItem: (...args) =>
+                form.asStep(() => handle.insertItem(...args)),
             changeItemType: (...args) =>
                 form.asStep(() => handle.changeItemType(...args)),
             moveItem: (...args) => form.asStep(() => handle.moveItem(...args)),
-            duplicateItem: (...args) =>
-                form.asStep(() => handle.duplicateItem(...args)),
-            removeItem: (...args) => form.asStep(() => handle.removeItem(...args)),
+            duplicateItem: (id, onCopied) =>
+                form.asStep(() =>
+                    handle.duplicateItem(id, (mapping) => {
+                        form.copyTextFor(mapping);
+                        onCopied?.(mapping);
+                    }),
+                ),
+            removeItem: (...args) =>
+                form.asStep(() => handle.removeItem(...args)),
         };
     }
 
@@ -323,7 +336,17 @@ export function useBuilder({
         template: SectionTemplate,
         index?: number,
     ): string | null {
-        return insertSection(sectionFromTemplate(template), index);
+        const copy = sectionFromTemplate(template);
+        const source: typeof copy = {
+            id: template.sectionId ?? copy.id,
+            type: 'rich',
+            data: template.data,
+        };
+        return insertSection(
+            copy,
+            index,
+            copySectionTranslations(source, copy, template.translations),
+        );
     }
 
     /** Adds a synced section, as a ref to it, at `index` and picks it. */
@@ -335,18 +358,30 @@ export function useBuilder({
     }
 
     /** Puts a new section at `index` (the end when left out) and picks it. */
-    function insertSection(block: Section, index?: number): string | null {
+    function insertSection(
+        block: Section,
+        index?: number,
+        translations?: SectionTranslations,
+    ): string | null {
         if (blocks.length >= MAX_SECTIONS) {
             return null;
         }
 
         const at = index === undefined ? blocks.length : index;
 
-        updateBlocks((current) => [
-            ...current.slice(0, at),
-            block,
-            ...current.slice(at),
-        ]);
+        form.setData((current) =>
+            withSectionTranslations(
+                {
+                    ...current,
+                    sections: [
+                        ...current.sections.slice(0, at),
+                        block,
+                        ...current.sections.slice(at),
+                    ],
+                },
+                translations,
+            ),
+        );
         selectSection(block.id);
         scrollToSection(block.id);
 
@@ -365,9 +400,7 @@ export function useBuilder({
      * picked section, or at the end of the last section.
      */
     function defaultItemTarget(): ItemTarget | null {
-        const picked = blocks.find(
-            (block) => block.id === selection.sectionId,
-        );
+        const picked = blocks.find((block) => block.id === selection.sectionId);
 
         if (picked?.type === 'rich') {
             return {
@@ -494,7 +527,8 @@ export function useBuilder({
     ) {
         updateAt(
             sectionId,
-            (current, index) => replaceItem(current, index, update(current[index])),
+            (current, index) =>
+                replaceItem(current, index, update(current[index])),
             group,
         );
     }
@@ -503,8 +537,25 @@ export function useBuilder({
      * Puts another section in a section's place, like a synced section's
      * copy, and picks it when the old one was picked.
      */
-    function replaceSection(sectionId: string, next: Section) {
-        updateSection(sectionId, () => next);
+    function replaceSection(
+        sectionId: string,
+        next: Section,
+        translations?: SectionTranslations,
+    ) {
+        form.setData((current) => {
+            const index = current.sections.findIndex(
+                (section) => section.id === sectionId,
+            );
+            return index < 0
+                ? current
+                : withSectionTranslations(
+                      {
+                          ...current,
+                          sections: replaceItem(current.sections, index, next),
+                      },
+                      translations,
+                  );
+        });
 
         if (next.id !== sectionId && selection.sectionId === sectionId) {
             selectSection(next.id);
@@ -544,7 +595,24 @@ export function useBuilder({
             ? duplicateBlock(blocks[index])
             : withoutDeveloperData(duplicateBlock(blocks[index]));
 
-        updateAt(sectionId, (current, at) => insertAfter(current, at, copy));
+        form.setData((current) => {
+            const at = current.sections.findIndex(
+                (section) => section.id === sectionId,
+            );
+            if (at === -1) return current;
+            const source = current.sections[at];
+            const mapping =
+                source.type === 'rich' && copy.type === 'rich'
+                    ? blockCopyMap(source.data.document, copy.data.document)
+                    : {};
+            return copyTranslations(
+                {
+                    ...current,
+                    sections: insertAfter(current.sections, at, copy),
+                },
+                mapping,
+            );
+        });
         selectSection(copy.id);
         scrollToSection(copy.id);
     }

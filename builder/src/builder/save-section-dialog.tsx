@@ -2,9 +2,17 @@ import { LoaderCircle } from 'lucide-react';
 import { type FormEvent, useId, useState } from 'react';
 import { useHost } from '@/lib/host';
 import { useT } from '@/lib/i18n';
+import {
+    translationsForSection,
+    type SectionTranslations,
+} from '@/lib/section-translations';
 import { normalizeValue } from '@/lib/page-value';
 import RULES from '@/generated/rules.json';
-import type { RichSection, SaveSectionResult, SectionTemplateInput } from '@/types';
+import type {
+    RichSection,
+    SaveSectionResult,
+    SectionTemplateInput,
+} from '@/types';
 import { Button } from '@/ui/button';
 import {
     Dialog,
@@ -34,7 +42,12 @@ async function saveOrRefuse(
     } catch (error) {
         return {
             ok: false,
-            errors: { section: error instanceof Error && error.message !== '' ? error.message : fallback },
+            errors: {
+                section:
+                    error instanceof Error && error.message !== ''
+                        ? error.message
+                        : fallback,
+            },
         };
     }
 }
@@ -56,8 +69,8 @@ export function SaveSectionDialog({
 }) {
     const t = useT();
     const id = useId();
-    const { adapter } = useHost();
-    const { builder, library } = useBuilderContext();
+    const { adapter, fieldLanguages } = useHost();
+    const { builder, library, form } = useBuilderContext();
     const [title, setTitle] = useState('');
     const [errors, setErrors] = useState<string[]>([]);
     const [isSaving, setIsSaving] = useState(false);
@@ -79,12 +92,28 @@ export function SaveSectionDialog({
             return;
         }
 
-        const copy = normalizeValue([section]).sections[0] as RichSection;
+        const source = form
+            .current()
+            .sections.find((current) => current.id === section.id);
+        if (source?.type !== 'rich') return;
+        const copy = normalizeValue([source]).sections[0] as RichSection;
+        const translations = translationsForSection(
+            copy,
+            form.current().translations,
+        );
+        const snapshot = JSON.stringify({ section: copy, translations });
 
         setIsSaving(true);
 
         const result = await saveOrRefuse(
-            () => saveSection(copy, { title: name, synced: isSynced }),
+            () =>
+                saveSection(copy, {
+                    title: name,
+                    synced: isSynced,
+                    ...(fieldLanguages || translations
+                        ? { translations: translations ?? {} }
+                        : {}),
+                }),
             t('The section could not be saved.'),
         );
 
@@ -96,7 +125,27 @@ export function SaveSectionDialog({
             return;
         }
 
-        keepSaved(result.id, result.template, name, copy);
+        const current = form
+            .current()
+            .sections.find((current) => current.id === section.id);
+        const unchanged =
+            current?.type === 'rich' &&
+            snapshot ===
+                JSON.stringify({
+                    section: normalizeValue([current]).sections[0],
+                    translations: translationsForSection(
+                        current,
+                        form.current().translations,
+                    ),
+                });
+        keepSaved(
+            result.id,
+            result.template,
+            name,
+            result.section ?? copy,
+            result.translations ?? translations,
+            unchanged,
+        );
         close();
     }
 
@@ -106,20 +155,35 @@ export function SaveSectionDialog({
         template: SectionTemplateInput | undefined,
         name: string,
         copy: RichSection,
+        translations: SectionTranslations | undefined,
+        replaceSource: boolean,
     ) {
         if (template) {
-            library.addTemplate(template);
+            library.addTemplate({
+                ...template,
+                ...((template.translations ?? translations)
+                    ? { translations: template.translations ?? translations }
+                    : {}),
+            });
         } else if (!isSynced) {
             library.addTemplate({
                 key: `saved-${String(id)}`,
                 label: name,
                 category: 'saved',
-                section: { data: copy.data },
+                section: { id: copy.id, data: copy.data },
+                ...(translations ? { translations } : {}),
             });
         }
 
         if (isSynced) {
-            library.addSynced({ id, title: name, editUrl: null, section: copy });
+            library.addSynced({
+                id,
+                title: name,
+                editUrl: null,
+                section: copy,
+                ...(translations ? { translations } : {}),
+            });
+            if (!replaceSource) return;
             builder.updateSection(section.id, (current) => ({
                 id: current.id,
                 type: 'ref',
@@ -132,19 +196,31 @@ export function SaveSectionDialog({
     return (
         <Dialog open={mode !== null} onOpenChange={(open) => !open && close()}>
             <DialogContent>
-                <form onSubmit={(event) => void save(event)} className="grid gap-4">
+                <form
+                    onSubmit={(event) => void save(event)}
+                    className="grid gap-4"
+                >
                     <DialogHeader>
                         <DialogTitle>
-                            {isSynced ? t('Make this section synced') : t('Save a copy of this section')}
+                            {isSynced
+                                ? t('Make this section synced')
+                                : t('Save a copy of this section')}
                         </DialogTitle>
                         <DialogDescription>
                             {isSynced
-                                ? t('Every page that uses it shows the same section. Change it once and it changes on all of them.')
-                                : t('A copy shows under Saved sections in Add, for every page. Changing this section later does not change the copy.')}
+                                ? t(
+                                      'Every page that uses it shows the same section. Change it once and it changes on all of them.',
+                                  )
+                                : t(
+                                      'A copy shows under Saved sections in Add, for every page. Changing this section later does not change the copy.',
+                                  )}
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-1.5">
-                        <label htmlFor={id} className="text-foreground text-sm font-medium">
+                        <label
+                            htmlFor={id}
+                            className="text-foreground text-sm font-medium"
+                        >
                             {t('Name')}
                         </label>
                         <Input
@@ -155,7 +231,11 @@ export function SaveSectionDialog({
                             onChange={(event) => setTitle(event.target.value)}
                         />
                         {errors.map((message) => (
-                            <p key={message} role="alert" className="text-destructive text-xs">
+                            <p
+                                key={message}
+                                role="alert"
+                                className="text-destructive text-xs"
+                            >
                                 {message}
                             </p>
                         ))}
@@ -164,8 +244,13 @@ export function SaveSectionDialog({
                         <Button type="button" variant="outline" onClick={close}>
                             {t('Cancel')}
                         </Button>
-                        <Button type="submit" disabled={isSaving || title.trim() === ''}>
-                            {isSaving && <LoaderCircle className="animate-spin" />}
+                        <Button
+                            type="submit"
+                            disabled={isSaving || title.trim() === ''}
+                        >
+                            {isSaving && (
+                                <LoaderCircle className="animate-spin" />
+                            )}
                             {t('Save')}
                         </Button>
                     </DialogFooter>

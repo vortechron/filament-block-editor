@@ -21,6 +21,7 @@ export function ButtonFields({
         <div className="grid grid-cols-1 gap-4">
             <TextField
                 label={t('Button text')}
+                translationPath="/props/text"
                 value={text}
                 maxLength={80}
                 onChange={(value) => onChange({ text: value })}

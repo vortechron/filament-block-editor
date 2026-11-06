@@ -37,7 +37,7 @@ final class Urls
 
         $url = trim($url);
 
-        return preg_match('~^(https?://|mailto:|tel:|#[\w-]|/(?!/))~i', $url) === 1 ? $url : null;
+        return preg_match('~^(?:https?://[^\s/?#]+[^\s]*|mailto:[^\s]+|tel:[^\s]+|#[^\s#]+|/(?!/)[^\s]*)$~iD', $url) === 1 ? $url : null;
     }
 
     /**

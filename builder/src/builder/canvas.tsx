@@ -58,7 +58,9 @@ export function Canvas({
         useBuilderContext();
     // Only a kit and shop info that can change are sent with the preview.
     const kitDraft = kit.canSave ? JSON.stringify(kit.kit) : null;
-    const siteInfoDraft = siteInfo.canSave ? JSON.stringify(siteInfo.values) : null;
+    const siteInfoDraft = siteInfo.canSave
+        ? JSON.stringify(siteInfo.values)
+        : null;
     const { blocks, selection } = builder;
     const showsFrame = isDesktop;
     const pageBox = useRef<HTMLDivElement>(null);
@@ -86,7 +88,10 @@ export function Canvas({
         ),
         pickedSectionId: selection.sectionId,
         pickedItemPath,
-        partLabels: { header: partTitle('header'), footer: partTitle('footer') },
+        partLabels: {
+            header: partTitle('header'),
+            footer: partTitle('footer'),
+        },
         pickedPart: pickedPart(builder.panel),
         hiddenLabel: t('Hidden'),
         scale,
@@ -178,6 +183,12 @@ export function Canvas({
                                 draft={JSON.stringify(form.data)}
                                 kit={kitDraft}
                                 siteInfo={siteInfoDraft}
+                                siteInfoTranslations={
+                                    siteInfo.canSave &&
+                                    Object.keys(siteInfo.translations).length
+                                        ? JSON.stringify(siteInfo.translations)
+                                        : null
+                                }
                                 reloads={siteInfo.reloads}
                                 marks={marks}
                                 onPick={handlePick}

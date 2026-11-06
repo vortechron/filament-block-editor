@@ -7,6 +7,7 @@ import type { Appearance } from '@vortechron/blocknote-kit';
 import { type CSSProperties, useRef } from 'react';
 import { useContentT, useT } from '@/lib/i18n';
 import type { RichDocument, SectionData } from '@/types';
+import type { IdentifiedTableEditor } from '@/lib/table-identities';
 import { accentTokens } from './accent-tokens';
 import { addLineBelowOnTap } from './add-line-below';
 import { shopInfoSlashItems } from './dynamic-inline';
@@ -43,7 +44,10 @@ export default function RichEditor({
     uploadFile: (file: File) => Promise<string>;
     onDocumentChange: (document: RichDocument) => void;
     /** For the page builder, which adds and changes items from outside. */
-    onEditorReady?: (editor: BlockNoteEditor) => void;
+    onEditorReady?: (
+        editor: BlockNoteEditor,
+        tables?: IdentifiedTableEditor,
+    ) => void;
 }) {
     const t = useT();
     const siteT = useContentT();
@@ -62,9 +66,9 @@ export default function RichEditor({
             >
                 <PageBlockEditor
                     initialContent={data.document}
-                    onEditorReady={(readyEditor) => {
+                    onEditorReady={(readyEditor, tables) => {
                         blockEditorRef.current = readyEditor;
-                        onEditorReady?.(readyEditor);
+                        onEditorReady?.(readyEditor, tables);
                     }}
                     onChange={onDocumentChange}
                     uploadFile={uploadFile}

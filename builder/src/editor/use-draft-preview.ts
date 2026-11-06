@@ -19,6 +19,7 @@ export type DraftExtras = {
     kit?: string | null;
     /** The shop info form's values as JSON, with changes not saved yet, or null. */
     siteInfo?: string | null;
+    siteInfoTranslations?: string | null;
     /** Asks again when it goes up, though nothing in the page changed. */
     reloads?: number;
 };
@@ -36,9 +37,15 @@ export type DraftExtras = {
  */
 export function useDraftPreview(
     draft: string,
-    { kit = null, siteInfo = null, reloads = 0 }: DraftExtras = {},
+    {
+        kit = null,
+        siteInfo = null,
+        siteInfoTranslations = null,
+        reloads = 0,
+    }: DraftExtras = {},
 ): DraftPreview {
-    const { adapter } = useHost();
+    const { adapter, fieldLanguages, previewLocale } = useHost();
+    const selectedLocale = fieldLanguages ? previewLocale : undefined;
     const [html, setHtml] = useState<string | null>(null);
     const [isUpdating, setIsUpdating] = useState(true);
     const [isStale, setIsStale] = useState(false);
@@ -56,10 +63,29 @@ export function useDraftPreview(
                             JSON.parse(draft) as PageValue,
                         );
                         const extra = previewExtra(kit, siteInfo);
+                        const localizedExtra =
+                            selectedLocale || siteInfoTranslations
+                                ? {
+                                      ...extra,
+                                      ...(selectedLocale
+                                          ? { contentLocale: selectedLocale }
+                                          : {}),
+                                      ...(siteInfoTranslations
+                                          ? {
+                                                siteInfoTranslations:
+                                                    JSON.parse(
+                                                        siteInfoTranslations,
+                                                    ) as NonNullable<
+                                                        SiteInfo['translations']
+                                                    >,
+                                            }
+                                          : {}),
+                                  }
+                                : extra;
 
-                        return extra === null
+                        return localizedExtra === null
                             ? adapter.preview(value)
-                            : adapter.preview(value, extra);
+                            : adapter.preview(value, localizedExtra);
                     })
                     .then((page) => {
                         if (!isCurrent) {
@@ -93,19 +119,32 @@ export function useDraftPreview(
             isCurrent = false;
             window.clearTimeout(timer);
         };
-    }, [adapter, draft, kit, siteInfo, reloads]);
+    }, [
+        adapter,
+        draft,
+        kit,
+        siteInfo,
+        reloads,
+        selectedLocale,
+        siteInfoTranslations,
+    ]);
 
     return { html, isUpdating, isStale };
 }
 
 /** The unsaved kit and shop info for the preview, or null with neither. */
-function previewExtra(kit: string | null, siteInfo: string | null): PreviewExtra | null {
+function previewExtra(
+    kit: string | null,
+    siteInfo: string | null,
+): PreviewExtra | null {
     if (kit === null && siteInfo === null) {
         return null;
     }
 
     return {
         ...(kit === null ? {} : { kit: JSON.parse(kit) as Kit }),
-        ...(siteInfo === null ? {} : { siteInfo: JSON.parse(siteInfo) as SiteInfo['values'] }),
+        ...(siteInfo === null
+            ? {}
+            : { siteInfo: JSON.parse(siteInfo) as SiteInfo['values'] }),
     };
 }
